@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    { "path": "/api/cron/poll-oem?secret=$CRON_SECRET", "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/check-cleaning?secret=$CRON_SECRET", "schedule": "0 9 * * *" }
+  ]
+}

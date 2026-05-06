@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 30% 98%;
+    --foreground: 222 40% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 40% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 40% 11%;
+    --primary: 36 92% 46%;
+    --primary-foreground: 28 70% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 94%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --success: 152 65% 40%;
+    --success-foreground: 152 50% 98%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 11%;
+    --border: 216 24% 90%;
+    --input: 216 24% 90%;
+    --ring: 36 92% 46%;
+    --radius: 0.6rem;
+    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", sans-serif;
+    --font-display: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+  .dark {
+    --background: 222 47% 5%;
+    --foreground: 210 40% 95%;
+    --card: 222 35% 9%;
+    --card-foreground: 210 40% 95%;
+    --popover: 222 35% 9%;
+    --popover-foreground: 210 40% 95%;
+    --primary: 36 95% 55%;
+    --primary-foreground: 28 70% 10%;
+    --secondary: 217 32% 15%;
+    --secondary-foreground: 210 40% 95%;
+    --muted: 217 32% 15%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 32% 18%;
+    --accent-foreground: 210 40% 95%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 210 40% 98%;
+    --success: 152 55% 45%;
+    --success-foreground: 152 50% 98%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 222 47% 11%;
+    --border: 217 32% 17%;
+    --input: 217 32% 17%;
+    --ring: 36 95% 55%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground font-sans antialiased; }
+  html { font-family: var(--font-sans); }
+}
+
+/* Subtle ambient grid for dashboard hero areas */
+.bg-grid {
+  background-image: linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px),
+                    linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, #000 50%, transparent 100%);
+}
+
+/* Chart overrides */
+.recharts-cartesian-axis-tick-value { fill: hsl(var(--muted-foreground)); font-size: 11px; }
+.recharts-tooltip-wrapper { outline: none !important; }
