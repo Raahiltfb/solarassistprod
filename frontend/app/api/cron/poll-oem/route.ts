@@ -6,15 +6,18 @@ import { sendEmail, alertEmailHtml } from "@/lib/integrations/resend";
 /**
  * Cron: poll every OEM integration, normalize into telemetry + alerts tables.
  * Also detects offline inverters (>15 min of no telemetry).
- * Schedule in Vercel at */15 * * * *.
- */
+ * Schedule in Vercel every 15 minutes*/
+ 
 export async function GET(req: NextRequest) {
   const secret = req.nextUrl.searchParams.get("secret");
   if (secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const sb = createServiceClient();
-  const { data: integrations } = await sb.from("oem_integrations").select("*").eq("is_active", true);
+  
+  const { data: integrations, error } = await sb.from("oem_integrations").select("*").eq("is_active", true);
+  console.log("ERROR:", error);
+  console.log("INTEGRATIONS:", integrations);
 
   let telemetryRows = 0;
   let alertRows = 0;
@@ -56,11 +59,11 @@ export async function GET(req: NextRequest) {
           // Email notify
           const { data: admins } = await sb.from("profiles").select("email").eq("org_id", integ.org_id).in("role", ["epc_admin","super_admin"]);
           const { data: site } = await sb.from("sites").select("name").eq("id", p.site_id).single();
-          await sendEmail({
+          /*await sendEmail({
             to: (admins ?? []).map((x) => x.email),
             subject: `[${a.severity.toUpperCase()}] ${a.title}`,
             html: alertEmailHtml({ siteName: site?.name ?? "Site", alertTitle: a.title, severity: a.severity, description: a.description }),
-          });
+          });*/
           void alert;
         }
       }
