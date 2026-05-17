@@ -1,9 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
+"use client";
+
+import { use, useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 const statusColors: Record<string, string> = {
   open: "bg-red-100 text-red-700",
   assigned: "bg-yellow-100 text-yellow-700",
-  "in progress": "bg-blue-100 text-blue-700",
+  in_progress: "bg-blue-100 text-blue-700",
   resolved: "bg-green-100 text-green-700",
   closed: "bg-gray-200 text-gray-700",
 };
@@ -15,20 +18,98 @@ const priorityColors: Record<string, string> = {
   p4: "bg-blue-100 text-blue-700",
 };
 
-export default async function TicketDetailsPage({
+const severityColors: Record<string, string> = {
+  L1: "bg-blue-100 text-blue-700",
+  L2: "bg-yellow-100 text-yellow-700",
+  L3: "bg-red-100 text-red-700",
+};
+
+export default function TicketDetailsPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const supabase = await createClient();
+  const { id } = use(params);
 
-  const { data: ticket, error } = await supabase
-    .from("tickets")
-    .select("*")
-    .eq("id", params.id)
-    .single();
+  const supabase = createClient();
 
-  if (error || !ticket) {
+  const [ticket, setTicket] = useState<any>(null);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  async function fetchData() {
+    await Promise.all([fetchTicket(), fetchActivities()]);
+    setLoading(false);
+  }
+
+  async function fetchTicket() {
+    const { data } = await supabase
+      .from("tickets")
+      .select(`
+        *,
+        organizations(name),
+        sites(name),
+        alerts(title),
+        profiles!tickets_assignee_id_fkey(full_name)
+      `)
+      .eq("id", id)
+      .single();
+
+    if (data) {
+      setTicket(data);
+    }
+  }
+
+  async function fetchActivities() {
+    const { data } = await supabase
+      .from("ticket_activity")
+      .select("*")
+      .eq("ticket_id", id)
+      .order("created_at", { ascending: false });
+
+    if (data) {
+      setActivities(data);
+    }
+  }
+
+  async function updateStatus(status: string) {
+    const updates: any = {
+      status,
+    };
+
+    if (status === "resolved") {
+      updates.resolved_at = new Date().toISOString();
+    }
+
+    const { error } = await supabase
+      .from("tickets")
+      .update(updates)
+      .eq("id", id);
+
+    if (!error) {
+      await supabase.from("ticket_activity").insert({
+        ticket_id: id,
+        activity_type: "status_change",
+        message: `Ticket marked as ${status.replace("_", " ")}`,
+      });
+
+      fetchData();
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <h1 className="text-xl font-semibold">Loading ticket...</h1>
+      </div>
+    );
+  }
+
+  if (!ticket) {
     return (
       <div className="p-6">
         <h1 className="text-xl font-semibold">Ticket not found</h1>
@@ -49,14 +130,14 @@ export default async function TicketDetailsPage({
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <span
             className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
               statusColors[ticket.status] ||
               "bg-gray-100 text-gray-700"
             }`}
           >
-            {ticket.status}
+            {ticket.status.replace("_", " ")}
           </span>
 
           <span
@@ -66,6 +147,15 @@ export default async function TicketDetailsPage({
             }`}
           >
             {ticket.priority}
+          </span>
+
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-medium ${
+              severityColors[ticket.severity_level] ||
+              "bg-gray-100 text-gray-700"
+            }`}
+          >
+            {ticket.severity_level}
           </span>
         </div>
       </div>
@@ -78,8 +168,35 @@ export default async function TicketDetailsPage({
 
           <div className="space-y-2 text-sm">
             <p>
+              <span className="font-medium">Ticket Type:</span>{" "}
+              {ticket.ticket_type || "Not set"}
+            </p>
+
+            <p>
+              <span className="font-medium">Severity:</span>{" "}
+              {ticket.severity_level || "Not set"}
+            </p>
+
+            <p>
+              <span className="font-medium">Source:</span>{" "}
+              {ticket.source || "Unknown"}
+            </p>
+
+            <p>
+              <span className="font-medium">Auto Resolvable:</span>{" "}
+              {ticket.auto_resolvable ? "Yes" : "No"}
+            </p>
+
+            <p>
+              <span className="font-medium">SLA:</span>{" "}
+              {ticket.resolution_sla_hours
+                ? `${ticket.resolution_sla_hours} hrs`
+                : "Not set"}
+            </p>
+
+            <p>
               <span className="font-medium">Status:</span>{" "}
-              {ticket.status}
+              {ticket.status.replace("_", " ")}
             </p>
 
             <p>
@@ -109,22 +226,22 @@ export default async function TicketDetailsPage({
           <div className="space-y-2 text-sm">
             <p>
               <span className="font-medium">Organization:</span>{" "}
-              {ticket.org_id}
+              {ticket.organizations?.name || "Unknown Organization"}
             </p>
 
             <p>
               <span className="font-medium">Site:</span>{" "}
-              {ticket.site_id}
+              {ticket.sites?.name || "Unknown Site"}
             </p>
 
             <p>
               <span className="font-medium">Alert:</span>{" "}
-              {ticket.alert_id || "No linked alert"}
+              {ticket.alerts?.title || "No linked alert"}
             </p>
 
             <p>
               <span className="font-medium">Assigned To:</span>{" "}
-              {ticket.assignee_id || "Unassigned"}
+              {ticket.profiles?.full_name || "Unassigned"}
             </p>
           </div>
         </div>
@@ -136,17 +253,55 @@ export default async function TicketDetailsPage({
         </h2>
 
         <div className="flex flex-wrap gap-3">
-          <button className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700 transition">
+          <button
+            onClick={() => updateStatus("in_progress")}
+            className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700 transition"
+          >
             Mark In Progress
           </button>
 
-          <button className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm hover:bg-green-700 transition">
+          <button
+            onClick={() => updateStatus("resolved")}
+            className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm hover:bg-green-700 transition"
+          >
             Resolve Ticket
           </button>
 
-          <button className="px-4 py-2 rounded-lg bg-gray-800 text-white text-sm hover:bg-black transition">
+          <button
+            onClick={() => updateStatus("closed")}
+            className="px-4 py-2 rounded-lg bg-gray-800 text-white text-sm hover:bg-black transition"
+          >
             Close Ticket
           </button>
+        </div>
+      </div>
+
+      <div className="border rounded-xl p-4 bg-white">
+        <h2 className="text-sm font-medium text-gray-500 mb-4">
+          Activity Timeline
+        </h2>
+
+        <div className="space-y-3">
+          {activities.length === 0 && (
+            <p className="text-sm text-gray-500">
+              No activity yet.
+            </p>
+          )}
+
+          {activities.map((activity) => (
+            <div
+              key={activity.id}
+              className="border rounded-lg p-3"
+            >
+              <p className="text-sm text-gray-900">
+                {activity.message}
+              </p>
+
+              <p className="text-xs text-gray-500 mt-1">
+                {new Date(activity.created_at).toLocaleString()}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
     </div>

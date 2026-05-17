@@ -118,9 +118,19 @@ export interface CleaningLog {
   performed_by: string | null;
   performed_at: string;
   next_due_on: string | null;
+
   remarks: string | null;
+
   before_photo_url: string | null;
   after_photo_url: string | null;
+
+  safety_photo_url: string | null;
+
+  damage_observed: boolean;
+
+  damage_type: string | null;
+
+  damage_photo_url: string | null;
 }
 
 export interface MaintenanceRemark {

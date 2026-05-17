@@ -10,14 +10,68 @@ import { ROLE_LABELS } from "@/lib/permissions";
 import type { Profile } from "@/lib/types";
 
 const NAV = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["super_admin","epc_admin","technician","client"] },
-  { href: "/sites",      label: "Sites",      icon: Building2,      roles: ["super_admin","epc_admin","technician","client"] },
-  { href: "/alerts",     label: "Alerts",     icon: Bell,           roles: ["super_admin","epc_admin","technician","client"] },
-  { href: "/tickets",    label: "Tickets",    icon: Ticket,         roles: ["super_admin","epc_admin","technician","client"] },
-  { href: "/cleaning",   label: "Cleaning",   icon: SprayCan,       roles: ["super_admin","epc_admin","technician","client"] },
-  { href: "/reports",    label: "Reports",    icon: BarChart3,      roles: ["super_admin","epc_admin","client"] },
-  { href: "/users",      label: "Users",      icon: Users,          roles: ["super_admin","epc_admin"] },
-  { href: "/settings",   label: "Settings",   icon: Settings,       roles: ["super_admin","epc_admin"] },
+  {
+    href: "/dashboard",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    roles: ["super_admin", "epc_admin", "technician", "client"],
+  },
+
+  {
+    href: "/sites",
+    label: "Sites",
+    icon: Building2,
+    roles: ["super_admin", "epc_admin", "client"],
+  },
+
+  {
+    href: "/alerts",
+    label: "Alerts",
+    icon: Bell,
+    roles: ["super_admin", "epc_admin", "client"],
+  },
+
+  {
+    href: "/tickets",
+    label: "Tickets",
+    icon: Ticket,
+    roles: ["super_admin", "epc_admin", "client"],
+  },
+
+  {
+    href: "/cleaning",
+    label: "Cleaning",
+    icon: SprayCan,
+    roles: ["super_admin", "epc_admin", "client"],
+  },
+
+  {
+    href: "/technician/cleaning",
+    label: "Cleaning",
+    icon: SprayCan,
+    roles: ["technician"],
+  },
+
+  {
+    href: "/reports",
+    label: "Reports",
+    icon: BarChart3,
+    roles: ["super_admin", "epc_admin", "client"],
+  },
+
+  {
+    href: "/users",
+    label: "Users",
+    icon: Users,
+    roles: ["super_admin", "epc_admin"],
+  },
+
+  {
+    href: "/settings",
+    label: "Settings",
+    icon: Settings,
+    roles: ["super_admin", "epc_admin"],
+  },
 ];
 
 export function Shell({ profile, children }: { profile: Profile; children: React.ReactNode }) {
