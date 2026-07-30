@@ -509,8 +509,8 @@ video {
     --card-foreground: 222 40% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 40% 11%;
-    --primary: 36 92% 46%;
-    --primary-foreground: 28 70% 98%;
+    --primary: 150 70% 22%;
+    --primary-foreground: 150 30% 98%;
     --secondary: 210 40% 96%;
     --secondary-foreground: 222 47% 11%;
     --muted: 210 40% 96%;
@@ -525,7 +525,7 @@ video {
     --warning-foreground: 222 47% 11%;
     --border: 216 24% 90%;
     --input: 216 24% 90%;
-    --ring: 36 92% 46%;
+    --ring: 150 70% 22%;
     --radius: 0.6rem;
     --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", sans-serif;
     --font-display: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
@@ -538,8 +538,8 @@ video {
     --card-foreground: 210 40% 95%;
     --popover: 222 35% 9%;
     --popover-foreground: 210 40% 95%;
-    --primary: 36 95% 55%;
-    --primary-foreground: 28 70% 10%;
+    --primary: 150 70% 45%;
+    --primary-foreground: 150 40% 10%;
     --secondary: 217 32% 15%;
     --secondary-foreground: 210 40% 95%;
     --muted: 217 32% 15%;
@@ -554,7 +554,7 @@ video {
     --warning-foreground: 222 47% 11%;
     --border: 217 32% 17%;
     --input: 217 32% 17%;
-    --ring: 36 95% 55%;
+    --ring: 150 70% 45%;
   }
   * {
   border-color: hsl(var(--border));
@@ -1126,6 +1126,13 @@ video {
 }
 .bg-\[radial-gradient\(ellipse_at_top_left\2c hsl\(36_95\%_55\%\/0\.18\)\2c transparent_60\%\)\2c radial-gradient\(ellipse_at_bottom_right\2c hsl\(200_80\%_50\%\/0\.12\)\2c transparent_60\%\)\] {
   background-image: radial-gradient(ellipse at top left,hsl(36 95% 55%/0.18),transparent 60%),radial-gradient(ellipse at bottom right,hsl(200 80% 50%/0.12),transparent 60%);
+}
+.bg-\[radial-gradient\(ellipse_at_top_left\2c hsl\(150_70\%_45\%\/0\.18\)\2c transparent_60\%\)\2c radial-gradient\(ellipse_at_bottom_right\2c hsl\(200_80\%_50\%\/0\.12\)\2c transparent_60\%\)\] {
+  background-image: radial-gradient(ellipse at top left,hsl(150 70% 45%/0.18),transparent 60%),radial-gradient(ellipse at bottom right,hsl(200 80% 50%/0.12),transparent 60%);
+}
+.object-contain {
+  -o-object-fit: contain;
+     object-fit: contain;
 }
 .p-0 {
   padding: 0px;

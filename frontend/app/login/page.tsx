@@ -19,7 +19,7 @@ import {
 
 import { toast } from "sonner";
 
-import { Sun } from "lucide-react";
+
 
 export default function LoginPage() {
   const router = useRouter();
@@ -100,14 +100,12 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-background">
-      <div className="hidden lg:flex relative bg-[radial-gradient(ellipse_at_top_left,hsl(36_95%_55%/0.18),transparent_60%),radial-gradient(ellipse_at_bottom_right,hsl(200_80%_50%/0.12),transparent_60%)] bg-slate-950 text-white">
+      <div className="hidden lg:flex relative bg-[radial-gradient(ellipse_at_top_left,hsl(150_70%_45%/0.18),transparent_60%),radial-gradient(ellipse_at_bottom_right,hsl(200_80%_50%/0.12),transparent_60%)] bg-slate-950 text-white">
         <div className="absolute inset-0 bg-grid opacity-20" />
 
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-              <Sun className="h-5 w-5 text-primary-foreground" />
-            </div>
+            <img src="/logo-icon.png" alt="Solar Assist Logo" className="h-10 w-10 object-contain" />
 
             <span className="font-display font-semibold text-xl">
               Solar Assist
@@ -185,9 +183,7 @@ export default function LoginPage() {
         >
           <CardHeader>
             <div className="lg:hidden flex items-center gap-2 mb-4">
-              <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
-                <Sun className="h-4 w-4 text-primary-foreground" />
-              </div>
+              <img src="/logo-icon.png" alt="Solar Assist Logo" className="h-9 w-9 object-contain" />
 
               <span className="font-display font-semibold text-lg">
                 Solar Assist

@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { LayoutDashboard, Sun, Building2, Bell, Ticket, SprayCan, BarChart3, Users, Settings, LogOut, User as UserIcon } from "lucide-react";
+import { LayoutDashboard, Building2, Bell, Ticket, SprayCan, BarChart3, Users, Settings, LogOut, User as UserIcon } from "lucide-react";
 import { ROLE_LABELS } from "@/lib/permissions";
 import type { Profile } from "@/lib/types";
 
@@ -91,9 +91,7 @@ export function Shell({ profile, children }: { profile: Profile; children: React
     <div className="min-h-screen flex bg-background">
       <aside className="hidden md:flex w-60 shrink-0 border-r bg-card flex-col" data-testid="sidebar">
         <div className="flex items-center gap-2 px-5 h-16 border-b">
-          <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
-            <Sun className="h-4 w-4 text-primary-foreground" />
-          </div>
+          <img src="/logo-icon.png" alt="Solar Assist Logo" className="h-8 w-8 object-contain" />
           <span className="font-display font-semibold tracking-tight">Solar Assist</span>
         </div>
         <nav className="flex-1 p-3 space-y-1">
@@ -122,9 +120,7 @@ export function Shell({ profile, children }: { profile: Profile; children: React
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-16 border-b bg-card/50 backdrop-blur flex items-center px-4 md:px-6 sticky top-0 z-30">
           <div className="md:hidden mr-2 flex items-center gap-2">
-            <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center">
-              <Sun className="h-3.5 w-3.5 text-primary-foreground" />
-            </div>
+            <img src="/logo-icon.png" alt="Solar Assist Logo" className="h-7 w-7 object-contain" />
             <span className="font-semibold">Solar Assist</span>
           </div>
           <div className="ml-auto flex items-center gap-3">

@@ -11,11 +11,6 @@
       "static/chunks/main-app.js",
       "static/chunks/app/(dashboard)/layout.js"
     ],
-    "/(dashboard)/technician/cleaning/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(dashboard)/technician/cleaning/page.js"
-    ],
     "/(dashboard)/dashboard/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -26,10 +21,45 @@
       "static/chunks/main-app.js",
       "static/chunks/app/login/page.js"
     ],
+    "/(dashboard)/settings/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(dashboard)/settings/page.js"
+    ],
+    "/(dashboard)/users/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(dashboard)/users/page.js"
+    ],
+    "/(dashboard)/reports/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(dashboard)/reports/page.js"
+    ],
     "/(dashboard)/cleaning/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(dashboard)/cleaning/page.js"
+    ],
+    "/(dashboard)/tickets/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(dashboard)/tickets/page.js"
+    ],
+    "/(dashboard)/alerts/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(dashboard)/alerts/page.js"
+    ],
+    "/(dashboard)/sites/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(dashboard)/sites/page.js"
+    ],
+    "/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/page.js"
     ],
     "/_not-found/page": [
       "static/chunks/webpack.js",
