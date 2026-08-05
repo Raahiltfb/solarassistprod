@@ -94,24 +94,24 @@ async function main() {
   console.log("→ organizations");
   const [org1, org2] = await Promise.all([
     sb.from("organizations").insert({ name: "Heliogrid Energy", slug: "heliogrid", primary_color: "#f59e0b" }).select().single(),
-    sb.from("organizations").insert({ name: "SunWave EPC",     slug: "sunwave",   primary_color: "#0ea5e9" }).select().single(),
+    sb.from("organizations").insert({ name: "SunWave EPC", slug: "sunwave", primary_color: "#0ea5e9" }).select().single(),
   ]);
   const org1Id = org1.data!.id, org2Id = org2.data!.id;
 
   console.log("→ demo users");
-  const superId = await upsertUser("super@solarassist.dev",   "Solar@12345", "Sam Superadmin",  "super_admin", null);
-  const admin1  = await upsertUser("admin@heliogrid.dev",     "Solar@12345", "Alex Admin",      "epc_admin",  org1Id);
-  const tech1   = await upsertUser("tech@heliogrid.dev",      "Solar@12345", "Tara Technician", "technician", org1Id);
-  const client1 = await upsertUser("client@heliogrid.dev",    "Solar@12345", "Chris Client",    "client",     org1Id);
+  const superId = await upsertUser("super@solarassist.dev", "Solar@12345", "Sam Superadmin", "super_admin", null);
+  const admin1 = await upsertUser("admin@heliogrid.dev", "Solar@12345", "Alex Admin", "epc_admin", org1Id);
+  const tech1 = await upsertUser("tech@heliogrid.dev", "Solar@12345", "Tara Technician", "technician", org1Id);
+  const client1 = await upsertUser("client@heliogrid.dev", "Solar@12345", "Chris Client", "client", org1Id);
   void superId; void tech1;
 
   console.log("→ sites + assets");
   const sitesSeed = [
-    { org_id: org1Id, name: "Jodhpur Solar Park",   location: "Rajasthan, India",   lat: 26.28, lon: 73.02, cap: 5200 },
-    { org_id: org1Id, name: "Pavagada Plant",        location: "Karnataka, India",   lat: 14.10, lon: 77.27, cap: 3800 },
-    { org_id: org1Id, name: "Bhadla Array 3",        location: "Rajasthan, India",   lat: 27.53, lon: 71.91, cap: 7500 },
-    { org_id: org2Id, name: "Nevada Sunbelt",        location: "Nevada, USA",        lat: 36.17, lon: -115.14, cap: 4500 },
-    { org_id: org2Id, name: "Atacama Phase 2",       location: "Antofagasta, Chile", lat: -23.65, lon: -70.40,  cap: 6200 },
+    { org_id: org1Id, name: "Jodhpur Solar Park", location: "Rajasthan, India", lat: 26.28, lon: 73.02, cap: 5200 },
+    { org_id: org1Id, name: "Pavagada Plant", location: "Karnataka, India", lat: 14.10, lon: 77.27, cap: 3800 },
+    { org_id: org1Id, name: "Bhadla Array 3", location: "Rajasthan, India", lat: 27.53, lon: 71.91, cap: 7500 },
+    { org_id: org2Id, name: "Nevada Sunbelt", location: "Nevada, USA", lat: 36.17, lon: -115.14, cap: 4500 },
+    { org_id: org2Id, name: "Atacama Phase 2", location: "Antofagasta, Chile", lat: -23.65, lon: -70.40, cap: 6200 },
   ];
 
   for (const s of sitesSeed) {

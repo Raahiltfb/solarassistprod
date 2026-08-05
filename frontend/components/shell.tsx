@@ -91,8 +91,8 @@ export function Shell({ profile, children }: { profile: Profile; children: React
     <div className="min-h-screen flex bg-background">
       <aside className="hidden md:flex w-60 shrink-0 border-r bg-card flex-col" data-testid="sidebar">
         <div className="flex items-center gap-2 px-5 h-16 border-b">
-          <img src="/logo-icon.png" alt="Solar Assist Logo" className="h-8 w-8 object-contain" />
-          <span className="font-display font-semibold tracking-tight">Solar Assist</span>
+          <img src="/logo-full.png" alt="Solar Assist Logo" className="h-12 w-12 object-contain" />
+
         </div>
         <nav className="flex-1 p-3 space-y-1">
           {items.map((it) => {
@@ -120,8 +120,8 @@ export function Shell({ profile, children }: { profile: Profile; children: React
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-16 border-b bg-card/50 backdrop-blur flex items-center px-4 md:px-6 sticky top-0 z-30">
           <div className="md:hidden mr-2 flex items-center gap-2">
-            <img src="/logo-icon.png" alt="Solar Assist Logo" className="h-7 w-7 object-contain" />
-            <span className="font-semibold">Solar Assist</span>
+            <img src="/logo-full.png" alt="Solar Assist Logo" className="h-7 w-7 object-contain" />
+
           </div>
           <div className="ml-auto flex items-center gap-3">
             <span className="hidden sm:inline text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">

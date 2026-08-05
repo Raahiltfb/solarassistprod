@@ -54,7 +54,7 @@ export default function LoginPage() {
 
       toast.error(
         error.message ||
-          "Invalid credentials"
+        "Invalid credentials"
       );
 
       return;
@@ -103,13 +103,8 @@ export default function LoginPage() {
       <div className="hidden lg:flex relative bg-[radial-gradient(ellipse_at_top_left,hsl(150_70%_45%/0.18),transparent_60%),radial-gradient(ellipse_at_bottom_right,hsl(200_80%_50%/0.12),transparent_60%)] bg-slate-950 text-white">
         <div className="absolute inset-0 bg-grid opacity-20" />
 
-        <div className="relative z-10 flex flex-col justify-between p-12 w-full">
+        <div className="relative z-10 flex flex-col justify-between p-10 w-full">
           <div className="flex items-center gap-3">
-            <img src="/logo-icon.png" alt="Solar Assist Logo" className="h-10 w-10 object-contain" />
-
-            <span className="font-display font-semibold text-xl">
-              Solar Assist
-            </span>
           </div>
 
           <div className="space-y-6 max-w-md">
@@ -118,14 +113,14 @@ export default function LoginPage() {
               <br />
               Every site.{" "}
               <span className="text-primary">
-                One console.
+                One platform.
               </span>
             </h1>
 
             <p className="text-slate-300 text-base leading-relaxed">
               The unified O&amp;M platform
               for EPCs. Normalize Solis,
-              Growatt, Sungrow and more —
+              Growatt, Sungrow and more -
               get alerts, tickets, cleaning
               workflows and client reports
               out of the box.
@@ -134,10 +129,10 @@ export default function LoginPage() {
             <div className="grid grid-cols-3 gap-6 pt-6">
               <div>
                 <div className="text-2xl font-semibold text-primary">
-                  4.2
+                  10+
                   <span className="text-slate-400 text-base">
                     {" "}
-                    GW
+                    MW
                   </span>
                 </div>
 
@@ -176,18 +171,18 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <div className="flex items-center justify-center p-6 lg:p-12">
+      <div className="relative flex items-center justify-center p-6 lg:p-12">
+        <div className="absolute top-6 right-6 lg:top-10 lg:right-10">
+          <img src="/logo-full.png" alt="Solar Assist Logo" className="h-20 w-20 object-contain" />
+        </div>
+
         <Card
           className="w-full max-w-md border-none shadow-none lg:shadow-sm lg:border"
           data-testid="login-card"
         >
           <CardHeader>
             <div className="lg:hidden flex items-center gap-2 mb-4">
-              <img src="/logo-icon.png" alt="Solar Assist Logo" className="h-9 w-9 object-contain" />
 
-              <span className="font-display font-semibold text-lg">
-                Solar Assist
-              </span>
             </div>
 
             <CardTitle className="text-2xl">
