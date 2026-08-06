@@ -52,6 +52,7 @@ export default async function ReportsPage() {
               <TableHead>Site</TableHead><TableHead className="text-right">Capacity</TableHead>
               <TableHead className="text-right">Expected</TableHead><TableHead className="text-right">Actual</TableHead>
               <TableHead className="text-right">PR</TableHead>
+              <TableHead className="text-right">Savings (₹)</TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {rows.map((r) => (

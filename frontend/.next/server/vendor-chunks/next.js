@@ -1953,17 +1953,6 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpac
 
 /***/ }),
 
-/***/ "(rsc)/./node_modules/next/dist/api/link.js":
-/*!********************************************!*\
-  !*** ./node_modules/next/dist/api/link.js ***!
-  \********************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"default\": () => (/* reexport default from dynamic */ _client_link__WEBPACK_IMPORTED_MODULE_0___default.a)\n/* harmony export */ });\n/* harmony import */ var _client_link__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../client/link */ \"(rsc)/./node_modules/next/dist/client/link.js\");\n/* harmony import */ var _client_link__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_client_link__WEBPACK_IMPORTED_MODULE_0__);\n/* harmony reexport (unknown) */ var __WEBPACK_REEXPORT_OBJECT__ = {};\n/* harmony reexport (unknown) */ for(const __WEBPACK_IMPORT_KEY__ in _client_link__WEBPACK_IMPORTED_MODULE_0__) if(__WEBPACK_IMPORT_KEY__ !== \"default\") __WEBPACK_REEXPORT_OBJECT__[__WEBPACK_IMPORT_KEY__] = () => _client_link__WEBPACK_IMPORTED_MODULE_0__[__WEBPACK_IMPORT_KEY__]\n/* harmony reexport (unknown) */ __webpack_require__.d(__webpack_exports__, __WEBPACK_REEXPORT_OBJECT__);\n\n\n\n//# sourceMappingURL=link.js.map//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiKHJzYykvLi9ub2RlX21vZHVsZXMvbmV4dC9kaXN0L2FwaS9saW5rLmpzIiwibWFwcGluZ3MiOiI7Ozs7Ozs7OztBQUF5QztBQUNWOztBQUUvQiIsInNvdXJjZXMiOlsiL1VzZXJzL3JhYWhpbG1laHRhL0Rlc2t0b3Avc29sYXJhc3Npc3Rwcm9kL2Zyb250ZW5kL25vZGVfbW9kdWxlcy9uZXh0L2Rpc3QvYXBpL2xpbmsuanMiXSwic291cmNlc0NvbnRlbnQiOlsiZXhwb3J0IHsgZGVmYXVsdCB9IGZyb20gJy4uL2NsaWVudC9saW5rJztcbmV4cG9ydCAqIGZyb20gJy4uL2NsaWVudC9saW5rJztcblxuLy8jIHNvdXJjZU1hcHBpbmdVUkw9bGluay5qcy5tYXAiXSwibmFtZXMiOltdLCJpZ25vcmVMaXN0IjpbMF0sInNvdXJjZVJvb3QiOiIifQ==\n//# sourceURL=webpack-internal:///(rsc)/./node_modules/next/dist/api/link.js\n");
-
-/***/ }),
-
 /***/ "(rsc)/./node_modules/next/dist/api/navigation.react-server.js":
 /*!***************************************************************!*\
   !*** ./node_modules/next/dist/api/navigation.react-server.js ***!
@@ -2182,19 +2171,6 @@ eval("\nObject.defineProperty(exports, \"__esModule\", ({\n    value: true\n}));
 
 "use strict";
 eval("\nObject.defineProperty(exports, \"__esModule\", ({\n    value: true\n}));\nObject.defineProperty(exports, \"unstable_rethrow\", ({\n    enumerable: true,\n    get: function() {\n        return unstable_rethrow;\n    }\n}));\nconst _isdynamicusageerror = __webpack_require__(/*! ../../export/helpers/is-dynamic-usage-error */ \"(rsc)/./node_modules/next/dist/export/helpers/is-dynamic-usage-error.js\");\nconst _ispostpone = __webpack_require__(/*! ../../server/lib/router-utils/is-postpone */ \"(rsc)/./node_modules/next/dist/server/lib/router-utils/is-postpone.js\");\nconst _bailouttocsr = __webpack_require__(/*! ../../shared/lib/lazy-dynamic/bailout-to-csr */ \"(rsc)/./node_modules/next/dist/shared/lib/lazy-dynamic/bailout-to-csr.js\");\nconst _isnextroutererror = __webpack_require__(/*! ./is-next-router-error */ \"(rsc)/./node_modules/next/dist/client/components/is-next-router-error.js\");\nfunction unstable_rethrow(error) {\n    if ((0, _isnextroutererror.isNextRouterError)(error) || (0, _bailouttocsr.isBailoutToCSRError)(error) || (0, _isdynamicusageerror.isDynamicUsageError)(error) || (0, _ispostpone.isPostpone)(error)) {\n        throw error;\n    }\n    if (error instanceof Error && 'cause' in error) {\n        unstable_rethrow(error.cause);\n    }\n}\nif ((typeof exports.default === 'function' || typeof exports.default === 'object' && exports.default !== null) && typeof exports.default.__esModule === 'undefined') {\n    Object.defineProperty(exports.default, '__esModule', {\n        value: true\n    });\n    Object.assign(exports.default, exports);\n    module.exports = exports.default;\n} //# sourceMappingURL=unstable-rethrow.js.map\n//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiKHJzYykvLi9ub2RlX21vZHVsZXMvbmV4dC9kaXN0L2NsaWVudC9jb21wb25lbnRzL3Vuc3RhYmxlLXJldGhyb3cuanMiLCJtYXBwaW5ncyI6Ijs7OztvREFZZ0JBOzs7ZUFBQUE7OztpREFab0I7d0NBQ1Q7MENBQ1M7K0NBQ0Y7QUFTM0IsU0FBU0EsaUJBQWlCQyxLQUFjO0lBQzdDLElBQ0VDLENBQUFBLEdBQUFBLG1CQUFBQSxpQkFBQUEsRUFBa0JELFVBQ2xCRSxDQUFBQSxHQUFBQSxjQUFBQSxtQkFBQUEsRUFBb0JGLFVBQ3BCRyxDQUFBQSxHQUFBQSxxQkFBQUEsbUJBQUFBLEVBQW9CSCxVQUNwQkksQ0FBQUEsR0FBQUEsWUFBQUEsVUFBQUEsRUFBV0osUUFDWDtRQUNBLE1BQU1BO0lBQ1I7SUFFQSxJQUFJQSxpQkFBaUJLLFNBQVMsV0FBV0wsT0FBTztRQUM5Q0QsaUJBQWlCQyxNQUFNTSxLQUFLO0lBQzlCO0FBQ0YiLCJzb3VyY2VzIjpbIi9Vc2Vycy9yYWFoaWxtZWh0YS9zcmMvY2xpZW50L2NvbXBvbmVudHMvdW5zdGFibGUtcmV0aHJvdy50cyJdLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgeyBpc0R5bmFtaWNVc2FnZUVycm9yIH0gZnJvbSAnLi4vLi4vZXhwb3J0L2hlbHBlcnMvaXMtZHluYW1pYy11c2FnZS1lcnJvcidcbmltcG9ydCB7IGlzUG9zdHBvbmUgfSBmcm9tICcuLi8uLi9zZXJ2ZXIvbGliL3JvdXRlci11dGlscy9pcy1wb3N0cG9uZSdcbmltcG9ydCB7IGlzQmFpbG91dFRvQ1NSRXJyb3IgfSBmcm9tICcuLi8uLi9zaGFyZWQvbGliL2xhenktZHluYW1pYy9iYWlsb3V0LXRvLWNzcidcbmltcG9ydCB7IGlzTmV4dFJvdXRlckVycm9yIH0gZnJvbSAnLi9pcy1uZXh0LXJvdXRlci1lcnJvcidcblxuLyoqXG4gKiBUaGlzIGZ1bmN0aW9uIHNob3VsZCBiZSB1c2VkIHRvIHJldGhyb3cgaW50ZXJuYWwgTmV4dC5qcyBlcnJvcnMgc28gdGhhdCB0aGV5IGNhbiBiZSBoYW5kbGVkIGJ5IHRoZSBmcmFtZXdvcmsuXG4gKiBXaGVuIHdyYXBwaW5nIGFuIEFQSSB0aGF0IHVzZXMgZXJyb3JzIHRvIGludGVycnVwdCBjb250cm9sIGZsb3csIHlvdSBzaG91bGQgdXNlIHRoaXMgZnVuY3Rpb24gYmVmb3JlIHlvdSBkbyBhbnkgZXJyb3IgaGFuZGxpbmcuXG4gKiBUaGlzIGZ1bmN0aW9uIHdpbGwgcmV0aHJvdyB0aGUgZXJyb3IgaWYgaXQgaXMgYSBOZXh0LmpzIGVycm9yIHNvIGl0IGNhbiBiZSBoYW5kbGVkLCBvdGhlcndpc2UgaXQgd2lsbCBkbyBub3RoaW5nLlxuICpcbiAqIFJlYWQgbW9yZTogW05leHQuanMgRG9jczogYHVuc3RhYmxlX3JldGhyb3dgXShodHRwczovL25leHRqcy5vcmcvZG9jcy9hcHAvYXBpLXJlZmVyZW5jZS9mdW5jdGlvbnMvdW5zdGFibGVfcmV0aHJvdylcbiAqL1xuZXhwb3J0IGZ1bmN0aW9uIHVuc3RhYmxlX3JldGhyb3coZXJyb3I6IHVua25vd24pOiB2b2lkIHtcbiAgaWYgKFxuICAgIGlzTmV4dFJvdXRlckVycm9yKGVycm9yKSB8fFxuICAgIGlzQmFpbG91dFRvQ1NSRXJyb3IoZXJyb3IpIHx8XG4gICAgaXNEeW5hbWljVXNhZ2VFcnJvcihlcnJvcikgfHxcbiAgICBpc1Bvc3Rwb25lKGVycm9yKVxuICApIHtcbiAgICB0aHJvdyBlcnJvclxuICB9XG5cbiAgaWYgKGVycm9yIGluc3RhbmNlb2YgRXJyb3IgJiYgJ2NhdXNlJyBpbiBlcnJvcikge1xuICAgIHVuc3RhYmxlX3JldGhyb3coZXJyb3IuY2F1c2UpXG4gIH1cbn1cbiJdLCJuYW1lcyI6WyJ1bnN0YWJsZV9yZXRocm93IiwiZXJyb3IiLCJpc05leHRSb3V0ZXJFcnJvciIsImlzQmFpbG91dFRvQ1NSRXJyb3IiLCJpc0R5bmFtaWNVc2FnZUVycm9yIiwiaXNQb3N0cG9uZSIsIkVycm9yIiwiY2F1c2UiXSwiaWdub3JlTGlzdCI6W10sInNvdXJjZVJvb3QiOiIifQ==\n//# sourceURL=webpack-internal:///(rsc)/./node_modules/next/dist/client/components/unstable-rethrow.js\n");
-
-/***/ }),
-
-/***/ "(rsc)/./node_modules/next/dist/client/link.js":
-/*!***********************************************!*\
-  !*** ./node_modules/next/dist/client/link.js ***!
-  \***********************************************/
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-const { createProxy } = __webpack_require__(/*! next/dist/build/webpack/loaders/next-flight-loader/module-proxy */ "(rsc)/./node_modules/next/dist/build/webpack/loaders/next-flight-loader/module-proxy.js")
-
-module.exports = createProxy("/Users/raahilmehta/Desktop/solarassistprod/frontend/node_modules/next/dist/client/link.js")
-
 
 /***/ }),
 

@@ -49,13 +49,13 @@ export default function AlertsPage() {
         <Select value={severity} onValueChange={setSeverity}>
           <SelectTrigger className="w-40" data-testid="alert-severity-filter"><SelectValue placeholder="Severity" /></SelectTrigger>
           <SelectContent>
-            {["all","critical","high","medium","low"].map((s) => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
+            {["all", "critical", "high", "medium", "low"].map((s) => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={status} onValueChange={setStatus}>
           <SelectTrigger className="w-40"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
-            {["all","open","acknowledged","resolved"].map((s) => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
+            {["all", "open", "acknowledged", "resolved"].map((s) => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
