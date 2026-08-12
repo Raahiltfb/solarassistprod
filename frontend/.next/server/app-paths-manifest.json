@@ -1,8 +1,6 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/(dashboard)/alerts/page": "app/(dashboard)/alerts/page.js",
-  "/(dashboard)/settings/page": "app/(dashboard)/settings/page.js",
-  "/(dashboard)/cleaning/page": "app/(dashboard)/cleaning/page.js",
-  "/(dashboard)/users/page": "app/(dashboard)/users/page.js",
-  "/(dashboard)/reports/page": "app/(dashboard)/reports/page.js"
+  "/api/cron/poll-oem/route": "app/api/cron/poll-oem/route.js",
+  "/(dashboard)/dashboard/page": "app/(dashboard)/dashboard/page.js",
+  "/(dashboard)/sites/page": "app/(dashboard)/sites/page.js",
+  "/(dashboard)/sites/[id]/page": "app/(dashboard)/sites/[id]/page.js"
 }

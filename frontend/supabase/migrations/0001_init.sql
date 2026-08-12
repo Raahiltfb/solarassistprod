@@ -124,7 +124,12 @@ create table if not exists public.telemetry (
   dc_power_kw numeric(10,3) not null default 0,
   energy_kwh numeric(12,3) not null default 0,
   efficiency_pct numeric(6,2) not null default 0,
-  temperature_c numeric(6,2) not null default 0
+  temperature_c numeric(6,2) not null default 0,
+  daily_generation_kwh numeric,
+  total_generation_kwh numeric,
+  specific_yield numeric,
+  online_status boolean,
+  last_update timestamptz
 );
 create index if not exists idx_telemetry_inv_time on public.telemetry(inverter_id, timestamp desc);
 
@@ -356,3 +361,32 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
 after insert on auth.users
 for each row execute function public.handle_new_user();
+
+-- ─────────────────────────────────────────────────────────
+-- STRING TELEMETRY (Added for Solis Cloud multi-string diagnostics)
+-- ─────────────────────────────────────────────────────────
+create table if not exists public.string_telemetry (
+  id uuid primary key default gen_random_uuid(),
+  string_id uuid not null references public.strings(id) on delete cascade,
+  timestamp timestamptz not null,
+  voltage_v numeric,
+  current_a numeric,
+  power_kw numeric,
+  status text
+);
+
+create index if not exists idx_string_telemetry_string on public.string_telemetry(string_id);
+create index if not exists idx_string_telemetry_timestamp on public.string_telemetry(timestamp desc);
+
+alter table public.string_telemetry enable row level security;
+
+drop policy if exists str_tel_select on public.string_telemetry;
+create policy str_tel_select on public.string_telemetry for select using (
+  public.is_super_admin() or exists (
+    select 1 from public.strings str
+    join public.inverters i on i.id = str.inverter_id
+    join public.sites s on s.id = i.site_id
+    where str.id = string_id and s.org_id = public.current_org()
+  )
+);
+

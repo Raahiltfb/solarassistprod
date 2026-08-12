@@ -1,7 +1,9 @@
 import { solisAdapter } from "./solis";
 import { growattAdapter } from "./growatt";
 import { sungrowAdapter } from "./sungrow";
-import type { OemAdapter, OemProvider } from "./types";
+import type { OemAdapter } from "./types";
+
+export type OemProvider = "solis" | "growatt" | "sungrow";
 
 export const adapters: Record<OemProvider, OemAdapter> = {
   solis: solisAdapter,
@@ -10,4 +12,3 @@ export const adapters: Record<OemProvider, OemAdapter> = {
 };
 
 export type { OemAdapter } from "./types";
-export type OemProvider = "solis" | "growatt" | "sungrow";

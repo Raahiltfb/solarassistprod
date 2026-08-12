@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +17,7 @@ import { formatDateTime } from "@/lib/utils";
 import type { Ticket, Site } from "@/lib/types";
 
 export default function TicketsPage() {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [tickets, setTickets] = useState<any[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [status, setStatus] = useState("all");
   const [q, setQ] = useState("");
@@ -25,13 +26,13 @@ export default function TicketsPage() {
   const sb = createClient();
 
   async function load() {
-    let query = sb.from("tickets").select("*").order("created_at", { ascending: false });
+    let query = sb.from("tickets").select("*, sites(name)").order("created_at", { ascending: false });
     if (status !== "all") query = query.eq("status", status);
     const [{ data: t }, { data: s }] = await Promise.all([query, sb.from("sites").select("id,name,org_id,location,capacity_kwp,status,latitude,longitude,commissioned_on,cleaning_cycle_days,last_cleaned_on,client_id,timezone,created_at")]);
-    setTickets((t as Ticket[]) ?? []);
+    setTickets(t ?? []);
     setSites((s as Site[]) ?? []);
   }
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [status]);
+  useEffect(() => { load(); }, [status]);
 
   async function create() {
     if (!form.title || !form.site_id) return toast.error("Title and site are required");
@@ -109,13 +110,23 @@ export default function TicketsPage() {
       <Card><CardContent className="p-0">
         <Table>
           <TableHeader><TableRow>
-            <TableHead>Title</TableHead><TableHead>Priority</TableHead><TableHead>Status</TableHead>
-            <TableHead>SLA due</TableHead><TableHead>Created</TableHead><TableHead></TableHead>
+            <TableHead>Title</TableHead>
+            <TableHead>Site</TableHead>
+            <TableHead>Priority</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>SLA due</TableHead>
+            <TableHead>Created</TableHead>
+            <TableHead></TableHead>
           </TableRow></TableHeader>
           <TableBody>
             {filtered.map((t) => (
               <TableRow key={t.id} data-testid={`ticket-row-${t.id}`}>
-                <TableCell className="max-w-md truncate">{t.title}</TableCell>
+                <TableCell className="max-w-md truncate">
+                  <Link href={`/tickets/${t.id}`} className="font-semibold text-primary hover:underline">
+                    {t.title}
+                  </Link>
+                </TableCell>
+                <TableCell className="text-sm font-medium">{t.sites?.name || "—"}</TableCell>
                 <TableCell><Badge variant="outline" className="uppercase text-[10px]">{t.priority}</Badge></TableCell>
                 <TableCell><Badge variant={t.status === "resolved" || t.status === "closed" ? "success" : t.status === "on_hold" ? "warning" : "secondary"} className="capitalize">{t.status.replace("_"," ")}</Badge></TableCell>
                 <TableCell className="text-xs text-muted-foreground">{t.sla_due_at ? formatDateTime(t.sla_due_at) : "—"}</TableCell>
@@ -128,7 +139,7 @@ export default function TicketsPage() {
                 </TableCell>
               </TableRow>
             ))}
-            {filtered.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">No tickets.</TableCell></TableRow>}
+            {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No tickets.</TableCell></TableRow>}
           </TableBody>
         </Table>
       </CardContent></Card>

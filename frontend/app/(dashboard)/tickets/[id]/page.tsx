@@ -2,6 +2,14 @@
 
 import { use, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { Camera, Image as ImageIcon } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   open: "bg-red-100 text-red-700",
@@ -30,12 +38,16 @@ export default function TicketDetailsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-
   const supabase = createClient();
 
   const [ticket, setTicket] = useState<any>(null);
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Technician log states
+  const [beforePhoto, setBeforePhoto] = useState<string>("");
+  const [afterPhoto, setAfterPhoto] = useState<string>("");
+  const [remarks, setRemarks] = useState<string>("");
 
   useEffect(() => {
     fetchData();
@@ -61,6 +73,9 @@ export default function TicketDetailsPage({
 
     if (data) {
       setTicket(data);
+      setRemarks(data.technician_remarks || "");
+      setBeforePhoto(data.before_photo_url || "");
+      setAfterPhoto(data.after_photo_url || "");
     }
   }
 
@@ -74,6 +89,52 @@ export default function TicketDetailsPage({
     if (data) {
       setActivities(data);
     }
+  }
+
+  async function uploadPhoto(file: File, kind: "before" | "after") {
+    const path = `tickets/${crypto.randomUUID()}-${kind}-${file.name}`;
+    const { error } = await supabase.storage
+      .from("solar-uploads")
+      .upload(path, file, { upsert: true });
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    const { data } = supabase.storage.from("solar-uploads").getPublicUrl(path);
+    
+    if (kind === "before") {
+      setBeforePhoto(data.publicUrl);
+    } else {
+      setAfterPhoto(data.publicUrl);
+    }
+
+    toast.success(`${kind} photo uploaded`);
+  }
+
+  async function saveTechnicianLog() {
+    const { error } = await supabase
+      .from("tickets")
+      .update({
+        before_photo_url: beforePhoto,
+        after_photo_url: afterPhoto,
+        technician_remarks: remarks
+      })
+      .eq("id", id);
+
+    if (error) {
+      return toast.error(error.message);
+    }
+
+    await supabase.from("ticket_activity").insert({
+      ticket_id: id,
+      activity_type: "update",
+      message: "Technician work log updated."
+    });
+
+    toast.success("Technician work log saved");
+    fetchData();
   }
 
   async function updateStatus(status: string) {
@@ -118,14 +179,14 @@ export default function TicketDetailsPage({
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6" data-testid="ticket-details-page">
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">
             {ticket.title}
           </h1>
 
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-2 text-sm text-gray-500 font-mono">
             Ticket ID: {ticket.id}
           </p>
         </div>
@@ -149,14 +210,16 @@ export default function TicketDetailsPage({
             {ticket.priority}
           </span>
 
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-medium ${
-              severityColors[ticket.severity_level] ||
-              "bg-gray-100 text-gray-700"
-            }`}
-          >
-            {ticket.severity_level}
-          </span>
+          {ticket.severity_level && (
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                severityColors[ticket.severity_level] ||
+                "bg-gray-100 text-gray-700"
+              }`}
+            >
+              {ticket.severity_level}
+            </span>
+          )}
         </div>
       </div>
 
@@ -168,49 +231,32 @@ export default function TicketDetailsPage({
 
           <div className="space-y-2 text-sm">
             <p>
-              <span className="font-medium">Ticket Type:</span>{" "}
-              {ticket.ticket_type || "Not set"}
+              <span className="font-medium text-muted-foreground">Ticket Type:</span>{" "}
+              {ticket.ticket_type || "Standard Alert"}
             </p>
 
             <p>
-              <span className="font-medium">Severity:</span>{" "}
+              <span className="font-medium text-muted-foreground">Severity:</span>{" "}
               {ticket.severity_level || "Not set"}
             </p>
 
             <p>
-              <span className="font-medium">Source:</span>{" "}
-              {ticket.source || "Unknown"}
+              <span className="font-medium text-muted-foreground">Source:</span>{" "}
+              {ticket.source || "System Alert"}
             </p>
 
             <p>
-              <span className="font-medium">Auto Resolvable:</span>{" "}
+              <span className="font-medium text-muted-foreground">Auto Resolvable:</span>{" "}
               {ticket.auto_resolvable ? "Yes" : "No"}
             </p>
 
             <p>
-              <span className="font-medium">SLA:</span>{" "}
-              {ticket.resolution_sla_hours
-                ? `${ticket.resolution_sla_hours} hrs`
-                : "Not set"}
-            </p>
-
-            <p>
-              <span className="font-medium">Status:</span>{" "}
-              {ticket.status.replace("_", " ")}
-            </p>
-
-            <p>
-              <span className="font-medium">Priority:</span>{" "}
-              {ticket.priority}
-            </p>
-
-            <p>
-              <span className="font-medium">Created:</span>{" "}
+              <span className="font-medium text-muted-foreground">Created:</span>{" "}
               {new Date(ticket.created_at).toLocaleString()}
             </p>
 
             <p>
-              <span className="font-medium">Resolved:</span>{" "}
+              <span className="font-medium text-muted-foreground">Resolved:</span>{" "}
               {ticket.resolved_at
                 ? new Date(ticket.resolved_at).toLocaleString()
                 : "Not resolved"}
@@ -225,26 +271,86 @@ export default function TicketDetailsPage({
 
           <div className="space-y-2 text-sm">
             <p>
-              <span className="font-medium">Organization:</span>{" "}
+              <span className="font-medium text-muted-foreground">Organization:</span>{" "}
               {ticket.organizations?.name || "Unknown Organization"}
             </p>
 
             <p>
-              <span className="font-medium">Site:</span>{" "}
+              <span className="font-medium text-muted-foreground">Site:</span>{" "}
               {ticket.sites?.name || "Unknown Site"}
             </p>
 
             <p>
-              <span className="font-medium">Alert:</span>{" "}
+              <span className="font-medium text-muted-foreground">Alert:</span>{" "}
               {ticket.alerts?.title || "No linked alert"}
             </p>
 
             <p>
-              <span className="font-medium">Assigned To:</span>{" "}
+              <span className="font-medium text-muted-foreground">Assigned To:</span>{" "}
               {ticket.profiles?.full_name || "Unassigned"}
             </p>
           </div>
         </div>
+      </div>
+
+      {ticket.description && (
+        <Card>
+          <CardContent className="pt-6">
+            <h3 className="text-sm font-medium text-gray-500 mb-2">Description</h3>
+            <p className="text-sm text-gray-700 whitespace-pre-wrap">{ticket.description}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Technician operational work log */}
+      <div className="border rounded-xl p-4 bg-white space-y-4">
+        <h2 className="text-sm font-medium text-gray-500">
+          Technician Operational Log
+        </h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label className="text-xs">Before Work Photo</Label>
+            <Input
+              type="file"
+              accept="image/*"
+              onChange={(e) => e.target.files?.[0] && uploadPhoto(e.target.files[0], "before")}
+            />
+            {beforePhoto && (
+              <a href={beforePhoto} target="_blank" rel="noreferrer" className="text-xs text-primary underline flex items-center gap-1 mt-1">
+                <ImageIcon className="h-3 w-3" /> View uploaded before photo
+              </a>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs">After Work Photo</Label>
+            <Input
+              type="file"
+              accept="image/*"
+              onChange={(e) => e.target.files?.[0] && uploadPhoto(e.target.files[0], "after")}
+            />
+            {afterPhoto && (
+              <a href={afterPhoto} target="_blank" rel="noreferrer" className="text-xs text-primary underline flex items-center gap-1 mt-1">
+                <ImageIcon className="h-3 w-3" /> View uploaded after photo
+              </a>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs">Technician Remarks & Actions Taken</Label>
+          <Textarea
+            placeholder="Describe findings, work completed, parts replaced..."
+            value={remarks}
+            onChange={(e) => setRemarks(e.target.value)}
+            className="h-24"
+          />
+        </div>
+
+        <Button onClick={saveTechnicianLog} size="sm">
+          Save Operational Log
+        </Button>
       </div>
 
       <div className="border rounded-xl p-4 bg-white">

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, BackgroundTasks
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -66,6 +66,32 @@ async def get_status_checks():
     
     return status_checks
 
+from fastapi import Header, HTTPException, status
+
+class SyncRequest(BaseModel):
+    trigger_source: str = "manual"
+
+@api_router.post("/sync", status_code=202)
+async def trigger_manual_sync(
+    background_tasks: BackgroundTasks,
+    payload: SyncRequest = None,
+    authorization: str = Header(None)
+):
+    """Trigger a sync cycle for all active OEM integrations in the background."""
+    cron_secret = os.getenv("CRON_SECRET")
+    if cron_secret:
+        expected = f"Bearer {cron_secret}"
+        if not authorization or authorization != expected:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Unauthorized: Invalid CRON_SECRET token."
+            )
+            
+    trigger_source = payload.trigger_source if payload else "manual"
+    from sync_service import poll_and_sync_all
+    background_tasks.add_task(poll_and_sync_all, trigger_source=trigger_source)
+    return {"status": "accepted", "message": "Synchronization task queued and running in the background"}
+
 # Include the router in the main app
 app.include_router(api_router)
 
@@ -83,6 +109,14 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+import asyncio
+from sync_service import start_polling_loop
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(start_polling_loop())
+    logger.info("Common sync polling background task registered on server startup.")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

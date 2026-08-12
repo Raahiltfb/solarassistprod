@@ -1,6 +1,4 @@
 import { Resend } from "resend";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.RESEND_FROM_EMAIL || "alerts@solar-assist.dev";
 
 export async function sendEmail(opts: { to: string | string[]; subject: string; html: string }) {
@@ -8,6 +6,7 @@ export async function sendEmail(opts: { to: string | string[]; subject: string; 
     console.warn("[resend] RESEND_API_KEY not set — skipping email", opts.subject);
     return { ok: false, skipped: true };
   }
+  const resend = new Resend(process.env.RESEND_API_KEY);
   try {
     const { error } = await resend.emails.send({
       from: `Solar Assist <${FROM}>`,

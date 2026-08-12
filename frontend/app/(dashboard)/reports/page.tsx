@@ -49,8 +49,10 @@ export default async function ReportsPage() {
         <CardContent className="p-0">
           <Table>
             <TableHeader><TableRow>
-              <TableHead>Site</TableHead><TableHead className="text-right">Capacity</TableHead>
-              <TableHead className="text-right">Expected</TableHead><TableHead className="text-right">Actual</TableHead>
+              <TableHead>Site</TableHead>
+              <TableHead className="text-right">Capacity</TableHead>
+              <TableHead className="text-right">Expected</TableHead>
+              <TableHead className="text-right">Actual</TableHead>
               <TableHead className="text-right">PR</TableHead>
               <TableHead className="text-right">Savings (₹)</TableHead>
             </TableRow></TableHeader>
@@ -61,7 +63,10 @@ export default async function ReportsPage() {
                   <TableCell className="text-right font-mono">{Number(r.capacity_kwp).toLocaleString()} kWp</TableCell>
                   <TableCell className="text-right font-mono text-muted-foreground">{kWh(r.expected)}</TableCell>
                   <TableCell className="text-right font-mono">{kWh(r.energy)}</TableCell>
-                  <TableCell className="text-right"><span className={r.pr > 80 ? "text-success" : "text-warning"}>{pct(r.pr)}</span></TableCell>
+                  <TableCell className="text-right">
+                    <span className={r.pr > 80 ? "text-success" : "text-warning"}>{pct(r.pr)}</span>
+                  </TableCell>
+                  <TableCell className="text-right font-mono">₹{Math.round(r.energy * 8).toLocaleString()}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

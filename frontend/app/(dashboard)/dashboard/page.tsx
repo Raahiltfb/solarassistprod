@@ -52,13 +52,18 @@ export default async function DashboardPage() {
   // =========================================================
 
   if (profile.role === "technician") {
-    const { data: sites } = await sb
-      .from("sites")
-      .select("*")
-      .eq("org_id", profile.org_id)
-      .order("name");
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
 
-    const siteList = sites ?? [];
+    const [sitesRes, completedTodayRes] = await Promise.all([
+      sb.from("sites").select("*").order("name"),
+      sb.from("cleaning_logs")
+        .select("id", { count: "exact", head: true })
+        .gte("performed_at", startOfToday.toISOString())
+    ]);
+
+    const siteList = sitesRes.data ?? [];
+    const completedToday = completedTodayRes.count ?? 0;
 
     const now = Date.now();
 
@@ -156,7 +161,7 @@ export default async function DashboardPage() {
 
           <KpiCard
             label="Completed Today"
-            value="0"
+            value={completedToday}
             sub="Cleaning logs today"
             icon={CheckCircle2}
             accent="success"
@@ -297,56 +302,51 @@ export default async function DashboardPage() {
 
   const [
     sitesRes,
-    alertsRes,
-    ticketsRes,
-    telRes,
     invertersRes,
+    activeAlertsCountRes,
+    openTicketsCountRes,
+    recentAlertsRes,
   ] = await Promise.all([
     sb.from("sites").select(
-      "id, name, location, capacity_kwp, status"
+      "id, name, location, capacity_kwp, status, last_cleaned_on, cleaning_cycle_days"
     ),
-
-    sb
-      .from("alerts")
-      .select(
-        "id, title, severity, status, triggered_at, site_id"
-      )
+    sb.from("inverters").select("id, status, site_id, capacity_kw"),
+    sb.from("alerts").select("id", { count: "exact", head: true }).eq("status", "open"),
+    sb.from("tickets").select("id", { count: "exact", head: true }).in("status", ["open", "in_progress", "on_hold"]),
+    sb.from("alerts")
+      .select("id, title, severity, status, triggered_at, site_id")
       .order("triggered_at", {
         ascending: false,
       })
       .limit(6),
-
-    sb
-      .from("tickets")
-      .select(
-        "id, title, status, priority, created_at"
-      )
-      .order("created_at", {
-        ascending: false,
-      })
-      .limit(6),
-
-    sb
-      .from("telemetry")
-      .select(
-        "timestamp, ac_power_kw, energy_kwh"
-      )
-      .gte(
-        "timestamp",
-        new Date(
-          Date.now() - 24 * 3600_000
-        ).toISOString()
-      )
-      .order("timestamp"),
-
-    sb.from("inverters").select("id, status"),
   ]);
 
   const sites = sitesRes.data ?? [];
-  const alerts = alertsRes.data ?? [];
-  const tickets = ticketsRes.data ?? [];
-  const telemetry = telRes.data ?? [];
   const inverters = invertersRes.data ?? [];
+  const openAlerts = activeAlertsCountRes.count ?? 0;
+  const openTickets = openTicketsCountRes.count ?? 0;
+  const alerts = recentAlertsRes.data ?? [];
+
+  const inverterIds = inverters.map((i) => i.id);
+
+  let latestTelemetry: any[] = [];
+  let telemetryHistory: any[] = [];
+
+  if (inverterIds.length > 0) {
+    const [latestTelsRes, historyRes] = await Promise.all([
+      sb.rpc("get_latest_telemetry", { inverter_ids: inverterIds }),
+      sb.from("telemetry")
+        .select("timestamp, ac_power_kw, daily_generation_kwh, inverter_id")
+        .in("inverter_id", inverterIds)
+        .gte("timestamp", new Date(Date.now() - 24 * 3600_000).toISOString())
+        .order("timestamp", { ascending: false })
+        .limit(400)
+    ]);
+    latestTelemetry = latestTelsRes.data ?? [];
+    telemetryHistory = historyRes.data ?? [];
+  }
+
+  const telemetry = telemetryHistory;
 
   const totalCapacity = sites.reduce(
     (s, x) =>
@@ -354,17 +354,63 @@ export default async function DashboardPage() {
     0
   );
 
-  const openAlerts = alerts.filter(
-    (a) => a.status === "open"
-  ).length;
+  const totalInverters = inverters.length || 1;
 
-  const onlineInverters =
-    inverters.filter(
-      (i) => i.status === "online"
-    ).length;
+  // Aggregate latest telemetry row per inverter
+  const latestInvTelemetryMap = new Map<string, any>();
+  for (const t of latestTelemetry) {
+    if (!latestInvTelemetryMap.has(t.inverter_id)) {
+      latestInvTelemetryMap.set(t.inverter_id, t);
+    }
+  }
 
-  const totalInverters =
-    inverters.length || 1;
+  let currentGeneration = 0;
+  let dailyGeneration = 0;
+  for (const inv of inverters) {
+    const tel = latestInvTelemetryMap.get(inv.id);
+    if (tel) {
+      currentGeneration += Number(tel.ac_power_kw || 0);
+      dailyGeneration += Number(tel.daily_generation_kwh || 0);
+    }
+  }
+
+  const siteInverters = new Map<string, string[]>();
+  for (const inv of inverters) {
+    const list = siteInverters.get(inv.site_id) ?? [];
+    list.push(inv.status);
+    siteInverters.set(inv.site_id, list);
+  }
+
+  let onlineSitesCount = 0;
+  let offlineSitesCount = 0;
+  for (const site of sites) {
+    const statuses = siteInverters.get(site.id) ?? [];
+    if (statuses.length === 0) {
+      if (site.status === "active") onlineSitesCount++;
+      else offlineSitesCount++;
+    } else {
+      if (statuses.some((status) => status === "online")) {
+        onlineSitesCount++;
+      } else {
+        offlineSitesCount++;
+      }
+    }
+  }
+
+  const now = Date.now();
+  let upcomingCleaningsCount = 0;
+  for (const site of sites) {
+    const lastCleaned = site.last_cleaned_on
+      ? new Date(site.last_cleaned_on).getTime()
+      : 0;
+    const daysSinceClean = lastCleaned > 0
+      ? Math.floor((now - lastCleaned) / 86400_000)
+      : 999;
+    const overdueDays = daysSinceClean - site.cleaning_cycle_days;
+    if (overdueDays >= -5) {
+      upcomingCleaningsCount++;
+    }
+  }
 
   const byHour = new Map<string, number>();
 
@@ -399,13 +445,6 @@ export default async function DashboardPage() {
       })
     );
 
-  const totalEnergy24h =
-    telemetry.reduce(
-      (s, t) =>
-        s + Number(t.ac_power_kw),
-      0
-    );
-
   return (
     <div
       className="space-y-6"
@@ -424,47 +463,86 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         <KpiCard
-          label="Installed capacity"
-          value={`${(
-            totalCapacity / 1000
-          ).toFixed(2)} MWp`}
-          sub={`${sites.length} sites`}
+          label="Total Sites"
+          value={sites.length}
+          sub="Configured in fleet"
           icon={Building2}
         />
 
         <KpiCard
-          label="Generation (24h)"
-          value={kWh(totalEnergy24h)}
-          sub="Sum across fleet"
-          icon={Zap}
-          accent="primary"
-        />
-
-        <KpiCard
-          label="Inverters online"
-          value={`${onlineInverters}/${totalInverters}`}
-          sub={`${(
-            (onlineInverters /
-              totalInverters) *
-            100
-          ).toFixed(0)}% availability`}
+          label="Online Sites"
+          value={onlineSitesCount}
+          sub="Active generation"
           icon={Activity}
           accent="success"
         />
 
         <KpiCard
-          label="Open alerts"
+          label="Offline Sites"
+          value={offlineSitesCount}
+          sub="No active inverter"
+          icon={AlertTriangle}
+          accent={offlineSitesCount > 0 ? "destructive" : "success"}
+        />
+
+        <KpiCard
+          label="Total Capacity"
+          value={`${(
+            totalCapacity / 1000
+          ).toFixed(2)} MWp`}
+          sub={`${totalInverters} inverters`}
+          icon={Zap}
+        />
+
+        <KpiCard
+          label="Current Power"
+          value={`${currentGeneration.toFixed(1)} kW`}
+          sub="Sum of active output"
+          icon={Zap}
+          accent="primary"
+        />
+
+        <KpiCard
+          label="Today's Generation"
+          value={kWh(dailyGeneration)}
+          sub="FLEET DAILY ENERGY"
+          icon={Zap}
+          accent="primary"
+        />
+
+        <KpiCard
+          label="Active Alerts"
           value={openAlerts}
-          sub={`${
-            tickets.filter(
-              (t) => t.status === "open"
-            ).length
-          } open tickets`}
+          sub="Awaiting review"
           icon={AlertTriangle}
           accent={
             openAlerts > 0
+              ? "warning"
+              : "success"
+          }
+        />
+
+        <KpiCard
+          label="Open Tickets"
+          value={openTickets}
+          sub="Unresolved cases"
+          icon={Clock}
+          accent={
+            openTickets > 0
+              ? "warning"
+              : "success"
+          }
+        />
+
+        <KpiCard
+          label="Upcoming Cleanings"
+          value={upcomingCleaningsCount}
+          sub="Due / overdue panels"
+          icon={CheckCircle2}
+          accent={
+            upcomingCleaningsCount > 0
               ? "warning"
               : "success"
           }
