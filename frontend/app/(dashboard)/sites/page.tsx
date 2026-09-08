@@ -2,21 +2,26 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MapPin, Zap, AlertTriangle } from "lucide-react";
+import { getSiteStatus } from "@/lib/status-utils";
 import { formatDateTime } from "@/lib/utils";
+import { SitesConfigurationTable } from "@/components/sites/sites-configuration-table";
 
 export default async function SitesPage() {
   const sb = await createClient();
 
-  const [sitesRes, invertersRes, alertsRes] = await Promise.all([
+  const [sitesRes, invertersRes, alertsRes, rulesRes] = await Promise.all([
     sb.from("sites").select("*").order("name"),
-    sb.from("inverters").select("id, status, site_id, capacity_kw"),
+    sb.from("inverters").select("id, status, site_id, capacity_kw, last_seen_at"),
     sb.from("alerts").select("id, site_id").eq("status", "open"),
+    sb.from("site_cleaning_rules").select("*"),
   ]);
 
   const sites = sitesRes.data ?? [];
   const inverters = invertersRes.data ?? [];
   const alerts = alertsRes.data ?? [];
+  const rules = rulesRes.data ?? [];
 
   const inverterIds = inverters.map((inv) => inv.id);
 
@@ -52,7 +57,22 @@ export default async function SitesPage() {
         <p className="text-sm text-muted-foreground mt-1">All installations under your organisation.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <Tabs defaultValue="table" className="space-y-6">
+        <TabsList className="bg-muted p-1">
+          <TabsTrigger value="table" className="text-xs font-semibold px-4">
+            Operational Cleaning Configuration ({sites.length})
+          </TabsTrigger>
+          <TabsTrigger value="grid" className="text-xs font-semibold px-4">
+            Fleet Telemetry Cards ({sites.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="table">
+          <SitesConfigurationTable sites={sites} rules={rules} />
+        </TabsContent>
+
+        <TabsContent value="grid">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {sites.map((s) => {
           const siteInvs = siteInverters.get(s.id) ?? [];
           const siteAlts = siteAlerts.get(s.id) ?? [];
@@ -92,9 +112,21 @@ export default async function SitesPage() {
                     <MapPin className="h-3.5 w-3.5" /> {s.location}
                   </p>
                 </div>
-                <Badge variant={s.status === "active" ? "success" : "secondary"} className="capitalize shrink-0">
-                  {s.status}
-                </Badge>
+                {(() => {
+                  const latestTelemetryTimestampMap = new Map<string, string>();
+                  for (const inv of siteInvs) {
+                    const tel = latestTelemetryMap.get(inv.id);
+                    if (tel?.timestamp) {
+                      latestTelemetryTimestampMap.set(inv.id, tel.timestamp);
+                    }
+                  }
+                  const siteStatus = getSiteStatus(siteInvs, latestTelemetryTimestampMap);
+                  return (
+                    <Badge variant={siteStatus === "ONLINE" ? "success" : siteStatus === "PARTIALLY ONLINE" ? "warning" : "destructive"} className="capitalize shrink-0">
+                      {siteStatus.toLowerCase()}
+                    </Badge>
+                  );
+                })()}
               </CardHeader>
               <CardContent className="pt-4 space-y-4 text-sm">
                 <div className="grid grid-cols-2 gap-x-4 gap-y-3">
@@ -147,7 +179,9 @@ export default async function SitesPage() {
             No sites found under your organisation.
           </div>
         )}
-      </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

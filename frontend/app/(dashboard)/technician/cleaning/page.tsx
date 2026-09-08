@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,18 +28,23 @@ import {
 } from "@/components/ui/dialog";
 
 import { toast } from "sonner";
-import { Camera, AlertTriangle } from "lucide-react";
+import { Camera, AlertTriangle, ArrowLeft } from "lucide-react";
 
 import type { Site } from "@/lib/types";
 
-export default function TechnicianCleaningPage() {
+function CleaningFormContent() {
   const sb = createClient();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const queryWoId = searchParams.get("work_order_id");
+  const querySiteId = searchParams.get("site_id");
 
   const [sites, setSites] = useState<Site[]>([]);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(Boolean(queryWoId));
 
   const [form, setForm] = useState({
-    site_id: "",
+    site_id: querySiteId || "",
     remarks: "",
     safety: "",
     before: "",
@@ -48,6 +54,9 @@ export default function TechnicianCleaningPage() {
     damagePhoto: "",
   });
 
+  const [currentTime, setCurrentTime] = useState<string>("");
+  const [submitting, setSubmitting] = useState(false);
+
   async function loadSites() {
     const { data } = await sb.from("sites").select("*");
 
@@ -56,7 +65,20 @@ export default function TechnicianCleaningPage() {
 
   useEffect(() => {
     loadSites();
-  }, []);
+    setCurrentTime(new Date().toLocaleString());
+    if (querySiteId) {
+      setForm((f) => ({ ...f, site_id: querySiteId }));
+    }
+    if (queryWoId) {
+      setOpen(true);
+    }
+    const timer = setInterval(() => {
+      setCurrentTime(new Date().toLocaleString());
+    }, 10000);
+    return () => clearInterval(timer);
+  }, [querySiteId, queryWoId]);
+
+  const isFormValid = Boolean(form.site_id && form.safety && form.before && form.after);
 
   async function uploadPhoto(
     file: File,
@@ -91,96 +113,115 @@ export default function TechnicianCleaningPage() {
 
   async function submit() {
     if (!form.site_id) {
-      return toast.error("Select a site");
+      return toast.error("Site name is mandatory");
     }
 
     if (!form.safety) {
-      return toast.error("Safety gear photo required");
+      return toast.error("Safety gear photo is mandatory");
     }
 
     if (!form.before) {
-      return toast.error("Before cleaning photo required");
+      return toast.error("Before cleaning photo is mandatory");
     }
 
     if (!form.after) {
-      return toast.error("After cleaning photo required");
+      return toast.error("After cleaning photo is mandatory");
     }
 
-    const {
-      data: { user },
-    } = await sb.auth.getUser();
+    setSubmitting(true);
 
-    const site = sites.find(
-      (s) => s.id === form.site_id
-    );
+    try {
+      const {
+        data: { user },
+      } = await sb.auth.getUser();
 
-    const nextDue = site
-      ? new Date(
-          Date.now() +
-            site.cleaning_cycle_days * 86400_000
-        )
-          .toISOString()
-          .slice(0, 10)
-      : null;
+      const site = sites.find(
+        (s) => s.id === form.site_id
+      );
 
-    const { error } = await sb
-      .from("cleaning_logs")
-      .insert({
-        site_id: form.site_id,
-        performed_by: user?.id ?? null,
-        performed_at: new Date().toISOString(),
-        next_due_on: nextDue,
+      const nextDue = site
+        ? new Date(
+            Date.now() +
+              site.cleaning_cycle_days * 86400_000
+          )
+            .toISOString()
+            .slice(0, 10)
+        : null;
 
-        remarks: form.remarks,
+      const completedAtIso = new Date().toISOString();
 
-        safety_photo_url: form.safety,
+      const { error } = await sb
+        .from("cleaning_logs")
+        .insert({
+          site_id: form.site_id,
+          work_order_id: queryWoId || null,
+          performed_by: user?.id ?? null,
+          performed_at: completedAtIso,
+          next_due_on: nextDue,
+          remarks: form.remarks,
+          safety_photo_url: form.safety,
+          before_photo_url: form.before,
+          after_photo_url: form.after,
+          damage_observed: form.damageObserved,
+          damage_type: form.damageObserved ? form.damageType : null,
+          damage_photo_url: form.damageObserved ? form.damagePhoto : null,
+        });
 
-        before_photo_url: form.before,
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
 
-        after_photo_url: form.after,
+      await sb
+        .from("sites")
+        .update({
+          last_cleaned_on: new Date()
+            .toISOString()
+            .slice(0, 10),
+        })
+        .eq("id", form.site_id);
 
-        damage_observed: form.damageObserved,
+      // If originated from a Work Order, mark the work order completed
+      if (queryWoId) {
+        const { error: woErr } = await sb
+          .from("work_orders")
+          .update({
+            status: "completed",
+            completed_at: completedAtIso,
+            updated_at: completedAtIso,
+          })
+          .eq("id", queryWoId);
 
-        damage_type:
-          form.damageObserved
-            ? form.damageType
-            : null,
+        if (woErr) {
+          console.error("Failed to update work order status:", woErr);
+        } else {
+          toast.success("Work Order completed!");
+        }
+      }
 
-        damage_photo_url:
-          form.damageObserved
-            ? form.damagePhoto
-            : null,
+      toast.success("Cleaning logged successfully");
+
+      setOpen(false);
+
+      setForm({
+        site_id: "",
+        remarks: "",
+        safety: "",
+        before: "",
+        after: "",
+        damageObserved: false,
+        damageType: "",
+        damagePhoto: "",
       });
 
-    if (error) {
-      return toast.error(error.message);
+      loadSites();
+
+      if (queryWoId) {
+        router.push(`/work-orders/${queryWoId}`);
+      }
+    } finally {
+      setSubmitting(false);
     }
-
-    await sb
-      .from("sites")
-      .update({
-        last_cleaned_on: new Date()
-          .toISOString()
-          .slice(0, 10),
-      })
-      .eq("id", form.site_id);
-
-    toast.success("Cleaning logged successfully");
-
-    setOpen(false);
-
-    setForm({
-      site_id: "",
-      remarks: "",
-      safety: "",
-      before: "",
-      after: "",
-      damageObserved: false,
-      damageType: "",
-      damagePhoto: "",
-    });
-
-    loadSites();
   }
 
   const now = Date.now();
@@ -249,8 +290,20 @@ export default function TechnicianCleaningPage() {
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Auto set & uneditable Date & Time of Cleaning */}
             <div className="space-y-2">
-              <Label>Site</Label>
+              <Label>Date & Time of Cleaning</Label>
+              <Input
+                type="text"
+                value={currentTime || new Date().toLocaleString()}
+                disabled
+                className="bg-muted text-muted-foreground cursor-not-allowed font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground">Automatically set to current date and time</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Site Name <span className="text-red-500">*</span></Label>
 
               <Select
                 value={form.site_id}
@@ -280,7 +333,7 @@ export default function TechnicianCleaningPage() {
 
             <div className="space-y-2">
               <Label>
-                Safety Gear Photo *
+                Safety Gear Photo <span className="text-red-500">*</span>
               </Label>
 
               <Input
@@ -296,16 +349,20 @@ export default function TechnicianCleaningPage() {
                 }
               />
 
-              {form.safety && (
-                <p className="text-xs text-green-600">
-                  uploaded ✓
+              {form.safety ? (
+                <p className="text-xs text-green-600 font-medium">
+                  ✓ Safety gear photo uploaded
+                </p>
+              ) : (
+                <p className="text-xs text-amber-600">
+                  Required: Upload photo of safety gear
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
               <Label>
-                Before Cleaning Photo *
+                Before Cleaning Photo <span className="text-red-500">*</span>
               </Label>
 
               <Input
@@ -321,16 +378,20 @@ export default function TechnicianCleaningPage() {
                 }
               />
 
-              {form.before && (
-                <p className="text-xs text-green-600">
-                  uploaded ✓
+              {form.before ? (
+                <p className="text-xs text-green-600 font-medium">
+                  ✓ Before cleaning photo uploaded
+                </p>
+              ) : (
+                <p className="text-xs text-amber-600">
+                  Required: Upload photo of panels before cleaning
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
               <Label>
-                After Cleaning Photo *
+                After Cleaning Photo <span className="text-red-500">*</span>
               </Label>
 
               <Input
@@ -346,16 +407,20 @@ export default function TechnicianCleaningPage() {
                 }
               />
 
-              {form.after && (
-                <p className="text-xs text-green-600">
-                  uploaded ✓
+              {form.after ? (
+                <p className="text-xs text-green-600 font-medium">
+                  ✓ After cleaning photo uploaded
+                </p>
+              ) : (
+                <p className="text-xs text-amber-600">
+                  Required: Upload photo of panels after cleaning
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
               <Label>
-                Damage Observed?
+                Damage Observed? (Optional)
               </Label>
 
               <Select
@@ -391,7 +456,7 @@ export default function TechnicianCleaningPage() {
             {form.damageObserved && (
               <>
                 <div className="space-y-2">
-                  <Label>Damage Type</Label>
+                  <Label>Type of Damage</Label>
 
                   <Select
                     value={form.damageType}
@@ -453,8 +518,8 @@ export default function TechnicianCleaningPage() {
                   />
 
                   {form.damagePhoto && (
-                    <p className="text-xs text-green-600">
-                      uploaded ✓
+                    <p className="text-xs text-green-600 font-medium">
+                      ✓ Damage photo uploaded
                     </p>
                   )}
                 </div>
@@ -477,16 +542,30 @@ export default function TechnicianCleaningPage() {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-col">
             <Button
               onClick={submit}
+              disabled={!isFormValid || submitting}
               className="w-full"
             >
-              Submit Cleaning
+              {submitting ? "Submitting..." : "Log Cleaning"}
             </Button>
+            {!isFormValid && (
+              <p className="text-xs text-center text-muted-foreground">
+                Site selection and all 3 photos (Safety, Before, After) are mandatory to enable submission.
+              </p>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function TechnicianCleaningPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-muted-foreground animate-pulse">Loading cleaning form...</div>}>
+      <CleaningFormContent />
+    </Suspense>
   );
 }

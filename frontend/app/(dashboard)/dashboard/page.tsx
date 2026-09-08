@@ -1,30 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
-
 import Link from "next/link";
-
-import { KpiCard } from "@/components/kpi-card";
-import { GenerationChart } from "@/components/generation-chart";
-
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle, CheckCircle2, Clock, SprayCan, ArrowRight, Building2 } from "lucide-react";
+import { getSiteStatus } from "@/lib/status-utils";
+import { formatDate } from "@/lib/utils";
+import { KpiCard } from "@/components/kpi-card";
 
-import {
-  Zap,
-  Activity,
-  AlertTriangle,
-  Building2,
-  Clock,
-  CheckCircle2,
-  SprayCan,
-} from "lucide-react";
-
-import { kWh, formatDateTime } from "@/lib/utils";
+import { FleetStatusBanner } from "@/components/command-center/fleet-status-banner";
+import { NeedsAttentionQueue } from "@/components/command-center/needs-attention-queue";
+import { TodaysOperationsTracker } from "@/components/command-center/todays-operations-tracker";
+import { FleetActivityFeed } from "@/components/command-center/fleet-activity-feed";
+import { FleetSiteMatrix } from "@/components/command-center/fleet-site-matrix";
+import { PerformanceAnalyticsSection } from "@/components/performance-analytics-section";
 
 export default async function DashboardPage() {
   const sb = await createClient();
@@ -48,9 +37,8 @@ export default async function DashboardPage() {
   }
 
   // =========================================================
-  // TECHNICIAN DASHBOARD
+  // TECHNICIAN DASHBOARD (Keep simple technician execution view)
   // =========================================================
-
   if (profile.role === "technician") {
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
@@ -59,12 +47,11 @@ export default async function DashboardPage() {
       sb.from("sites").select("*").order("name"),
       sb.from("cleaning_logs")
         .select("id", { count: "exact", head: true })
-        .gte("performed_at", startOfToday.toISOString())
+        .gte("performed_at", startOfToday.toISOString()),
     ]);
 
     const siteList = sitesRes.data ?? [];
     const completedToday = completedTodayRes.count ?? 0;
-
     const now = Date.now();
 
     const enrichedSites = siteList.map((site) => {
@@ -73,566 +60,425 @@ export default async function DashboardPage() {
         : 0;
 
       const daysSinceClean =
-        lastCleaned > 0
-          ? Math.floor(
-              (now - lastCleaned) / 86400_000
-            )
-          : 999;
-
-      const overdueDays =
-        daysSinceClean -
-        site.cleaning_cycle_days;
-
-      const nextDueDate =
-        lastCleaned > 0
-          ? new Date(
-              lastCleaned +
-                site.cleaning_cycle_days *
-                  86400_000
-            )
-          : null;
+        lastCleaned > 0 ? Math.floor((now - lastCleaned) / 86400_000) : 999;
+      const overdueDays = daysSinceClean - site.cleaning_cycle_days;
 
       let priority = "normal";
-
-      if (
-        Number(site.capacity_kwp) >= 5000 ||
-        overdueDays >= 5
-      ) {
+      if (Number(site.capacity_kwp) >= 5000 || overdueDays >= 5) {
         priority = "high";
+      } else if (overdueDays >= 0) {
+        priority = "medium";
       }
 
       return {
         ...site,
+        daysSinceClean,
         overdueDays,
-        nextDueDate,
         priority,
       };
     });
 
-    const overdueSites = enrichedSites.filter(
-      (s) => s.overdueDays > 0
-    );
-
+    const overdueSites = enrichedSites.filter((s) => s.overdueDays >= 0);
     const upcomingSites = enrichedSites.filter(
-      (s) =>
-        s.overdueDays <= 0 &&
-        s.overdueDays >= -5
+      (s) => s.overdueDays < 0 && s.overdueDays >= -3
     );
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-6" data-testid="dashboard-page">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Cleaning Operations
+          <h1 className="text-3xl font-display font-semibold tracking-tight">
+            Hello, {profile.full_name || "Technician"}
           </h1>
-
           <p className="text-sm text-muted-foreground mt-1">
-            Cleaning schedules, overdue
-            sites and operational updates.
+            Role: SolarAssist Operations Technician
           </p>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <KpiCard
-            label="Assigned Sites"
-            value={siteList.length}
-            sub="Within your organisation"
-            icon={Building2}
-          />
-
-          <KpiCard
-            label="Overdue"
+            label="Overdue Sites"
             value={overdueSites.length}
-            sub="Require cleaning"
+            sub="Requires immediate cleaning"
             icon={AlertTriangle}
-            accent={
-              overdueSites.length > 0
-                ? "warning"
-                : "success"
-            }
+            accent={overdueSites.length > 0 ? "destructive" : "success"}
           />
-
-          <KpiCard
-            label="Upcoming"
-            value={upcomingSites.length}
-            sub="Due soon"
-            icon={Clock}
-          />
-
           <KpiCard
             label="Completed Today"
             value={completedToday}
-            sub="Cleaning logs today"
+            sub="Logs submitted"
             icon={CheckCircle2}
             accent="success"
           />
+          <KpiCard
+            label="Upcoming Cycle"
+            value={upcomingSites.length}
+            sub="Next 3 days"
+            icon={Clock}
+          />
         </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>
-                Site Cleaning Status
-              </CardTitle>
-
-              <p className="text-sm text-muted-foreground mt-1">
-                Cleaning schedules and
-                overdue tracking.
-              </p>
+        {overdueSites.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="font-semibold text-base text-destructive flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4" /> Overdue Sites ({overdueSites.length})
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {overdueSites.map((site) => (
+                <Card key={site.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-2 border-b flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base font-semibold">{site.name}</CardTitle>
+                      <p className="text-xs text-muted-foreground">{site.location}</p>
+                    </div>
+                    <Badge variant="destructive">
+                      {site.overdueDays === 0 ? "Due Today" : `${site.overdueDays}d Overdue`}
+                    </Badge>
+                  </CardHeader>
+                  <CardContent className="pt-3 space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Capacity:</span>
+                      <span className="font-mono font-medium">{Number(site.capacity_kwp).toLocaleString()} kWp</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Last Cleaned:</span>
+                      <span>{site.last_cleaned_on ? formatDate(site.last_cleaned_on) : "Never"}</span>
+                    </div>
+                    <div className="pt-2 border-t flex justify-end">
+                      <Link href={`/technician/sites/${site.id}`}>
+                        <Button size="sm" className="text-[11px] h-7 gap-1">
+                          Log Cleaning <SprayCan className="h-3 w-3" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
+          </div>
+        )}
 
-            <Link href="/technician/cleaning">
-              <Badge className="cursor-pointer">
-                <SprayCan className="h-3 w-3 mr-1" />
-                Log Cleaning
-              </Badge>
-            </Link>
-          </CardHeader>
-
-          <CardContent className="space-y-4">
-            {enrichedSites.map((site) => {
-              const isOverdue =
-                site.overdueDays > 0;
-
-              return (
-                <div
-                  key={site.id}
-                  className="border rounded-xl p-4 space-y-3"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-medium text-lg">
-                        {site.name}
-                      </h3>
-
-                      <p className="text-sm text-muted-foreground">
-                        {site.location}
-                      </p>
-                    </div>
-
-                    <div className="flex gap-2 flex-wrap">
-                      <Badge
-                        variant={
-                          isOverdue
-                            ? "destructive"
-                            : "secondary"
-                        }
-                      >
-                        {isOverdue
-                          ? `${site.overdueDays} days overdue`
-                          : "Within schedule"}
-                      </Badge>
-
-                      {site.priority ===
-                        "high" && (
-                        <Badge className="bg-orange-500">
-                          High Priority
-                        </Badge>
-                      )}
-                    </div>
+        <div className="space-y-3">
+          <h3 className="font-semibold text-base">All Assigned Sites</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {enrichedSites.map((site) => (
+              <Card key={site.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2 border-b flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base font-semibold">{site.name}</CardTitle>
+                    <p className="text-xs text-muted-foreground">{site.location}</p>
                   </div>
-
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
-                    <div>
-                      <div className="text-muted-foreground">
-                        Capacity
-                      </div>
-
-                      <div className="font-medium">
-                        {site.capacity_kwp} kWp
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-muted-foreground">
-                        Last Cleaned
-                      </div>
-
-                      <div className="font-medium">
-                        {site.last_cleaned_on ??
-                          "Never"}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-muted-foreground">
-                        Next Due
-                      </div>
-
-                      <div className="font-medium">
-                        {site.nextDueDate
-                          ? site.nextDueDate
-                              .toISOString()
-                              .slice(0, 10)
-                          : "Unknown"}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-muted-foreground">
-                        Cleaning Cycle
-                      </div>
-
-                      <div className="font-medium">
-                        {
-                          site.cleaning_cycle_days
-                        }{" "}
-                        days
-                      </div>
-                    </div>
+                  <Badge variant={site.priority === "high" ? "destructive" : site.priority === "medium" ? "warning" : "secondary"}>
+                    {site.priority === "high" ? "High Priority" : site.priority === "medium" ? "Medium" : "Normal"}
+                  </Badge>
+                </CardHeader>
+                <CardContent className="pt-3 space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Capacity:</span>
+                    <span className="font-mono font-medium">{Number(site.capacity_kwp).toLocaleString()} kWp</span>
                   </div>
-                </div>
-              );
-            })}
-
-            {enrichedSites.length === 0 && (
-              <div className="text-sm text-muted-foreground text-center py-10">
-                No sites assigned.
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Last Cleaned:</span>
+                    <span>{site.last_cleaned_on ? formatDate(site.last_cleaned_on) : "Never"}</span>
+                  </div>
+                  <div className="pt-2 border-t flex justify-end">
+                    <Link href={`/technician/sites/${site.id}`}>
+                      <Button variant="outline" size="sm" className="text-[11px] h-7 gap-1">
+                        View Details & Log
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
   // =========================================================
-  // ADMIN / CLIENT DASHBOARD
+  // SOLARASSIST OPERATIONS COMMAND CENTER (Admin / EPC / Coordinator)
   // =========================================================
+  const todayStr = new Date().toISOString().split("T")[0];
 
   const [
     sitesRes,
     invertersRes,
-    activeAlertsCountRes,
-    openTicketsCountRes,
-    recentAlertsRes,
+    ticketsRes,
+    workOrdersRes,
+    dailyRoutesRes,
+    techniciansRes,
+    alertsRes,
+    cleaningLogsRes,
   ] = await Promise.all([
-    sb.from("sites").select(
-      "id, name, location, capacity_kwp, status, last_cleaned_on, cleaning_cycle_days"
-    ),
-    sb.from("inverters").select("id, status, site_id, capacity_kw"),
-    sb.from("alerts").select("id", { count: "exact", head: true }).eq("status", "open"),
-    sb.from("tickets").select("id", { count: "exact", head: true }).in("status", ["open", "in_progress", "on_hold"]),
-    sb.from("alerts")
-      .select("id, title, severity, status, triggered_at, site_id")
-      .order("triggered_at", {
-        ascending: false,
-      })
-      .limit(6),
+    sb
+      .from("sites")
+      .select(
+        "id, org_id, name, location, latitude, longitude, capacity_kwp, commissioned_on, cleaning_cycle_days, last_cleaned_on, next_cleaning_date, cleaning_schedule_type, cleaning_schedule_notes, client_id, client_org_id, grid_tariff_inr_per_kwh, status, timezone, created_at"
+      )
+      .order("name"),
+    sb
+      .from("inverters")
+      .select("id, site_id, oem, oem_device_id, model, serial_number, capacity_kw, string_count, status, last_seen_at, installed_on"),
+    sb
+      .from("tickets")
+      .select("*, sites(name), alerts(id, code, title)")
+      .order("created_at", { ascending: false }),
+    sb
+      .from("work_orders")
+      .select("*, sites(name), profiles!work_orders_technician_id_fkey(full_name)")
+      .order("created_at", { ascending: false }),
+    sb
+      .from("daily_routes")
+      .select("*, profiles!daily_routes_technician_id_fkey(full_name, base_address), route_stops(*, work_orders(*, sites(name)))")
+      .eq("date", todayStr),
+    sb.from("profiles").select("*").eq("role", "technician").order("full_name"),
+    sb.from("alerts").select("*, sites(name)").order("triggered_at", { ascending: false }).limit(20),
+    sb.from("cleaning_logs").select("*, sites(name)").order("performed_at", { ascending: false }).limit(10),
   ]);
 
   const sites = sitesRes.data ?? [];
   const inverters = invertersRes.data ?? [];
-  const openAlerts = activeAlertsCountRes.count ?? 0;
-  const openTickets = openTicketsCountRes.count ?? 0;
-  const alerts = recentAlertsRes.data ?? [];
+  const tickets = ticketsRes.data ?? [];
+  const workOrders = workOrdersRes.data ?? [];
+  const dailyRoutes = dailyRoutesRes.data ?? [];
+  const technicians = techniciansRes.data ?? [];
+  const alerts = alertsRes.data ?? [];
+  const cleaningLogs = cleaningLogsRes.data ?? [];
 
+  // Fetch telemetry snapshots per inverter
   const inverterIds = inverters.map((i) => i.id);
-
   let latestTelemetry: any[] = [];
-  let telemetryHistory: any[] = [];
 
   if (inverterIds.length > 0) {
-    const [latestTelsRes, historyRes] = await Promise.all([
-      sb.rpc("get_latest_telemetry", { inverter_ids: inverterIds }),
-      sb.from("telemetry")
-        .select("timestamp, ac_power_kw, daily_generation_kwh, inverter_id")
-        .in("inverter_id", inverterIds)
-        .gte("timestamp", new Date(Date.now() - 24 * 3600_000).toISOString())
-        .order("timestamp", { ascending: false })
-        .limit(400)
-    ]);
+    const latestTelsRes = await sb.rpc("get_latest_telemetry", { inverter_ids: inverterIds });
     latestTelemetry = latestTelsRes.data ?? [];
-    telemetryHistory = historyRes.data ?? [];
   }
 
-  const telemetry = telemetryHistory;
-
-  const totalCapacity = sites.reduce(
-    (s, x) =>
-      s + Number(x.capacity_kwp || 0),
-    0
-  );
-
-  const totalInverters = inverters.length || 1;
-
-  // Aggregate latest telemetry row per inverter
-  const latestInvTelemetryMap = new Map<string, any>();
+  // Telemetry lookup maps
+  const latestTelemetryMap = new Map<string, any>();
+  const latestTimestampMap = new Map<string, string>();
   for (const t of latestTelemetry) {
-    if (!latestInvTelemetryMap.has(t.inverter_id)) {
-      latestInvTelemetryMap.set(t.inverter_id, t);
-    }
+    latestTelemetryMap.set(t.inverter_id, t);
+    latestTimestampMap.set(t.inverter_id, t.timestamp);
   }
 
-  let currentGeneration = 0;
-  let dailyGeneration = 0;
+  // Calculate live power & energy metrics
+  let currentPowerKw = 0;
+  let todayEnergyKwh = 0;
   for (const inv of inverters) {
-    const tel = latestInvTelemetryMap.get(inv.id);
+    const tel = latestTelemetryMap.get(inv.id);
     if (tel) {
-      currentGeneration += Number(tel.ac_power_kw || 0);
-      dailyGeneration += Number(tel.daily_generation_kwh || 0);
+      currentPowerKw += Number(tel.ac_power_kw || 0);
+      todayEnergyKwh += Number(tel.daily_generation_kwh || 0);
     }
   }
 
-  const siteInverters = new Map<string, string[]>();
+  // Site health & status breakdown
+  const siteInvertersMap = new Map<string, typeof inverters>();
   for (const inv of inverters) {
-    const list = siteInverters.get(inv.site_id) ?? [];
-    list.push(inv.status);
-    siteInverters.set(inv.site_id, list);
+    const list = siteInvertersMap.get(inv.site_id) ?? [];
+    list.push(inv);
+    siteInvertersMap.set(inv.site_id, list);
   }
 
-  let onlineSitesCount = 0;
-  let offlineSitesCount = 0;
+  let onlineSites = 0;
+  let normalSites = 0;
+  let attentionSites = 0;
+  let offlineSites = 0;
+
+  const offlineSitesList: any[] = [];
+
   for (const site of sites) {
-    const statuses = siteInverters.get(site.id) ?? [];
-    if (statuses.length === 0) {
-      if (site.status === "active") onlineSitesCount++;
-      else offlineSitesCount++;
-    } else {
-      if (statuses.some((status) => status === "online")) {
-        onlineSitesCount++;
+    const siteInvs = siteInvertersMap.get(site.id) ?? [];
+    const status = getSiteStatus(siteInvs, latestTimestampMap);
+
+    const siteTickets = tickets.filter((t) => t.site_id === site.id && t.status !== "resolved" && t.status !== "closed");
+    const siteAlerts = alerts.filter((a) => a.site_id === site.id && a.status === "open");
+
+    if (status === "ONLINE" || status === "PARTIALLY ONLINE") {
+      onlineSites++;
+      if (siteTickets.length > 0 || siteAlerts.length > 0 || status === "PARTIALLY ONLINE") {
+        attentionSites++;
       } else {
-        offlineSitesCount++;
+        normalSites++;
+      }
+    } else {
+      offlineSites++;
+      attentionSites++;
+      offlineSitesList.push({
+        ...site,
+        offlineInvertersCount: siteInvs.filter((i) => i.status === "offline").length || 1,
+      });
+    }
+  }
+
+  const onlineInverters = inverters.filter((i) => i.status === "online").length;
+  const offlineInverters = inverters.filter((i) => i.status === "offline").length;
+
+  const openTickets = tickets.filter((t) => t.status !== "resolved" && t.status !== "closed");
+  const openAlerts = alerts.filter((a) => a.status === "open");
+
+  // Today's work orders (scheduled, en_route, in_progress, completed)
+  const todayWorkOrders = workOrders.filter((wo) => wo.scheduled_date === todayStr);
+
+  // Concise Cleaning Overview calculation
+  const now = new Date();
+  const next7Days = new Date(now.getTime() + 7 * 86400_000).toISOString().split("T")[0];
+
+  let cleaningsDueThisWeek = 0;
+  let overdueCleanings = 0;
+
+  for (const site of sites) {
+    const targetDate = site.next_cleaning_date;
+    if (targetDate) {
+      if (targetDate < todayStr) overdueCleanings++;
+      else if (targetDate <= next7Days) cleaningsDueThisWeek++;
+    } else if (site.last_cleaned_on && site.cleaning_cycle_days) {
+      const lastCleanedDate = new Date(site.last_cleaned_on);
+      const suggestedDate = new Date(lastCleanedDate.getTime() + site.cleaning_cycle_days * 86400_000)
+        .toISOString()
+        .split("T")[0];
+
+      if (suggestedDate < todayStr) overdueCleanings++;
+      else if (suggestedDate <= next7Days) cleaningsDueThisWeek++;
+    }
+  }
+
+  // Enrich sites for Matrix component
+  const enrichedMatrixSites = sites.map((site) => {
+    const siteInvs = siteInvertersMap.get(site.id) ?? [];
+    let sPower = 0;
+    let sEnergy = 0;
+    for (const inv of siteInvs) {
+      const tel = latestTelemetryMap.get(inv.id);
+      if (tel) {
+        sPower += Number(tel.ac_power_kw || 0);
+        sEnergy += Number(tel.daily_generation_kwh || 0);
       }
     }
-  }
 
-  const now = Date.now();
-  let upcomingCleaningsCount = 0;
-  for (const site of sites) {
-    const lastCleaned = site.last_cleaned_on
-      ? new Date(site.last_cleaned_on).getTime()
-      : 0;
-    const daysSinceClean = lastCleaned > 0
-      ? Math.floor((now - lastCleaned) / 86400_000)
-      : 999;
-    const overdueDays = daysSinceClean - site.cleaning_cycle_days;
-    if (overdueDays >= -5) {
-      upcomingCleaningsCount++;
-    }
-  }
+    const openCount = tickets.filter(
+      (t) => t.site_id === site.id && t.status !== "resolved" && t.status !== "closed"
+    ).length;
 
-  const byHour = new Map<string, number>();
-
-  for (const t of telemetry) {
-    const h =
-      new Date(t.timestamp)
-        .toISOString()
-        .slice(0, 13) + ":00:00Z";
-
-    byHour.set(
-      h,
-      (byHour.get(h) ?? 0) +
-        Number(t.ac_power_kw)
-    );
-  }
-
-  const series = Array.from(
-    byHour.entries()
-  )
-    .sort()
-    .map(
-      ([timestamp, ac_power_kw]) => ({
-        timestamp,
-
-        ac_power_kw:
-          +ac_power_kw.toFixed(2),
-
-        expected:
-          +(ac_power_kw * 1.08).toFixed(
-            2
-          ),
-      })
-    );
+    return {
+      ...site,
+      currentPowerKw: sPower,
+      todayEnergyKwh: sEnergy,
+      openTicketsCount: openCount,
+    };
+  });
 
   return (
-    <div
-      className="space-y-6"
-      data-testid="dashboard-page"
-    >
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="space-y-8 pb-12" data-testid="dashboard-page">
+      {/* Header Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl lg:text-4xl font-display font-semibold tracking-tight">
-            Fleet overview
+          <h1 className="text-3xl lg:text-4xl font-display font-bold tracking-tight text-foreground">
+            Operations Command Center
           </h1>
-
           <p className="text-sm text-muted-foreground mt-1">
-            Real-time generation, health
-            and ops across all sites.
+            Real-time operational monitoring, deduplicated incident queue, route dispatches, and fleet performance.
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        <KpiCard
-          label="Total Sites"
-          value={sites.length}
-          sub="Configured in fleet"
-          icon={Building2}
-        />
+      {/* 1. Fleet Executive Status Banner & Metric Cards */}
+      <FleetStatusBanner
+        totalSites={sites.length}
+        onlineSites={onlineSites}
+        normalSites={normalSites}
+        attentionSites={attentionSites}
+        offlineSites={offlineSites}
+        totalInverters={inverters.length}
+        onlineInverters={onlineInverters}
+        offlineInverters={offlineInverters}
+        openTicketsCount={openTickets.length}
+        openAlertsCount={openAlerts.length}
+        currentPowerKw={currentPowerKw}
+        todayEnergyKwh={todayEnergyKwh}
+      />
 
-        <KpiCard
-          label="Online Sites"
-          value={onlineSitesCount}
-          sub="Active generation"
-          icon={Activity}
-          accent="success"
-        />
+      {/* 2. Needs Attention Deduplicated Incident Queue */}
+      <NeedsAttentionQueue
+        tickets={tickets}
+        workOrders={workOrders}
+        offlineSites={offlineSitesList}
+        alerts={alerts}
+      />
 
-        <KpiCard
-          label="Offline Sites"
-          value={offlineSitesCount}
-          sub="No active inverter"
-          icon={AlertTriangle}
-          accent={offlineSitesCount > 0 ? "destructive" : "success"}
-        />
+      {/* 3. Field Operations & Technician Dispatch Tracker */}
+      <TodaysOperationsTracker
+        dailyRoutes={dailyRoutes}
+        technicians={technicians}
+        todayWorkOrders={todayWorkOrders}
+      />
 
-        <KpiCard
-          label="Total Capacity"
-          value={`${(
-            totalCapacity / 1000
-          ).toFixed(2)} MWp`}
-          sub={`${totalInverters} inverters`}
-          icon={Zap}
-        />
-
-        <KpiCard
-          label="Current Power"
-          value={`${currentGeneration.toFixed(1)} kW`}
-          sub="Sum of active output"
-          icon={Zap}
-          accent="primary"
-        />
-
-        <KpiCard
-          label="Today's Generation"
-          value={kWh(dailyGeneration)}
-          sub="FLEET DAILY ENERGY"
-          icon={Zap}
-          accent="primary"
-        />
-
-        <KpiCard
-          label="Active Alerts"
-          value={openAlerts}
-          sub="Awaiting review"
-          icon={AlertTriangle}
-          accent={
-            openAlerts > 0
-              ? "warning"
-              : "success"
-          }
-        />
-
-        <KpiCard
-          label="Open Tickets"
-          value={openTickets}
-          sub="Unresolved cases"
-          icon={Clock}
-          accent={
-            openTickets > 0
-              ? "warning"
-              : "success"
-          }
-        />
-
-        <KpiCard
-          label="Upcoming Cleanings"
-          value={upcomingCleaningsCount}
-          sub="Due / overdue panels"
-          icon={CheckCircle2}
-          accent={
-            upcomingCleaningsCount > 0
-              ? "warning"
-              : "success"
-          }
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>
-              Generation — last 24 hours
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent>
-            {series.length > 0 ? (
-              <GenerationChart
-                data={series}
-              />
-            ) : (
-              <div className="text-sm text-muted-foreground py-12 text-center">
-                No telemetry yet.
+      {/* 4. Concise Operational Cleaning Summary Card */}
+      <Card className="border shadow-sm bg-gradient-to-r from-card via-card to-amber-500/5">
+        <CardContent className="p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <SprayCan className="h-6 w-6" />
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Recent alerts
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent className="space-y-3">
-            {alerts.length === 0 && (
-              <div className="text-sm text-muted-foreground">
-                All clear.
-              </div>
-            )}
-
-            {alerts.map((a) => (
-              <Link
-                key={a.id}
-                href="/alerts"
-                className="block"
-              >
-                <div className="flex items-start gap-3 p-3 rounded-md hover:bg-accent transition-colors">
-                  <div
-                    className={`h-2 w-2 rounded-full mt-1.5 ${
-                      a.severity ===
-                      "critical"
-                        ? "bg-destructive"
-                        : a.severity ===
-                            "high"
-                          ? "bg-orange-500"
-                          : a.severity ===
-                              "medium"
-                            ? "bg-warning"
-                            : "bg-muted-foreground"
-                    }`}
-                  />
-
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">
-                      {a.title}
-                    </div>
-
-                    <div className="text-xs text-muted-foreground">
-                      {formatDateTime(
-                        a.triggered_at
-                      )}
-                    </div>
-                  </div>
-
-                  <Badge
-                    variant={
-                      a.status === "open"
-                        ? "destructive"
-                        : "secondary"
-                    }
-                    className="shrink-0 capitalize"
-                  >
-                    {a.status}
-                  </Badge>
+              <div className="space-y-0.5">
+                <div className="text-lg font-bold text-foreground">
+                  {cleaningsDueThisWeek + overdueCleanings} Cleanings Scheduled This Week
+                  {overdueCleanings > 0 && (
+                    <span className="text-destructive font-semibold ml-2">
+                      · {overdueCleanings} Overdue
+                    </span>
+                  )}
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Review Option A manual schedules & Option B suggested cycle dates for all 35 operational fleet sites.
+                </p>
+              </div>
+            </div>
+
+            <Button asChild variant="default" size="sm" className="text-xs h-9 gap-1.5">
+              <Link href="/cleaning">
+                <span>Manage Cleaning Schedule</span>
+                <ArrowRight className="h-4 w-4" />
               </Link>
-            ))}
-          </CardContent>
-        </Card>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 5. Fleet Performance Analytics (Reused Baseline Component) */}
+      <Card className="border shadow-sm">
+        <CardHeader className="p-6 pb-2">
+          <CardTitle className="text-lg font-bold">Fleet Production & Generation Analytics</CardTitle>
+          <CardDescription className="text-sm">
+            Fleet-wide energy generation and power output history with Daily, Weekly, Monthly, Yearly, and Lifetime range controls.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-6 pt-2">
+          <PerformanceAnalyticsSection
+            isPortfolio={true}
+            initialInverterIds={inverterIds}
+            initialTotalCapacity={sites.reduce((sum, s) => sum + Number(s.capacity_kwp || 0), 0)}
+          />
+        </CardContent>
+      </Card>
+
+      {/* 6. Recent Operational Activity Feed & Site Grid Matrix */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-1">
+          <FleetActivityFeed
+            alerts={alerts}
+            tickets={tickets}
+            workOrders={workOrders}
+            cleaningLogs={cleaningLogs}
+          />
+        </div>
+
+        <div className="lg:col-span-2">
+          <FleetSiteMatrix sites={enrichedMatrixSites} inverters={inverters} />
+        </div>
       </div>
     </div>
   );

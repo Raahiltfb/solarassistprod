@@ -138,8 +138,14 @@ export default function AlertsPage() {
                     {a.requires_technician && <div className="text-[10px] text-orange-600 font-medium">Tech Required</div>}
                   </div>
                 </TableCell>
-                <TableCell><Badge variant={a.severity === "critical" ? "destructive" : a.severity === "high" ? "warning" : "secondary"} className="capitalize">{a.severity}</Badge></TableCell>
-                <TableCell className="capitalize">{a.status}</TableCell>
+                <TableCell>
+                  <Badge 
+                    variant={a.status === "open" ? "default" : a.status === "acknowledged" ? "secondary" : "outline"} 
+                    className={`capitalize ${a.status === "resolved" ? "bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300" : ""}`}
+                  >
+                    {a.status}
+                  </Badge>
+                </TableCell>
                 <TableCell className="text-xs text-muted-foreground">{formatDateTime(a.triggered_at)}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1.5">
@@ -148,14 +154,22 @@ export default function AlertsPage() {
                         <Check className="h-3.5 w-3.5 mr-1" /> Ack
                       </Button>
                     )}
-                    {!a.ticket_id ? (
-                      <Button size="sm" variant="outline" className="bg-primary/5 hover:bg-primary/10 border-primary/20" onClick={() => createTicketForAlert(a)}>
-                        <Ticket className="h-3.5 w-3.5 mr-1" /> Ticket
-                      </Button>
+                    {a.status !== "resolved" ? (
+                      !a.ticket_id ? (
+                        <Button size="sm" variant="outline" className="bg-primary/5 hover:bg-primary/10 border-primary/20" onClick={() => createTicketForAlert(a)}>
+                          <Ticket className="h-3.5 w-3.5 mr-1" /> Ticket
+                        </Button>
+                      ) : (
+                        <Badge variant="outline" className="text-xs shrink-0 py-1">
+                          <Link href={`/tickets/${a.ticket_id}`}>View Ticket</Link>
+                        </Badge>
+                      )
                     ) : (
-                      <Badge variant="outline" className="text-xs shrink-0 py-1">
-                        <Link href={`/tickets/${a.ticket_id}`}>View Ticket</Link>
-                      </Badge>
+                      a.ticket_id && (
+                        <Badge variant="outline" className="text-xs shrink-0 py-1">
+                          <Link href={`/tickets/${a.ticket_id}`}>View Ticket</Link>
+                        </Badge>
+                      )
                     )}
                   </div>
                 </TableCell>

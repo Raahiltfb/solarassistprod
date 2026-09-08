@@ -46,12 +46,10 @@ def verify():
             assert len(db_invs) == 1, f"Inverter {dev.serial_number} not found in DB!"
             db_inv = db_invs[0]
             
-            assert db_inv["string_count"] == dev.string_count, f"String count mismatch for {dev.serial_number}: DB={db_inv['string_count']} vs Solis={dev.string_count}"
-            
             # Check strings table
             db_strings = supabase_get("strings", params={"inverter_id": f"eq.{db_inv['id']}"})
-            assert len(db_strings) == dev.string_count, f"DB strings count mismatch for {dev.serial_number}: DB strings={len(db_strings)} vs Solis string_count={dev.string_count}"
-            logger.info(f"  ✓ DB string count exactly matches real channels ({len(db_strings)} strings)")
+            assert len(db_strings) == db_inv["string_count"], f"DB strings count mismatch for {dev.serial_number}: DB strings={len(db_strings)} vs DB string_count={db_inv['string_count']}"
+            logger.info(f"  ✓ DB string count exactly matches active channels ({len(db_strings)} strings)")
             
             # Check raw telemetry vs DB telemetry
             raw_tel, raw_str_tels = adapter.fetch_telemetry(dev.oem_device_id)

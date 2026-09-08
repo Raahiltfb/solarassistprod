@@ -9,6 +9,12 @@ export type TicketPriority = "p1" | "p2" | "p3" | "p4";
 export type OemProvider = "solis" | "growatt" | "sungrow";
 export type InverterStatus = "online" | "offline" | "fault" | "standby";
 
+export type WorkOrderType = "cleaning" | "maintenance" | "inspection" | "alarm_investigation";
+export type WorkOrderStatus = "draft" | "scheduled" | "en_route" | "in_progress" | "completed" | "cancelled";
+export type RouteStatus = "draft" | "optimized" | "published" | "completed";
+export type NotificationChannel = "email" | "sms";
+export type NotificationStatus = "pending" | "sent" | "failed" | "cancelled";
+
 export interface Organization {
   id: string;
   name: string;
@@ -26,6 +32,9 @@ export interface Profile {
   role: Role;
   phone: string | null;
   avatar_url: string | null;
+  base_latitude?: number | null;
+  base_longitude?: number | null;
+  base_address?: string | null;
   created_at: string;
 }
 
@@ -40,7 +49,12 @@ export interface Site {
   commissioned_on: string;
   cleaning_cycle_days: number;
   last_cleaned_on: string | null;
+  next_cleaning_date: string | null;
+  cleaning_schedule_type: "suggested" | "manual" | "approved" | null;
+  cleaning_schedule_notes: string | null;
   client_id: string | null;
+  client_org_id: string | null;
+  grid_tariff_inr_per_kwh: number | null;
   status: "active" | "inactive" | "commissioning";
   timezone: string;
   created_at: string;
@@ -112,24 +126,79 @@ export interface Ticket {
   created_at: string;
 }
 
+export interface WorkOrder {
+  id: string;
+  org_id: string;
+  site_id: string;
+  ticket_id?: string | null;
+  technician_id?: string | null;
+  created_by?: string | null;
+  title: string;
+  description?: string | null;
+  type: WorkOrderType;
+  status: WorkOrderStatus;
+  scheduled_date?: string | null;
+  estimated_duration_mins: number;
+  check_in_at?: string | null;
+  check_in_lat?: number | null;
+  check_in_lng?: number | null;
+  completed_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DailyRoute {
+  id: string;
+  org_id: string;
+  technician_id: string;
+  date: string;
+  status: RouteStatus;
+  start_location_lat?: number | null;
+  start_location_lng?: number | null;
+  total_distance_km: number;
+  total_travel_mins: number;
+  created_at: string;
+}
+
+export interface RouteStop {
+  id: string;
+  route_id: string;
+  work_order_id: string;
+  sequence_order: number;
+  estimated_arrival?: string | null;
+  travel_time_mins: number;
+  distance_km: number;
+  created_at: string;
+}
+
+export interface WorkOrderNotification {
+  id: string;
+  org_id: string;
+  work_order_id: string;
+  recipient_id?: string | null;
+  recipient_email: string;
+  channel: NotificationChannel;
+  event_type: string;
+  status: NotificationStatus;
+  scheduled_for: string;
+  sent_at?: string | null;
+  error_message?: string | null;
+  created_at: string;
+}
+
 export interface CleaningLog {
   id: string;
   site_id: string;
+  work_order_id?: string | null;
   performed_by: string | null;
   performed_at: string;
   next_due_on: string | null;
-
   remarks: string | null;
-
   before_photo_url: string | null;
   after_photo_url: string | null;
-
   safety_photo_url: string | null;
-
   damage_observed: boolean;
-
   damage_type: string | null;
-
   damage_photo_url: string | null;
 }
 
@@ -149,3 +218,89 @@ export interface OemIntegration {
   is_active: boolean;
   last_sync_at: string | null;
 }
+
+export type PlanStatus = "draft" | "review" | "approved" | "published" | "completed";
+export type ConstraintSeverity = "valid" | "warning" | "blocking";
+
+export interface TechnicianTeam {
+  id: string;
+  org_id: string;
+  name: string;
+  base_latitude?: number | null;
+  base_longitude?: number | null;
+  base_address?: string | null;
+  color_code?: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface TechnicianTeamMember {
+  id: string;
+  team_id: string;
+  technician_id: string;
+  created_at: string;
+  profiles?: Profile | null;
+}
+
+export const DEFAULT_SYSTEM_CLEANING_POLICY = {
+  normal_interval_days: 15,
+  monsoon_interval_days: 30,
+  monsoon_start_md: "06-01",
+  monsoon_end_md: "09-30",
+  allowed_weekdays: [1, 2, 3, 4, 5],
+  estimated_cleaning_mins: 90,
+};
+
+export interface SiteCleaningRule {
+  id: string;
+  site_id: string;
+  is_configured: boolean;
+  is_override?: boolean;
+  normal_interval_days: number | null;
+  monsoon_interval_days: number | null;
+  monsoon_start_md: string | null;
+  monsoon_end_md: string | null;
+  allowed_weekdays: number[] | null;
+  blackout_dates: string[] | null;
+  estimated_cleaning_mins: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CleaningPlan {
+  id: string;
+  org_id: string;
+  year: number;
+  month: number;
+  status: PlanStatus;
+  planning_capacity_mins: number;
+  scheduling_tolerance_days: number;
+  notes?: string | null;
+  created_by?: string | null;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  published_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CleaningPlanAssignment {
+  id: string;
+  plan_id: string;
+  site_id: string;
+  team_id: string;
+  target_date: string;
+  scheduled_date: string;
+  sequence_order: number;
+  estimated_cleaning_mins: number;
+  estimated_travel_mins: number;
+  estimated_distance_km: number;
+  constraint_state: ConstraintSeverity;
+  constraint_notes?: string | null;
+  scheduler_rationale?: string | null;
+  created_at: string;
+  updated_at: string;
+  sites?: Site | null;
+  technician_teams?: TechnicianTeam | null;
+}
+

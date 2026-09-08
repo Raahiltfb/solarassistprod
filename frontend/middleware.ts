@@ -20,6 +20,14 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
+  if (role === "client") {
+    if (pathname === "/dashboard" || pathname === "/") {
+      return NextResponse.redirect(
+        new URL("/client", request.url)
+      );
+    }
+  }
+
   if (role === "technician") {
     const isTechnicianRoute =
       pathname.startsWith(

@@ -93,16 +93,15 @@ async function main() {
 
   console.log("→ organizations");
   const [org1, org2] = await Promise.all([
-    sb.from("organizations").insert({ name: "Heliogrid Energy", slug: "heliogrid", primary_color: "#f59e0b" }).select().single(),
+    sb.from("organizations").insert({ name: "SolarAssist O&M", slug: "solarassist", primary_color: "#f59e0b" }).select().single(),
     sb.from("organizations").insert({ name: "SunWave EPC", slug: "sunwave", primary_color: "#0ea5e9" }).select().single(),
   ]);
   const org1Id = org1.data!.id, org2Id = org2.data!.id;
 
   console.log("→ demo users");
   const superId = await upsertUser("super@solarassist.dev", "Solar@12345", "Sam Superadmin", "super_admin", null);
-  const admin1 = await upsertUser("admin@heliogrid.dev", "Solar@12345", "Alex Admin", "epc_admin", org1Id);
-  const tech1 = await upsertUser("tech@heliogrid.dev", "Solar@12345", "Tara Technician", "technician", org1Id);
-  const client1 = await upsertUser("client@heliogrid.dev", "Solar@12345", "Chris Client", "client", org1Id);
+  const admin1 = await upsertUser("admin@solarassist.dev", "Solar@12345", "SolarAssist Admin", "epc_admin", org1Id);
+  const tech1 = await upsertUser("tech@solarassist.dev", "Solar@12345", "SolarAssist Technician", "technician", org1Id);
   void superId; void tech1;
 
   console.log("→ sites + assets");
@@ -120,7 +119,7 @@ async function main() {
       latitude: s.lat, longitude: s.lon, capacity_kwp: s.cap,
       commissioned_on: "2022-06-15", cleaning_cycle_days: 30,
       last_cleaned_on: new Date(Date.now() - (10 + Math.floor(Math.random() * 40)) * 86400_000).toISOString().slice(0, 10),
-      client_id: s.org_id === org1Id ? client1 : null,
+      client_id: null,
     }).select().single();
 
     // 4 inverters per site

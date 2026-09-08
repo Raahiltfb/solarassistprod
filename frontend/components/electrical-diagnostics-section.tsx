@@ -6,7 +6,8 @@ import { format, parseISO, subDays, startOfDay } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Clock, Zap, Activity, Sun } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 
 interface ElectricalProps {
@@ -40,6 +41,39 @@ export function ElectricalDiagnosticsSection({ inverterId, latestTelemetry }: El
     { key: "metrics.dcBus", label: "DC Bus Voltage", unit: "V", stroke: "#10b981" },
     { key: "metrics.dcBusHalf", label: "DC Bus Half Voltage", unit: "V", stroke: "#6366f1" }
   ];
+
+  if (latestTelemetry && latestTelemetry.metrics) {
+    for (let i = 1; i <= 20; i++) {
+      const upv = latestTelemetry.metrics[`mpptUpv${i}`];
+      const ipv = latestTelemetry.metrics[`mpptIpv${i}`];
+      const pow = latestTelemetry.metrics[`mpptPow${i}`];
+      
+      if (upv !== undefined && upv > 0) {
+        dcGroup.push({
+          key: `metrics.mpptUpv${i}`,
+          label: `MPPT ${i} Voltage`,
+          unit: "V",
+          stroke: "#eab308"
+        });
+      }
+      if (ipv !== undefined && ipv > 0) {
+        dcGroup.push({
+          key: `metrics.mpptIpv${i}`,
+          label: `MPPT ${i} Current`,
+          unit: "A",
+          stroke: "#10b981"
+        });
+      }
+      if (pow !== undefined && pow > 0) {
+        dcGroup.push({
+          key: `metrics.mpptPow${i}`,
+          label: `MPPT ${i} Power`,
+          unit: "kW",
+          stroke: "#3b82f6"
+        });
+      }
+    }
+  }
 
   const healthGroup = [
     { key: "temperature_c", label: "Core Temperature", unit: "°C", stroke: "#ef4444" },
@@ -77,6 +111,23 @@ export function ElectricalDiagnosticsSection({ inverterId, latestTelemetry }: El
   const allMetrics = [...acGroup, ...dcGroup, ...healthGroup, ...batteryGroup, ...loadGroup];
   const activeConfig = allMetrics.find((m) => m.key === metric) || acGroup[0];
 
+  const activeMppts: { index: number; upv: number; ipv: number; pow: number }[] = [];
+  if (latestTelemetry && latestTelemetry.metrics) {
+    for (let i = 1; i <= 20; i++) {
+      const upv = latestTelemetry.metrics[`mpptUpv${i}`];
+      const ipv = latestTelemetry.metrics[`mpptIpv${i}`];
+      const pow = latestTelemetry.metrics[`mpptPow${i}`];
+      if (upv > 0 || ipv > 0 || pow > 0) {
+        activeMppts.push({
+          index: i,
+          upv: Number(upv || 0),
+          ipv: Number(ipv || 0),
+          pow: Number(pow || 0)
+        });
+      }
+    }
+  }
+
   useEffect(() => {
     async function loadTelemetry() {
       setLoading(true);
@@ -89,7 +140,7 @@ export function ElectricalDiagnosticsSection({ inverterId, latestTelemetry }: El
 
         const { data } = await sb
           .from("telemetry")
-          .select("*")
+          .select("timestamp, voltage_r_v, voltage_s_v, voltage_t_v, current_r_a, current_s_a, current_t_a, frequency_hz, power_factor, reactive_power_kvar, apparent_power_kva, dc_power_kw, temperature_c, efficiency_pct, battery_soc_pct, battery_soh_pct, battery_power_kw, battery_voltage_v, battery_current_a, load_power_kw, grid_purchased_today_kwh, grid_sell_today_kwh, load_today_kwh, metrics")
           .eq("inverter_id", inverterId)
           .gte("timestamp", startDate.toISOString())
           .order("timestamp", { ascending: true });
@@ -107,7 +158,11 @@ export function ElectricalDiagnosticsSection({ inverterId, latestTelemetry }: El
   function getMetricValue(row: any, keyPath: string) {
     if (keyPath.startsWith("metrics.")) {
       const field = keyPath.split(".")[1];
-      return row.metrics ? Number(row.metrics[field] || 0) : 0;
+      let val = row.metrics ? Number(row.metrics[field] || 0) : 0;
+      if (field.startsWith("mpptPow")) {
+        val = val / 1000.0;
+      }
+      return val;
     }
     return Number(row[keyPath] || 0);
   }
@@ -117,28 +172,12 @@ export function ElectricalDiagnosticsSection({ inverterId, latestTelemetry }: El
     val: getMetricValue(row, activeConfig.key)
   }));
 
-  // Calculate freshness badge status
-  function getFreshnessBadge(lastUpdate: string) {
-    if (!lastUpdate) return <Badge variant="outline">Offline</Badge>;
-    const diffMinutes = (Date.now() - new Date(lastUpdate).getTime()) / 60000;
-    if (diffMinutes < 20) {
-      return <Badge variant="success" className="animate-pulse">Fresh</Badge>;
-    } else if (diffMinutes < 60) {
-      return <Badge variant="warning">Delayed</Badge>;
-    } else if (diffMinutes < 1440) {
-      return <Badge variant="secondary">Stale</Badge>;
-    } else {
-      return <Badge variant="destructive">Offline</Badge>;
-    }
-  }
-
   return (
     <div className="space-y-4" data-testid="electrical-diagnostics-section">
       <div className="flex flex-wrap items-center justify-between gap-4 bg-accent/30 p-3.5 rounded-xl border border-border/40">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Clock className="h-3.5 w-3.5" />
-          <span>Last Updated: <b>{latestTelemetry.timestamp ? formatDateTime(latestTelemetry.timestamp) : "—"}</b></span>
-          {getFreshnessBadge(latestTelemetry.timestamp)}
+          <span>Last updated: <b>{latestTelemetry.timestamp ? formatDateTime(latestTelemetry.timestamp) : "—"}</b></span>
         </div>
 
         <div className="flex items-center gap-1.5">
@@ -154,6 +193,79 @@ export function ElectricalDiagnosticsSection({ inverterId, latestTelemetry }: El
             </Button>
           ))}
         </div>
+      </div>
+
+      {/* Live Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* AC Live Stats */}
+        <Card className="bg-card/40 backdrop-blur border border-border/40 p-4 space-y-3">
+          <div className="flex items-center gap-2 font-semibold text-xs uppercase tracking-wider text-amber-500">
+            <Zap className="h-4 w-4" /> AC Grid Phases
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-xs pt-1">
+            <div>
+              <span className="text-[10px] text-muted-foreground block uppercase">Phase R</span>
+              <span className="font-semibold font-mono text-sm block">{latestTelemetry.voltage_r_v !== null && latestTelemetry.voltage_r_v !== undefined ? `${Number(latestTelemetry.voltage_r_v).toFixed(1)}V` : "—"}</span>
+              <span className="text-muted-foreground font-mono text-[10px] block mt-0.5">{latestTelemetry.current_r_a !== null && latestTelemetry.current_r_a !== undefined ? `${Number(latestTelemetry.current_r_a).toFixed(2)}A` : "—"}</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-muted-foreground block uppercase">Phase S</span>
+              <span className="font-semibold font-mono text-sm block">{latestTelemetry.voltage_s_v !== null && latestTelemetry.voltage_s_v !== undefined ? `${Number(latestTelemetry.voltage_s_v).toFixed(1)}V` : "—"}</span>
+              <span className="text-muted-foreground font-mono text-[10px] block mt-0.5">{latestTelemetry.current_s_a !== null && latestTelemetry.current_s_a !== undefined ? `${Number(latestTelemetry.current_s_a).toFixed(2)}A` : "—"}</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-muted-foreground block uppercase">Phase T</span>
+              <span className="font-semibold font-mono text-sm block">{latestTelemetry.voltage_t_v !== null && latestTelemetry.voltage_t_v !== undefined ? `${Number(latestTelemetry.voltage_t_v).toFixed(1)}V` : "—"}</span>
+              <span className="text-muted-foreground font-mono text-[10px] block mt-0.5">{latestTelemetry.current_t_a !== null && latestTelemetry.current_t_a !== undefined ? `${Number(latestTelemetry.current_t_a).toFixed(2)}A` : "—"}</span>
+            </div>
+          </div>
+          <div className="flex justify-between items-center pt-2.5 border-t border-border/30 text-xs">
+            <span className="text-muted-foreground">Grid Frequency</span>
+            <span className="font-semibold font-mono text-sm">{latestTelemetry.frequency_hz !== null && latestTelemetry.frequency_hz !== undefined ? `${Number(latestTelemetry.frequency_hz).toFixed(2)} Hz` : "—"}</span>
+          </div>
+        </Card>
+
+        {/* DC Input & Bus Stats */}
+        <Card className="bg-card/40 backdrop-blur border border-border/40 p-4 space-y-3">
+          <div className="flex items-center gap-2 font-semibold text-xs uppercase tracking-wider text-amber-500">
+            <Activity className="h-4 w-4" /> DC Inputs & Bus
+          </div>
+          <div className="space-y-2 text-xs pt-1">
+            <div className="flex justify-between items-center border-b border-border/10 pb-1.5">
+              <span className="text-muted-foreground">Total DC Power</span>
+              <span className="font-semibold font-mono text-sm text-amber-500">{latestTelemetry.dc_power_kw !== null && latestTelemetry.dc_power_kw !== undefined ? `${Number(latestTelemetry.dc_power_kw).toFixed(2)} kW` : "—"}</span>
+            </div>
+            <div className="flex justify-between items-center border-b border-border/10 pb-1.5">
+              <span className="text-muted-foreground">DC Bus Voltage</span>
+              <span className="font-semibold font-mono text-sm">{latestTelemetry.metrics?.dcBus !== null && latestTelemetry.metrics?.dcBus !== undefined ? `${Number(latestTelemetry.metrics.dcBus).toFixed(1)} V` : "—"}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">DC Bus Half Voltage</span>
+              <span className="font-semibold font-mono text-sm">{latestTelemetry.metrics?.dcBusHalf !== null && latestTelemetry.metrics?.dcBusHalf !== undefined ? `${Number(latestTelemetry.metrics.dcBusHalf).toFixed(1)} V` : "—"}</span>
+            </div>
+          </div>
+        </Card>
+
+        {/* MPPT Tracker Status */}
+        <Card className="bg-card/40 backdrop-blur border border-border/40 p-4 space-y-3">
+          <div className="flex items-center gap-2 font-semibold text-xs uppercase tracking-wider text-emerald-500">
+            <Sun className="h-4 w-4" /> MPPT Tracker Status
+          </div>
+          <div className="max-h-[110px] overflow-y-auto space-y-1.5 pr-1 scrollbar-thin text-xs pt-1">
+            {activeMppts.length > 0 ? (
+              activeMppts.map(mppt => (
+                <div key={mppt.index} className="flex justify-between items-center border-b border-border/10 pb-1 last:border-0 last:pb-0">
+                  <span className="font-medium text-muted-foreground">MPPT #{mppt.index}</span>
+                  <span className="font-mono text-[11px] font-semibold">
+                    {mppt.upv.toFixed(1)}V / {mppt.ipv.toFixed(2)}A / {(mppt.pow / 1000.0).toFixed(2)}kW
+                  </span>
+                </div>
+              ))
+            ) : (
+              <span className="text-muted-foreground text-xs italic block py-4 text-center">No active MPPT channels.</span>
+            )}
+          </div>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -187,7 +299,7 @@ export function ElectricalDiagnosticsSection({ inverterId, latestTelemetry }: El
             <h5 className="text-sm font-semibold">{activeConfig.label} ({activeConfig.unit})</h5>
             {telemetry.length > 0 && (
               <span className="text-xs font-mono text-muted-foreground">
-                Current: <b>{getMetricValue(telemetry[telemetry.length - 1], activeConfig.key)} {activeConfig.unit}</b>
+                Current: <b>{Number(getMetricValue(telemetry[telemetry.length - 1], activeConfig.key)).toFixed(2)} {activeConfig.unit}</b>
               </span>
             )}
           </div>
@@ -230,7 +342,7 @@ export function ElectricalDiagnosticsSection({ inverterId, latestTelemetry }: El
                         return String(t);
                       }
                     }}
-                    formatter={(v: number) => [`${v} ${activeConfig.unit}`, activeConfig.label]}
+                    formatter={(v: number) => [`${Number(v).toFixed(2)} ${activeConfig.unit}`, activeConfig.label]}
                   />
                   <Area 
                     type="monotone" 

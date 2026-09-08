@@ -88,7 +88,8 @@ class SolisAdapter(OemAdapter):
         return stations
 
     def list_devices(self, plant_id: str) -> List[NormalizedDevice]:
-        res = self._call_solis("/v1/api/inverterList", {"stationId": plant_id, "pageNo": 1, "pageSize": 100})
+        station_id_param = int(plant_id) if str(plant_id).isdigit() else plant_id
+        res = self._call_solis("/v1/api/inverterList", {"stationId": station_id_param, "pageNo": 1, "pageSize": 100})
         devices = []
         if res.get("code") == "0":
             records = res.get("data", {}).get("page", {}).get("records", [])
@@ -102,21 +103,23 @@ class SolisAdapter(OemAdapter):
                 inv_detail_res = self._call_solis("/v1/api/inverterDetail", {"id": inv_oem_id})
                 inv_data = inv_detail_res.get("data", {}) if inv_detail_res.get("code") == "0" else {}
                 
-                state_val = inv_data.get("state") or d.get("state")
-                if state_val == 1 or state_val == "1":
+                state_val = inv_data.get("state") if inv_data.get("state") is not None else d.get("state")
+                pac_val = float(inv_data.get("pac") or d.get("pac") or 0.0)
+                
+                if state_val == 1 or state_val == "1" or pac_val > 0:
                     status = "online"
-                elif state_val == 2 or state_val == "2":
-                    status = "standby"
                 elif state_val == 3 or state_val == "3":
                     status = "fault"
-                else:
+                elif state_val == 2 or state_val == "2":
                     status = "offline"
+                else:
+                    status = "standby" if pac_val == 0 else "online"
                     
                 model = d.get("machine") or d.get("model") or inv_data.get("model") or "Solis Inverter"
                 capacity_kw = float(inv_data.get("power") or d.get("power") or 0.0)
-                dc_input_type = inv_data.get("dcInputType")
+                dc_input_type = inv_data.get("dcInputType") or inv_data.get("dcInputtype")
                 if dc_input_type is None:
-                    dc_input_type = d.get("dcInputType")
+                    dc_input_type = d.get("dcInputType") or d.get("dcInputtype")
                 string_count = int(dc_input_type) + 1 if dc_input_type is not None else 8
                 
                 ts = inv_data.get("dataTimestamp") or inv_data.get("updateTime") or d.get("dataTimestamp")
@@ -202,6 +205,17 @@ class SolisAdapter(OemAdapter):
             "totalFullHour": inv_data.get("totalFullHour"),
         }
         
+        for i in range(1, 21):
+            upv = inv_data.get(f"mpptUpv{i}")
+            ipv = inv_data.get(f"mpptIpv{i}")
+            pow_val = inv_data.get(f"mpptPow{i}")
+            if upv is not None:
+                vendor_metrics[f"mpptUpv{i}"] = float(upv)
+            if ipv is not None:
+                vendor_metrics[f"mpptIpv{i}"] = float(ipv)
+            if pow_val is not None:
+                vendor_metrics[f"mpptPow{i}"] = float(pow_val)
+        
         telemetry = NormalizedTelemetry(
             timestamp=last_seen_at,
             ac_power_kw=ac_power_kw,
@@ -256,18 +270,32 @@ class SolisAdapter(OemAdapter):
             
         return telemetry, string_telemetries
 
-    def fetch_alerts(self, plant_id: str) -> List[NormalizedAlert]:
-        alarm_payload = {
-            "pageNo": "1", 
-            "pageSize": "100", 
-            "stationId": int(plant_id),
-            "state": 0 # Active alarms
-        }
-        res = self._call_solis("/v1/api/alarmList", alarm_payload)
+    def fetch_alerts(self, plant_id: str) -> Optional[List[NormalizedAlert]]:
         alerts = []
-        if res.get("code") == "0":
-            records = res.get("data", {}).get("records", [])
+        page_no = 1
+        page_size = 100
+        has_more = True
+
+        while has_more:
+            alarm_payload = {
+                "pageNo": str(page_no),
+                "pageSize": str(page_size),
+                "stationId": int(plant_id) if str(plant_id).isdigit() else plant_id,
+                "state": 0 # Fetch active alarms specifically so they aren't buried under resolved historical alarms
+            }
+            res = self._call_solis("/v1/api/alarmList", alarm_payload)
+            if not res or res.get("code") != "0":
+                if page_no == 1:
+                    return None
+                break
+                
+            records = res.get("data", {}).get("records", []) if res.get("data") else []
             for alarm in records:
+                # Solis alarm state: '0' or '1' = active alarm, '2' = resolved/restored alarm.
+                state_str = str(alarm.get("state"))
+                if state_str not in ["0", "1"]:
+                    continue  # Skip resolved/restored alarms
+                    
                 code = alarm.get("alarmCode") or "UNKNOWN"
                 title = alarm.get("alarmMsg") or "Fault Detected"
                 description = alarm.get("alarmMsg") or ""
@@ -305,4 +333,10 @@ class SolisAdapter(OemAdapter):
                     requires_technician=True,
                     recommended_action=""
                 ))
+            
+            if len(records) < page_size:
+                has_more = False
+            else:
+                page_no += 1
+                
         return alerts

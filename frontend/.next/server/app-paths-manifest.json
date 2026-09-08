@@ -1,6 +1,11 @@
 {
-  "/api/cron/poll-oem/route": "app/api/cron/poll-oem/route.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/(dashboard)/cleaning/planner/page": "app/(dashboard)/cleaning/planner/page.js",
+  "/(dashboard)/cleaning/page": "app/(dashboard)/cleaning/page.js",
+  "/(dashboard)/client/page": "app/(dashboard)/client/page.js",
   "/(dashboard)/dashboard/page": "app/(dashboard)/dashboard/page.js",
+  "/(dashboard)/client/sites/page": "app/(dashboard)/client/sites/page.js",
   "/(dashboard)/sites/page": "app/(dashboard)/sites/page.js",
-  "/(dashboard)/sites/[id]/page": "app/(dashboard)/sites/[id]/page.js"
+  "/(dashboard)/client/sites/[id]/page": "app/(dashboard)/client/sites/[id]/page.js",
+  "/(dashboard)/work-orders/page": "app/(dashboard)/work-orders/page.js"
 }

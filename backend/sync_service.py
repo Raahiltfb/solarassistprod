@@ -19,7 +19,7 @@ logger = logging.getLogger("sync_service")
 
 # --- SETTINGS ---
 SUPABASE_URL = os.getenv("NEXT_PUBLIC_SUPABASE_URL") or "https://ylnmjvgnjootrkywbcsj.supabase.co"
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlsbm1qdmduam9vdHJreXdiY3NqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2OTU4NywiZXhwIjoyMDkzNjQ1NTg3fQ.955II1P09pciz-r3YQE7ZNWfzcEnkfr0W2oAS5hMGfE"
 
 def get_supabase_headers():
     return {
@@ -72,6 +72,87 @@ def get_adapter_for_integration(integ: dict) -> OemAdapter:
         raise ValueError(f"Unsupported provider: {provider}")
 
 sync_lock = threading.Lock()
+
+SEVERITY_TO_PRIORITY = {
+    "critical": "p1",
+    "high": "p2",
+    "medium": "p3",
+    "low": "p4"
+}
+
+def process_alert_automation_python(alert_row: dict):
+    """Idempotent Python helper to create/associate Ticket and Draft Work Order for actionable alerts."""
+    try:
+        alert_id = alert_row.get("id")
+        requires_technician = alert_row.get("requires_technician", False)
+        status = alert_row.get("status")
+        
+        if not requires_technician or status != "open":
+            logger.info(f"Skipping automation for alert {alert_id}: requires_technician is False or status is not open.")
+            return
+            
+        org_id = alert_row.get("org_id")
+        site_id = alert_row.get("site_id")
+        code = alert_row.get("code")
+        title = alert_row.get("title", "")
+        description = alert_row.get("description", "")
+        severity = alert_row.get("severity", "medium")
+        priority = SEVERITY_TO_PRIORITY.get(severity, "p3")
+        
+        # 1. Idempotent Ticket Lookup / Creation
+        existing_tickets = supabase_get("tickets", params={
+            "alert_id": f"eq.{alert_id}",
+            "status": "in.(open,in_progress,on_hold)"
+        })
+        
+        ticket_id = None
+        if existing_tickets:
+            ticket_id = existing_tickets[0]["id"]
+            logger.info(f"Reusing active Ticket ID {ticket_id} for alert {alert_id}")
+        else:
+            ticket_payload = {
+                "org_id": org_id,
+                "site_id": site_id,
+                "alert_id": alert_id,
+                "title": f"[ALARM] {title}",
+                "description": f"Automated ticket created for alert code {code}. {description}",
+                "status": "open",
+                "priority": priority
+            }
+            res_ticket = supabase_post("tickets", [ticket_payload], headers_override={"Prefer": "return=representation"})
+            if res_ticket:
+                ticket_id = res_ticket[0]["id"]
+                logger.info(f"Created Ticket ID {ticket_id} for alert {alert_id}")
+                
+        if not ticket_id:
+            return
+            
+        # 2. Idempotent Draft Work Order Lookup / Creation
+        existing_wos = supabase_get("work_orders", params={
+            "ticket_id": f"eq.{ticket_id}",
+            "status": "in.(draft,scheduled,en_route,in_progress)"
+        })
+        
+        if existing_wos:
+            logger.info(f"Reusing active Work Order ID {existing_wos[0]['id']} for Ticket {ticket_id}")
+        else:
+            wo_payload = {
+                "org_id": org_id,
+                "site_id": site_id,
+                "ticket_id": ticket_id,
+                "technician_id": None, # Unassigned
+                "title": f"Alarm Investigation: {title}",
+                "description": f"Field investigation task for alert code {code}. {description}\nRecommended Action: {alert_row.get('recommended_action', 'Perform manual inspection.')}",
+                "type": "alarm_investigation",
+                "status": "draft",
+                "scheduled_date": None, # NULL until coordinator dispatches
+                "estimated_duration_mins": 60
+            }
+            res_wo = supabase_post("work_orders", [wo_payload], headers_override={"Prefer": "return=representation"})
+            if res_wo:
+                logger.info(f"Created Draft Work Order ID {res_wo[0]['id']} for Ticket {ticket_id}")
+    except Exception as e:
+        logger.error(f"Error processing alert automation for alert {alert_row.get('id')}: {e}", exc_info=True)
 
 def poll_and_sync_all(trigger_source: str = "manual"):
     """Polls all active OEM integrations, normalizes data, and cleans up demo data safely."""
@@ -270,6 +351,9 @@ def poll_and_sync_all(trigger_source: str = "manual"):
                             telemetry, string_telemetries = adapter.fetch_telemetry(dev.oem_device_id)
                             
                             if telemetry:
+                                if telemetry.timestamp and telemetry.timestamp > dev.last_seen_at:
+                                    supabase_patch("inverters", {"last_seen_at": telemetry.timestamp}, params={"id": f"eq.{inv_id}"})
+                                
                                 # Prevent duplicates check
                                 existing_telemetry = supabase_get("telemetry", params={
                                     "inverter_id": f"eq.{inv_id}",
@@ -380,48 +464,103 @@ def poll_and_sync_all(trigger_source: str = "manual"):
                             
                     # 5. Sync Alerts for the plant
                     alerts = adapter.fetch_alerts(plant_id)
-                    for alert in alerts:
+                    if alerts is None:
+                        logger.warning(f"[Alert Sync] Received null/failed response for plant ID {plant_id}. Skipping alert ingestion/resolution to prevent incorrect state clearance.")
+                    else:
+                        active_alert_keys = set()
+                        for alert in alerts:
+                            try:
+                                # Try parsing device SN from description
+                                device_sn = None
+                                if "(Device SN: " in alert.description:
+                                    device_sn = alert.description.split("(Device SN: ")[1].split(")")[0]
+                                    
+                                inv_id = serial_to_inv_id_map.get(device_sn) if device_sn else None
+                                key = f"{alert.code}:{inv_id or ''}"
+                                active_alert_keys.add(key)
+                                
+                                # Prevent duplicate check
+                                params = {
+                                    "code": f"eq.{alert.code}",
+                                    "status": "eq.open",
+                                    "site_id": f"eq.{site_id}"
+                                }
+                                if inv_id:
+                                    params["inverter_id"] = f"eq.{inv_id}"
+                                else:
+                                    params["inverter_id"] = "is.null"
+                                    
+                                existing_alerts = supabase_get("alerts", params=params)
+                                if not existing_alerts:
+                                    translated = translate_alert(alert.oem, alert.alarm_code, alert.title)
+                                    res_alert = supabase_post("alerts", [{
+                                        "org_id": org_id,
+                                        "site_id": site_id,
+                                        "inverter_id": inv_id,
+                                        "code": alert.code,
+                                        "title": translated.get("title", alert.title),
+                                        "description": alert.description + (f" - {translated.get('description')}" if translated.get('description') else ""),
+                                        "severity": translated.get("severity", alert.severity),
+                                        "status": "open",
+                                        "triggered_at": alert.triggered_at,
+                                        "oem": alert.oem,
+                                        "alarm_code": alert.alarm_code,
+                                        "category": translated.get("category", "inverter"),
+                                        "is_auto_resolvable": translated.get("is_auto_resolvable", False),
+                                        "requires_technician": translated.get("requires_technician", True),
+                                        "recommended_action": translated.get("recommended_action", "")
+                                    }], headers_override={"Prefer": "return=representation"})
+                                    alerts_processed_count += 1
+                                    logger.info(f"Created alert for code {alert.code} under Site {site_id}")
+                                    
+                                    if res_alert:
+                                        process_alert_automation_python(res_alert[0])
+                            except Exception as e:
+                                logger.error(f"Error syncing alert code {alert.code} for station {station.name}: {e}", exc_info=True)
+                                error_count += 1
+
+                        # Auto-resolve database alerts that are no longer reported as active by the Solis API snapshot
                         try:
-                            # Try parsing device SN from description
-                            device_sn = None
-                            if "(Device SN: " in alert.description:
-                                device_sn = alert.description.split("(Device SN: ")[1].split(")")[0]
-                                
-                            inv_id = serial_to_inv_id_map.get(device_sn) if device_sn else None
-                            
-                            # Prevent duplicate check
-                            params = {
-                                "code": f"eq.{alert.code}",
-                                "status": "eq.open",
-                                "site_id": f"eq.{site_id}"
-                            }
-                            if inv_id:
-                                params["inverter_id"] = f"eq.{inv_id}"
-                                
-                            existing_alerts = supabase_get("alerts", params=params)
-                            if not existing_alerts:
-                                translated = translate_alert(alert.oem, alert.alarm_code, alert.title)
-                                supabase_post("alerts", [{
-                                    "org_id": org_id,
-                                    "site_id": site_id,
-                                    "inverter_id": inv_id,
-                                    "code": alert.code,
-                                    "title": translated.get("title", alert.title),
-                                    "description": alert.description + (f" - {translated.get('description')}" if translated.get('description') else ""),
-                                    "severity": translated.get("severity", alert.severity),
-                                    "status": "open",
-                                    "triggered_at": alert.triggered_at,
-                                    "oem": alert.oem,
-                                    "alarm_code": alert.alarm_code,
-                                    "category": translated.get("category", "inverter"),
-                                    "is_auto_resolvable": translated.get("is_auto_resolvable", False),
-                                    "requires_technician": translated.get("requires_technician", True),
-                                    "recommended_action": translated.get("recommended_action", "")
-                                }])
-                                alerts_processed_count += 1
-                                logger.info(f"Created alert for code {alert.code} under Site {site_id}")
+                            db_open_alerts = supabase_get("alerts", params={
+                                "site_id": f"eq.{site_id}",
+                                "status": "eq.open"
+                            })
+                            for db_alert in db_open_alerts:
+                                key = f"{db_alert['code']}:{db_alert.get('inverter_id') or ''}"
+                                if key not in active_alert_keys:
+                                    supabase_patch("alerts", {
+                                        "status": "resolved",
+                                        "resolved_at": datetime.now(timezone.utc).isoformat()
+                                    }, params={"id": f"eq.{db_alert['id']}"})
+                                    logger.info(f"Automatically resolved alert ID: {db_alert['id']} (Code: {db_alert['code']}) for Site {site_id}")
+                                    
+                                    # Conservative Ticket Resolution: Check if remaining alerts or active WOs exist
+                                    try:
+                                        linked_tickets = supabase_get("tickets", params={
+                                            "alert_id": f"eq.{db_alert['id']}",
+                                            "status": "in.(open,in_progress,on_hold)"
+                                        })
+                                        for t in linked_tickets:
+                                            t_id = t["id"]
+                                            remaining_alerts = supabase_get("alerts", params={
+                                                "status": "eq.open",
+                                                "site_id": f"eq.{site_id}",
+                                                "code": f"eq.{db_alert['code']}"
+                                            })
+                                            remaining_wos = supabase_get("work_orders", params={
+                                                "ticket_id": f"eq.{t_id}",
+                                                "status": "in.(draft,scheduled,en_route,in_progress)"
+                                            })
+                                            if not remaining_alerts and not remaining_wos:
+                                                supabase_patch("tickets", {
+                                                    "status": "resolved",
+                                                    "resolved_at": datetime.now(timezone.utc).isoformat()
+                                                }, params={"id": f"eq.{t_id}"})
+                                                logger.info(f"Verified telemetry clearance: Resolved Ticket ID {t_id} after Alert clearance.")
+                                    except Exception as t_err:
+                                        logger.error(f"Error evaluating ticket resolution for alert {db_alert['id']}: {t_err}")
                         except Exception as e:
-                            logger.error(f"Error syncing alert code {alert.code} for station {station.name}: {e}", exc_info=True)
+                            logger.error(f"Error auto-resolving alerts for site {site_id}: {e}", exc_info=True)
                             error_count += 1
                             
                 except Exception as e:

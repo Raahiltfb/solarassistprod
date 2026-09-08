@@ -7,6 +7,7 @@ import { ElectricalDiagnosticsSection } from "@/components/electrical-diagnostic
 import { StringAnalyticsSection } from "@/components/string-analytics-section";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
@@ -22,6 +23,7 @@ import {
   Layers,
   Calendar
 } from "lucide-react";
+import { getInverterStatus } from "@/lib/status-utils";
 import { kWh, formatDate, formatDateTime } from "@/lib/utils";
 
 export default async function InverterDetailsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -67,7 +69,7 @@ export default async function InverterDetailsPage({ params }: { params: Promise<
   const alerts = alertsRes.data ?? [];
   const tickets = ticketsRes.data ?? [];
   const cleaningLogs = cleaningRes.data ?? [];
-  const strings = stringsRes.data ?? [];
+  const strings = (stringsRes.data ?? []).sort((a, b) => Number(a.string_index) - Number(b.string_index));
 
   // Fetch latest string telemetry for live diagnostic values
   let latestStringTelemetry = new Map<string, any>();
@@ -113,9 +115,16 @@ export default async function InverterDetailsPage({ params }: { params: Promise<
   const activeAlertsCount = alerts.filter((a) => a.status === "open").length;
   const unresolvedTicketsCount = tickets.filter((t) => ["open", "in_progress", "on_hold"].includes(t.status)).length;
 
+  const invStatus = getInverterStatus(inverter, latestTelemetry?.timestamp);
+
   return (
     <div className="space-y-6" data-testid="inverter-detail-page">
       <div>
+        <Link href={`/sites/${inverter.site_id}`}>
+          <Button variant="outline" size="sm" className="mb-4 gap-1 text-xs">
+            ← Back to Site
+          </Button>
+        </Link>
         <div className="flex items-center gap-2 text-xs text-muted-foreground uppercase tracking-wider mb-1">
           <Link href={`/sites/${inverter.site_id}`} className="hover:text-primary transition-colors">
             {inverter.sites?.name}
@@ -129,22 +138,21 @@ export default async function InverterDetailsPage({ params }: { params: Promise<
             <p className="text-sm text-muted-foreground mt-1">
               Serial Number: <b className="font-mono">{inverter.serial_number}</b> · OEM: <span className="capitalize">{inverter.oem}</span> · Model: {inverter.model}
             </p>
+            <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
+              Last updated: <span className="font-mono font-medium">{latestTelemetry.timestamp ? formatDateTime(latestTelemetry.timestamp) : "—"}</span>
+            </p>
           </div>
-          <Badge variant={inverter.status === "online" ? "success" : inverter.status === "offline" ? "destructive" : "warning"} className="text-sm capitalize py-1 px-3">
-            {inverter.status}
+          <Badge variant={invStatus === "ONLINE" ? "success" : invStatus === "OFFLINE" ? "destructive" : "warning"} className="text-sm capitalize py-1 px-3">
+            {invStatus === "NO GRID" ? "Online (No Grid)" : invStatus.toLowerCase()}
           </Badge>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <KpiCard label="AC Active Power" value={`${currentPower.toFixed(2)} kW`} sub={`Capacity: ${inverter.capacity_kw} kW`} icon={Zap} accent="primary" />
         <KpiCard label="Today's Generation" value={`${dailyGen.toFixed(1)} kWh`} sub={`Specific Yield: ${specificYieldVal.toFixed(2)} kWh/kWp`} icon={Sun} accent="success" />
         <KpiCard label="Lifetime Generation" value={formatLifetimeGeneration(totalGen)} sub="Total yield over system lifetime" icon={Zap} />
         <KpiCard label="Specific Yield" value={`${specificYieldVal.toFixed(2)} kWh/kWp`} sub="Today's yield ratio" icon={Activity} accent="success" />
-      </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Data Freshness" value={getFreshnessText(latestTelemetry.timestamp)} sub={`Last updated: ${latestTelemetry.timestamp ? formatDateTime(latestTelemetry.timestamp) : '—'}`} icon={Clock} accent={getFreshnessText(latestTelemetry.timestamp) === 'Fresh' ? 'success' : 'warning'} />
         <KpiCard label="Active Alerts" value={activeAlertsCount} sub={`${unresolvedTicketsCount} unresolved tickets`} icon={AlertTriangle} accent={activeAlertsCount > 0 ? "warning" : "success"} />
       </div>
 
@@ -163,7 +171,11 @@ export default async function InverterDetailsPage({ params }: { params: Promise<
         <TabsContent value="performance">
           <Card>
             <CardContent className="pt-6">
-              <PerformanceAnalyticsSection inverterId={id} />
+              <PerformanceAnalyticsSection
+                inverterId={id}
+                initialInverterIds={[id]}
+                initialTotalCapacity={Number(inverter.capacity_kw || 0)}
+              />
             </CardContent>
           </Card>
         </TabsContent>

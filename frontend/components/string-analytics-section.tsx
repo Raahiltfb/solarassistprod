@@ -1,18 +1,36 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 import { format, parseISO, subDays, startOfDay } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+
+const STRING_COLORS = [
+  "#3b82f6", // Blue
+  "#eab308", // Yellow
+  "#10b981", // Green
+  "#ec4899", // Pink
+  "#f97316", // Orange
+  "#8b5cf6", // Purple
+  "#06b6d4", // Cyan
+  "#ef4444", // Red
+  "#a855f7", // Violet
+  "#14b8a6", // Teal
+  "#f43f5e", // Rose
+  "#6366f1", // Indigo
+  "#84cc16", // Lime
+  "#e11d48", // Crimson
+  "#4f46e5"  // Royal Blue
+];
 
 export function StringAnalyticsSection({ inverters }: { inverters: any[] }) {
   const sb = createClient();
 
   const [selectedInvId, setSelectedInvId] = useState<string>(inverters[0]?.id || "");
   const [strings, setStrings] = useState<any[]>([]);
-  const [selectedStrId, setSelectedStrId] = useState<string>("");
+  const [selectedStrIds, setSelectedStrIds] = useState<string[]>([]);
   const [range, setRange] = useState<"today" | "week" | "month" | "year">("today");
   
   const [telemetry, setTelemetry] = useState<any[]>([]);
@@ -33,9 +51,10 @@ export function StringAnalyticsSection({ inverters }: { inverters: any[] }) {
       setStrings(strList);
       
       if (strList.length > 0) {
-        setSelectedStrId(strList[0].id);
+        // Select all strings by default for comprehensive monitoring
+        setSelectedStrIds(strList.map((s) => s.id));
       } else {
-        setSelectedStrId("");
+        setSelectedStrIds([]);
       }
     }
     loadStrings();
@@ -43,7 +62,7 @@ export function StringAnalyticsSection({ inverters }: { inverters: any[] }) {
 
   // Fetch string telemetry when string or range changes
   useEffect(() => {
-    if (!selectedStrId) {
+    if (selectedStrIds.length === 0) {
       setTelemetry([]);
       return;
     }
@@ -58,8 +77,8 @@ export function StringAnalyticsSection({ inverters }: { inverters: any[] }) {
 
         const { data } = await sb
           .from("string_telemetry")
-          .select("*")
-          .eq("string_id", selectedStrId)
+          .select("timestamp, string_id, voltage_v, current_a, power_kw")
+          .in("string_id", selectedStrIds)
           .gte("timestamp", startDate.toISOString())
           .order("timestamp", { ascending: true });
 
@@ -70,20 +89,49 @@ export function StringAnalyticsSection({ inverters }: { inverters: any[] }) {
       setLoading(false);
     }
     loadTelemetry();
-  }, [selectedStrId, range]);
+  }, [selectedStrIds, range]);
 
   const defaultMetrics = [
-    { key: "voltage_v", label: "Voltage", unit: "V", stroke: "#eab308" },
-    { key: "current_a", label: "Current", unit: "A", stroke: "#10b981" },
-    { key: "power_kw", label: "Power", unit: "kW", stroke: "hsl(var(--primary))" }
+    { key: "voltage_v", label: "Voltage", unit: "V" },
+    { key: "current_a", label: "Current", unit: "A" },
+    { key: "power_kw", label: "Power", unit: "kW" }
   ];
 
   const activeMetricConfig = defaultMetrics.find((m) => m.key === metric) || defaultMetrics[0];
 
-  const chartData = telemetry.map((row) => ({
-    timestamp: row.timestamp,
-    val: Number(row[activeMetricConfig.key] || 0)
-  }));
+  // Group telemetry records by timestamp for Recharts overlay
+  const timeMap = new Map<string, Record<string, number>>();
+  for (const r of telemetry) {
+    const strObj = strings.find((s) => s.id === r.string_id);
+    if (!strObj) continue;
+    
+    const label = `String #${strObj.string_index}`;
+    const existing = timeMap.get(r.timestamp) ?? {};
+    existing[label] = Number(r[metric] || 0);
+    timeMap.set(r.timestamp, existing);
+  }
+
+  const chartData = Array.from(timeMap.entries()).map(([timestamp, values]) => ({
+    timestamp,
+    ...values
+  })).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+
+  const toggleStringSelection = (id: string) => {
+    setSelectedStrIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const selectAllStrings = () => {
+    setSelectedStrIds(strings.map((s) => s.id));
+  };
+
+  const clearStringSelection = () => {
+    setSelectedStrIds([]);
+  };
+
+  // Find strings selected for display line elements
+  const selectedStringsInfo = strings.filter((s) => selectedStrIds.includes(s.id));
 
   return (
     <div className="space-y-4" data-testid="string-diagnostics-section">
@@ -103,17 +151,41 @@ export function StringAnalyticsSection({ inverters }: { inverters: any[] }) {
           </div>
 
           {strings.length > 0 && (
-            <div className="w-[120px]">
-              <Select value={selectedStrId} onValueChange={setSelectedStrId}>
-                <SelectTrigger className="h-8"><SelectValue placeholder="Select string" /></SelectTrigger>
-                <SelectContent>
-                  {strings.map((str) => (
-                    <SelectItem key={str.id} value={str.id}>
-                      String #{str.string_index}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex flex-wrap gap-1.5 items-center bg-card/65 px-3 py-1.5 rounded-lg border border-border/50">
+              <span className="text-xs text-muted-foreground mr-1.5 font-medium">Strings:</span>
+              <button 
+                type="button" 
+                onClick={selectAllStrings} 
+                className="h-6 text-[10px] px-1.5 rounded bg-transparent hover:bg-muted font-medium text-muted-foreground hover:text-foreground transition-all"
+              >
+                All
+              </button>
+              <button 
+                type="button" 
+                onClick={clearStringSelection} 
+                className="h-6 text-[10px] px-1.5 rounded bg-transparent hover:bg-muted font-medium text-muted-foreground hover:text-foreground mr-1.5 transition-all"
+              >
+                Clear
+              </button>
+              <div className="flex flex-wrap gap-1">
+                {strings.map((str) => {
+                  const isSelected = selectedStrIds.includes(str.id);
+                  return (
+                    <button
+                      key={str.id}
+                      type="button"
+                      onClick={() => toggleStringSelection(str.id)}
+                      className={`text-xs h-6 px-2.5 rounded font-semibold transition-all duration-150 active:scale-95 ${
+                        isSelected 
+                          ? "bg-primary text-primary-foreground shadow-sm" 
+                          : "bg-background text-muted-foreground border border-border/60 hover:text-foreground hover:bg-accent/40"
+                      }`}
+                    >
+                      #{str.string_index}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -134,7 +206,7 @@ export function StringAnalyticsSection({ inverters }: { inverters: any[] }) {
       </div>
 
       {loading ? (
-        <div className="h-[280px] flex items-center justify-center border border-dashed rounded-xl bg-card">
+        <div className="h-[320px] flex items-center justify-center border border-dashed rounded-xl bg-card">
           <span className="text-xs text-muted-foreground animate-pulse">Loading string telemetry...</span>
         </div>
       ) : telemetry.length > 0 ? (
@@ -153,15 +225,9 @@ export function StringAnalyticsSection({ inverters }: { inverters: any[] }) {
             ))}
           </div>
 
-          <div className="h-[280px]">
+          <div className="h-[320px] bg-card p-4 rounded-xl border border-border/30 shadow-sm">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 8, left: -10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="strMetricGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={activeMetricConfig.stroke} stopOpacity={0.35} />
-                    <stop offset="95%" stopColor={activeMetricConfig.stroke} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
+              <LineChart data={chartData} margin={{ top: 10, right: 8, left: -10, bottom: 0 }}>
                 <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
                 <XAxis 
                   dataKey="timestamp" 
@@ -186,24 +252,35 @@ export function StringAnalyticsSection({ inverters }: { inverters: any[] }) {
                       return String(t);
                     }
                   }}
-                  formatter={(v: number) => [`${v} ${activeMetricConfig.unit}`, activeMetricConfig.label]}
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="val" 
-                  stroke={activeMetricConfig.stroke} 
-                  fill="url(#strMetricGrad)" 
-                  strokeWidth={2} 
+                <Legend 
+                  verticalAlign="top" 
+                  height={36} 
+                  iconType="circle" 
+                  iconSize={8} 
+                  wrapperStyle={{ fontSize: 10, fontWeight: 500 }} 
                 />
-              </AreaChart>
+                {selectedStringsInfo.map((str, idx) => (
+                  <Line 
+                    key={str.id}
+                    type="monotone" 
+                    dataKey={`String #${str.string_index}`}
+                    stroke={STRING_COLORS[idx % STRING_COLORS.length]} 
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 4 }}
+                  />
+                ))}
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
       ) : (
-        <div className="h-[280px] flex items-center justify-center border border-dashed rounded-xl bg-card">
+        <div className="h-[320px] flex items-center justify-center border border-dashed rounded-xl bg-card">
           <span className="text-xs text-muted-foreground">No historical string telemetry found for this time range.</span>
         </div>
       )}
     </div>
   );
 }
+

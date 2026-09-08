@@ -5,67 +5,83 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { LayoutDashboard, Building2, Bell, Ticket, SprayCan, BarChart3, Users, Settings, LogOut, User as UserIcon } from "lucide-react";
+import { LayoutDashboard, Building2, Bell, Ticket, SprayCan, Wrench, Navigation, BarChart3, Users, Settings, LogOut, User as UserIcon } from "lucide-react";
 import { ROLE_LABELS } from "@/lib/permissions";
 import type { Profile } from "@/lib/types";
 
 const NAV = [
   {
+    href: "/client",
+    label: "Portfolio",
+    icon: LayoutDashboard,
+    roles: ["client"],
+  },
+  {
+    href: "/client/sites",
+    label: "My Sites",
+    icon: Building2,
+    roles: ["client"],
+  },
+  {
     href: "/dashboard",
     label: "Dashboard",
     icon: LayoutDashboard,
-    roles: ["super_admin", "epc_admin", "technician", "client"],
+    roles: ["super_admin", "epc_admin", "technician"],
   },
-
+  {
+    href: "/work-orders",
+    label: "Work Orders",
+    icon: Wrench,
+    roles: ["super_admin", "epc_admin", "technician"],
+  },
   {
     href: "/sites",
     label: "Sites",
     icon: Building2,
-    roles: ["super_admin", "epc_admin", "client"],
+    roles: ["super_admin", "epc_admin"],
   },
-
   {
     href: "/alerts",
     label: "Alerts",
     icon: Bell,
-    roles: ["super_admin", "epc_admin", "client"],
+    roles: ["super_admin", "epc_admin"],
   },
-
   {
     href: "/tickets",
     label: "Tickets",
     icon: Ticket,
-    roles: ["super_admin", "epc_admin", "client"],
+    roles: ["super_admin", "epc_admin"],
   },
-
   {
     href: "/cleaning",
     label: "Cleaning",
     icon: SprayCan,
-    roles: ["super_admin", "epc_admin", "client"],
+    roles: ["super_admin", "epc_admin"],
   },
-
+  {
+    href: "/workforce",
+    label: "Workforce",
+    icon: Users,
+    roles: ["super_admin", "epc_admin"],
+  },
   {
     href: "/technician/cleaning",
     label: "Cleaning",
     icon: SprayCan,
     roles: ["technician"],
   },
-
   {
     href: "/reports",
     label: "Reports",
     icon: BarChart3,
-    roles: ["super_admin", "epc_admin", "client"],
+    roles: ["super_admin", "epc_admin"],
   },
-
   {
     href: "/users",
     label: "Users",
     icon: Users,
     roles: ["super_admin", "epc_admin"],
   },
-
   {
     href: "/settings",
     label: "Settings",

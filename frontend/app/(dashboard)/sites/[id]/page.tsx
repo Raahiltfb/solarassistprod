@@ -5,11 +5,14 @@ import { KpiCard } from "@/components/kpi-card";
 import { PerformanceAnalyticsSection } from "@/components/performance-analytics-section";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Zap, Activity, Thermometer, Sun, AlertTriangle, Clock, Ticket } from "lucide-react";
 import { kWh, pct, formatDate, formatDateTime } from "@/lib/utils";
+import { getInverterStatus } from "@/lib/status-utils";
 import { expectedDailyGeneration } from "@/lib/integrations/solcast";
+import { SiteCleaningConfigButton } from "@/components/sites/site-cleaning-config-button";
 
 export default async function SiteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -19,37 +22,32 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ id:
   if (!site) notFound();
 
   // Parallel data fetching for site detail aggregates & related collections
-  const [invRes, alertsRes, cleaningRes, ticketsRes] = await Promise.all([
+  const [invRes, alertsRes, cleaningRes, ticketsRes, ruleRes] = await Promise.all([
     sb.from("inverters").select("*").eq("site_id", id).order("oem_device_id"),
     sb.from("alerts").select("*").eq("site_id", id).order("triggered_at", { ascending: false }),
     sb.from("cleaning_logs").select("*").eq("site_id", id).order("performed_at", { ascending: false }).limit(20),
     sb.from("tickets").select("*").eq("site_id", id).order("created_at", { ascending: false }),
+    sb.from("site_cleaning_rules").select("*").eq("site_id", id).maybeSingle(),
   ]);
 
   const inverters = invRes.data ?? [];
   const alerts = alertsRes.data ?? [];
   const cleaning = cleaningRes.data ?? [];
   const tickets = ticketsRes.data ?? [];
+  const rule = ruleRes.data ?? null;
 
   const inverterIds = inverters.map((i) => i.id);
 
-  let telemetry: any[] = [];
   let strings: any[] = [];
   let latestStringTelemetry = new Map<string, any>();
   let latestTelemetryMap = new Map<string, any>();
 
   if (inverterIds.length > 0) {
-    const [telRes, strRes, latestTelRes] = await Promise.all([
-      sb.from("telemetry")
-        .select("timestamp, ac_power_kw, daily_generation_kwh, total_generation_kwh, temperature_c, efficiency_pct, inverter_id")
-        .in("inverter_id", inverterIds)
-        .order("timestamp", { ascending: false })
-        .limit(300),
+    const [strRes, latestTelRes] = await Promise.all([
       sb.from("strings").select("*").in("inverter_id", inverterIds),
       sb.rpc("get_latest_telemetry", { inverter_ids: inverterIds })
     ]);
 
-    telemetry = telRes.data ?? [];
     strings = strRes.data ?? [];
     const latestTel = latestTelRes.data ?? [];
     for (const t of latestTel) {
@@ -97,8 +95,15 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ id:
   const expectedGenerationDaily = expectedDailyGeneration(Number(site.capacity_kwp), Number(site.latitude));
   const performance = expectedGenerationDaily > 0 ? Math.min(100, (todayGeneration / expectedGenerationDaily) * 100) : 0;
   
-  const onlineCount = inverters.filter((i) => i.status === "online").length;
-  const healthScore = inverters.length > 0 ? Math.round((onlineCount / inverters.length) * 100) : 100;
+  let communicatingCount = 0;
+  for (const inv of inverters) {
+    const tel = latestTelemetryMap.get(inv.id);
+    const status = getInverterStatus(inv, tel?.timestamp);
+    if (status !== "OFFLINE") {
+      communicatingCount++;
+    }
+  }
+  const healthScore = inverters.length > 0 ? Math.round((communicatingCount / inverters.length) * 100) : 100;
 
   const lastCleaned = site.last_cleaned_on ? new Date(site.last_cleaned_on) : null;
   const daysSinceClean = lastCleaned ? Math.floor((Date.now() - lastCleaned.getTime()) / 86400_000) : null;
@@ -109,18 +114,23 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="space-y-6" data-testid="site-detail">
-      <div>
-        <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Site</div>
-        <h1 className="text-3xl font-display font-semibold">{site.name}</h1>
-        <p className="text-sm text-muted-foreground">
-          {site.location} · {Number(site.capacity_kwp).toLocaleString()} kWp · commissioned {formatDate(site.commissioned_on)}
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Site</div>
+          <h1 className="text-3xl font-display font-semibold">{site.name}</h1>
+          <p className="text-sm text-muted-foreground">
+            {site.location} · {Number(site.capacity_kwp).toLocaleString()} kWp · commissioned {formatDate(site.commissioned_on)}
+          </p>
+        </div>
+        <div>
+          <SiteCleaningConfigButton site={site} rule={rule} variant="default" />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard label="Current Power" value={`${currentPower.toFixed(2)} kW`} sub="Active fleet output" icon={Zap} accent="primary" />
         <KpiCard label="Today's generation" value={kWh(todayGeneration)} sub={`Expected: ${kWh(expectedGenerationDaily)}`} icon={Sun} accent={performance > 85 ? "success" : "warning"} />
-        <KpiCard label="Health score" value={`${healthScore}%`} sub={`${onlineCount}/${inverters.length} online`} icon={Activity} accent={healthScore > 90 ? "success" : "warning"} />
+        <KpiCard label="Health score" value={`${healthScore}%`} sub={`${communicatingCount}/${inverters.length} communicating`} icon={Activity} accent={healthScore > 90 ? "success" : "warning"} />
         <KpiCard label="Cleaning" value={daysSinceClean !== null ? `${daysSinceClean}d` : "—"} sub={daysSinceClean !== null && daysSinceClean > site.cleaning_cycle_days ? "Overdue" : `Cycle: ${site.cleaning_cycle_days}d`} icon={Thermometer} accent={daysSinceClean !== null && daysSinceClean > site.cleaning_cycle_days ? "destructive" : "success"} />
       </div>
 
@@ -133,7 +143,12 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ id:
 
       <Card>
         <CardContent className="pt-6">
-          <PerformanceAnalyticsSection siteId={id} isSite={true} />
+          <PerformanceAnalyticsSection
+            siteId={id}
+            isSite={true}
+            initialInverterIds={inverterIds}
+            initialTotalCapacity={Number(site.capacity_kwp || 0)}
+          />
         </CardContent>
       </Card>
 
@@ -149,20 +164,36 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ id:
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {inverters.map((inv) => {
               const tel = latestTelemetryMap.get(inv.id);
-              const invStrings = strings.filter((s) => s.inverter_id === inv.id);
+              const invStrings = strings
+                .filter((s) => s.inverter_id === inv.id)
+                .sort((a, b) => Number(a.string_index) - Number(b.string_index));
 
               return (
                 <Card key={inv.id} className="overflow-hidden">
-                  <CardHeader className="pb-3 border-b flex flex-row items-center justify-between">
+                  <CardHeader className="pb-3 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <CardTitle className="text-base font-mono font-medium hover:text-primary transition-colors">
-                        <Link href={`/inverters/${inv.id}`}>{inv.oem_device_id}</Link>
+                      <CardTitle className="text-base font-mono font-medium">
+                        {inv.oem_device_id}
                       </CardTitle>
-                      <p className="text-xs text-muted-foreground uppercase">{inv.oem} · {inv.model} · SN: {inv.serial_number}</p>
+                      <p className="text-xs text-muted-foreground uppercase mt-0.5">
+                        {inv.oem} · {inv.model} · SN: <span className="font-mono font-semibold">{inv.serial_number}</span>
+                      </p>
                     </div>
-                    <Badge variant={inv.status === "online" ? "success" : inv.status === "offline" ? "destructive" : "warning"} className="capitalize">
-                      {inv.status}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      {(() => {
+                        const invStatus = getInverterStatus(inv, tel?.timestamp);
+                        return (
+                          <Badge variant={invStatus === "ONLINE" ? "success" : invStatus === "OFFLINE" ? "destructive" : "warning"} className="capitalize">
+                            {invStatus === "NO GRID" ? "Online (No Grid)" : invStatus.toLowerCase()}
+                          </Badge>
+                        );
+                      })()}
+                      <Link href={`/inverters/${inv.id}`}>
+                        <Button variant="outline" size="sm" className="text-xs gap-1 py-1 h-7">
+                          View Inverter Details →
+                        </Button>
+                      </Link>
+                    </div>
                   </CardHeader>
                   <CardContent className="pt-4 space-y-4">
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
@@ -261,8 +292,13 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ id:
         </TabsContent>
 
         <TabsContent value="cleaning">
-          <Card><CardContent className="p-0">
-            <Table>
+          <Card>
+            <CardHeader className="py-3 border-b flex flex-row items-center justify-between">
+              <CardTitle className="text-base font-semibold">Cleaning History & Policy</CardTitle>
+              <SiteCleaningConfigButton site={site} rule={rule} variant="outline" size="sm" />
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
               <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Remarks</TableHead><TableHead>Before</TableHead><TableHead>After</TableHead></TableRow></TableHeader>
               <TableBody>
                 {cleaning.map((c) => (

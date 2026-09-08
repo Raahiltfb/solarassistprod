@@ -25,7 +25,7 @@ export default function LoginPage() {
   const router = useRouter();
 
   const [email, setEmail] = useState(
-    "admin@heliogrid.dev"
+    "admin@solarassist.dev"
   );
 
   const [password, setPassword] =
@@ -249,19 +249,11 @@ export default function LoginPage() {
 
               <div className="text-xs text-muted-foreground bg-muted/50 rounded-md p-3 space-y-1">
                 <div className="font-medium text-foreground">
-                  Demo accounts
+                  SolarAssist Operational Accounts
                 </div>
 
                 <div>
-                  super@solarassist.dev
-                  &nbsp;·&nbsp;
-                  admin@heliogrid.dev
-                </div>
-
-                <div>
-                  tech@heliogrid.dev
-                  &nbsp;·&nbsp;
-                  client@heliogrid.dev
+                  super@solarassist.dev &nbsp;·&nbsp; admin@solarassist.dev &nbsp;·&nbsp; tech@solarassist.dev
                 </div>
 
                 <div>

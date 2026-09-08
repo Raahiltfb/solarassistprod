@@ -1,7 +1,9 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { AlarmIntelligenceCard } from "@/components/alarm-intelligence-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -65,7 +67,7 @@ export default function TicketDetailsPage({
         *,
         organizations(name),
         sites(name),
-        alerts(title),
+        alerts(id, title, code, alarm_code, oem, description),
         profiles!tickets_assignee_id_fkey(full_name)
       `)
       .eq("id", id)
@@ -302,6 +304,18 @@ export default function TicketDetailsPage({
         </Card>
       )}
 
+      {/* ALARM INTELLIGENCE & FIELD GUIDANCE */}
+      {(ticket.alerts?.alarm_code || ticket.alerts?.code || ticket.title?.includes("1045") || ticket.title?.includes("1021") || ticket.title?.includes("1011")) && (
+        <AlarmIntelligenceCard
+          code={
+            ticket.alerts?.alarm_code ||
+            ticket.alerts?.code ||
+            (ticket.title?.includes("1045") ? "1045" : ticket.title?.includes("1021") ? "1021" : ticket.title?.includes("1011") ? "1011" : "1045")
+          }
+          oem={ticket.alerts?.oem || "solis"}
+        />
+      )}
+
       {/* Technician operational work log */}
       <div className="border rounded-xl p-4 bg-white space-y-4">
         <h2 className="text-sm font-medium text-gray-500">
@@ -355,10 +369,18 @@ export default function TicketDetailsPage({
 
       <div className="border rounded-xl p-4 bg-white">
         <h2 className="text-sm font-medium text-gray-500 mb-4">
-          Actions
+          Actions &amp; Field Dispatch
         </h2>
 
         <div className="flex flex-wrap gap-3">
+          <Link href={`/work-orders?site_id=${ticket.site_id}&ticket_id=${ticket.id}&title=${encodeURIComponent("Field Job: " + ticket.title)}`}>
+            <button
+              className="px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 transition flex items-center gap-1.5"
+            >
+              + Create Work Order
+            </button>
+          </Link>
+
           <button
             onClick={() => updateStatus("in_progress")}
             className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700 transition"
