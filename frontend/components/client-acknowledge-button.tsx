@@ -17,15 +17,16 @@ export function ClientAcknowledgeButton({ logId }: Props) {
   async function handleAcknowledgeCleaning() {
     setAcknowledging(true);
     try {
-      const { error } = await sb
-        .from("cleaning_logs")
-        .update({
-          client_acknowledged_at: new Date().toISOString(),
-          client_acknowledged_damage: true,
-        })
-        .eq("id", logId);
+      const res = await fetch("/api/cleaning/acknowledge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actionId: logId, isSchedule: false }),
+      });
 
-      if (error) throw error;
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || "Failed to acknowledge");
+      }
       
       toast.success("Cleaning acknowledged. Thank you!");
       window.location.reload();

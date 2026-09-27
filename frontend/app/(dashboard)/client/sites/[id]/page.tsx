@@ -139,8 +139,8 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
     "use server";
     const logId = formData.get("logId") as string;
     if (!logId) return;
-    const sbClient = await createClient();
-    await sbClient
+    const sbService = createServiceClient();
+    await sbService
       .from("cleaning_logs")
       .update({ client_acknowledged: true, client_acknowledged_at: new Date().toISOString() })
       .eq("id", logId);

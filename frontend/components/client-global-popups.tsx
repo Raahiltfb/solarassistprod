@@ -36,29 +36,31 @@ export function ClientGlobalPopups({ events }: { events: any[] }) {
   async function handleAcknowledge() {
     setSubmitting(true);
     try {
-      if (isSchedule) {
-        const { error } = await sb.from("work_orders").update({
-          client_acknowledged_at: new Date().toISOString()
-        }).eq("id", currentEvent.actionableId);
-        if (error) throw error;
-      } else {
-        const { error } = await sb.from("cleaning_logs").update({
-          client_acknowledged: true,
-          client_acknowledged_at: new Date().toISOString()
-        }).eq("id", currentEvent.actionableId);
-        if (error) throw error;
+      const res = await fetch("/api/cleaning/acknowledge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actionId: currentEvent.actionableId, isSchedule }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || "Failed to acknowledge");
       }
+
       toast.success("Acknowledged successfully");
       
-      // Update local state and trigger refresh of parent if we finished all popups
-      if (currentIndex + 1 >= pendingEvents.length) {
-        window.location.reload();
-      } else {
-        setCurrentIndex(prev => prev + 1);
+      // Remove current acknowledged event from pending list immediately so popup disappears
+      const nextPending = pendingEvents.filter((_, idx) => idx !== currentIndex);
+      setPendingEvents(nextPending);
+
+      if (nextPending.length === 0) {
+        setTimeout(() => {
+          window.location.reload();
+        }, 200);
       }
     } catch (e: any) {
       console.error("Acknowledge error:", e);
-      toast.error("Failed to acknowledge");
+      toast.error(e.message || "Failed to acknowledge");
     } finally {
       setSubmitting(false);
     }
