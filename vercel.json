@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "frontend/$1"
+    }
+  ],
+  "crons": [
+    { "path": "/api/cron/poll-oem", "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/check-cleaning", "schedule": "0 9 * * *" }
+  ]
+}
