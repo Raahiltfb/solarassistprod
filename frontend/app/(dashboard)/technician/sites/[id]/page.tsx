@@ -19,6 +19,7 @@ import {
   FileText,
 } from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/utils";
+import { CleaningEvidenceLinks } from "@/components/cleaning-evidence-links";
 
 export default async function TechnicianSiteDetailPage({
   params,
@@ -274,47 +275,14 @@ export default async function TechnicianSiteDetailPage({
                     <p className="text-muted-foreground italic">"{log.remarks}"</p>
                   )}
 
-                  <div className="flex flex-wrap items-center gap-4 text-xs pt-1 text-primary">
-                    {log.safety_photo_url && (
-                      <a
-                        href={log.safety_photo_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline hover:text-primary/80"
-                      >
-                        Safety Gear Photo
-                      </a>
-                    )}
-                    {log.before_photo_url && (
-                      <a
-                        href={log.before_photo_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline hover:text-primary/80"
-                      >
-                        Before Photo
-                      </a>
-                    )}
-                    {log.after_photo_url && (
-                      <a
-                        href={log.after_photo_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline hover:text-primary/80"
-                      >
-                        After Photo
-                      </a>
-                    )}
-                    {log.damage_photo_url && (
-                      <a
-                        href={log.damage_photo_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline text-red-600 hover:text-red-800 font-medium"
-                      >
-                        Damage Photo
-                      </a>
-                    )}
+                  <div className="pt-1">
+                    <CleaningEvidenceLinks
+                      safetyPhotoUrl={log.safety_photo_url}
+                      beforePhotoUrl={log.before_photo_url}
+                      afterPhotoUrl={log.after_photo_url}
+                      damagePhotoUrl={log.damage_photo_url}
+                      damageObserved={log.damage_observed}
+                    />
                   </div>
                 </div>
               ))}

@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { getInverterStatus } from "@/lib/status-utils";
 import { kWh, formatDate, formatDateTime } from "@/lib/utils";
+import { CleaningEvidenceLinks } from "@/components/cleaning-evidence-links";
 
 export default async function InverterDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -336,8 +337,7 @@ export default async function InverterDetailsPage({ params }: { params: Promise<
                   <TableRow>
                     <TableHead>Cleaning Date</TableHead>
                     <TableHead>Remarks</TableHead>
-                    <TableHead>Before photo</TableHead>
-                    <TableHead>After photo</TableHead>
+                    <TableHead className="text-right">Evidence Records</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -345,21 +345,21 @@ export default async function InverterDetailsPage({ params }: { params: Promise<
                     <TableRow key={c.id}>
                       <TableCell className="font-semibold">{formatDate(c.performed_at)}</TableCell>
                       <TableCell className="text-sm">{c.remarks || "—"}</TableCell>
-                      <TableCell>
-                        {c.before_photo_url ? (
-                          <a href={c.before_photo_url} className="text-primary underline text-xs" target="_blank" rel="noopener noreferrer">View</a>
-                        ) : "—"}
-                      </TableCell>
-                      <TableCell>
-                        {c.after_photo_url ? (
-                          <a href={c.after_photo_url} className="text-primary underline text-xs" target="_blank" rel="noopener noreferrer">View</a>
-                        ) : "—"}
+                      <TableCell className="text-right">
+                        <CleaningEvidenceLinks
+                          safetyPhotoUrl={(c as any).safety_photo_url}
+                          beforePhotoUrl={c.before_photo_url}
+                          afterPhotoUrl={c.after_photo_url}
+                          damagePhotoUrl={(c as any).damage_photo_url}
+                          damageObserved={(c as any).damage_observed}
+                          className="justify-end"
+                        />
                       </TableCell>
                     </TableRow>
                   ))}
                   {cleaningLogs.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                      <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
                         No cleaning events logged.
                       </TableCell>
                     </TableRow>

@@ -53,6 +53,10 @@ export interface ClientServiceEvent {
   title: string;
   description: string;
   timestamp: string;
+  safety_photo_url?: string | null;
+  before_photo_url?: string | null;
+  after_photo_url?: string | null;
+  damage_photo_url?: string | null;
   photos?: string[];
   actionable?: "cleaning_ack" | "cleaning_schedule_ack";
   actionableId?: string;
@@ -169,7 +173,7 @@ export function sanitizeServiceEvents(
   // 3. Cleaning Logs
   for (const cl of cleaningLogs) {
     const siteName = cl.sites?.name || "your site";
-    const photos = [cl.before_photo_url, cl.after_photo_url, cl.damage_photo_url].filter(Boolean) as string[];
+    const photos = [cl.safety_photo_url, cl.before_photo_url, cl.after_photo_url, cl.damage_photo_url].filter(Boolean) as string[];
     let desc = `Comprehensive solar panel cleaning completed at ${siteName} to maximize output.`;
     if (cl.damage_observed) {
       desc += ` Damage Observation recorded: ${cl.damage_type || 'unspecified issue'}.`;
@@ -180,10 +184,14 @@ export function sanitizeServiceEvents(
       title: "Solar Panel Cleaning Completed",
       description: desc,
       timestamp: cl.performed_at,
+      safety_photo_url: cl.safety_photo_url || null,
+      before_photo_url: cl.before_photo_url || null,
+      after_photo_url: cl.after_photo_url || null,
+      damage_photo_url: (cl.damage_observed || cl.damage_photo_url) ? (cl.damage_photo_url || null) : null,
       photos: photos.length > 0 ? photos : undefined,
       actionable: "cleaning_ack",
       actionableId: cl.id,
-      actionableStatus: cl.client_acknowledged_at ? "completed" : "pending",
+      actionableStatus: (cl.client_acknowledged_at || cl.client_acknowledged) ? "completed" : "pending",
       actionableContext: {
         damage_observed: cl.damage_observed,
         damage_type: cl.damage_type,

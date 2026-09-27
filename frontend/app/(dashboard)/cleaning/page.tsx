@@ -20,6 +20,7 @@ import type { CleaningLog, Site, Profile, SiteCleaningRule } from "@/lib/types";
 import { SiteRuleDialog } from "@/components/cleaning/site-rule-dialog";
 import { BulkRuleDialog } from "@/components/cleaning/bulk-rule-dialog";
 import { SubNav } from "@/components/sub-nav";
+import { CleaningEvidenceLinks } from "@/components/cleaning-evidence-links";
 
 export default function CleaningPage() {
   const [logs, setLogs] = useState<(CleaningLog & { sites?: { name: string; cleaning_cycle_days: number; last_cleaned_on: string | null } })[]>([]);
@@ -531,24 +532,14 @@ export default function CleaningPage() {
                         </div>
                       </TableCell>
                       <TableCell className="py-3.5 px-6 text-right">
-                        <div className="flex flex-col items-end gap-1.5 text-xs">
-                          {l.before_photo_url && (
-                            <a className="text-primary underline font-medium" href={l.before_photo_url} target="_blank" rel="noopener noreferrer">
-                              Before Photo
-                            </a>
-                          )}
-                          {l.after_photo_url && (
-                            <a className="text-primary underline font-medium" href={l.after_photo_url} target="_blank" rel="noopener noreferrer">
-                              After Photo
-                            </a>
-                          )}
-                          {(l as any).damage_photo_url && (
-                            <a className="text-destructive underline font-medium" href={(l as any).damage_photo_url} target="_blank" rel="noopener noreferrer">
-                              Damage Evidence
-                            </a>
-                          )}
-                          {!l.before_photo_url && !l.after_photo_url && !(l as any).damage_photo_url && <span className="text-muted-foreground">—</span>}
-                        </div>
+                        <CleaningEvidenceLinks
+                          safetyPhotoUrl={(l as any).safety_photo_url}
+                          beforePhotoUrl={l.before_photo_url}
+                          afterPhotoUrl={l.after_photo_url}
+                          damagePhotoUrl={(l as any).damage_photo_url}
+                          damageObserved={(l as any).damage_observed}
+                          className="justify-end"
+                        />
                       </TableCell>
                     </TableRow>
                   ))}

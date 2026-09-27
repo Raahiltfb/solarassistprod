@@ -25,6 +25,7 @@ import { calculateFinancialSavings, sanitizeServiceEvents } from "@/lib/client-s
 import { ClientGlobalPopups } from "@/components/client-global-popups";
 import { getSiteStatus } from "@/lib/status-utils";
 import { kWh, formatDateTime, formatDate } from "@/lib/utils";
+import { CleaningEvidenceLinks } from "@/components/cleaning-evidence-links";
 
 export default async function ClientPortfolioPage() {
   const sb = await createClient();
@@ -363,7 +364,7 @@ export default async function ClientPortfolioPage() {
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <Wrench className="h-4 w-4 text-primary" /> Service & Maintenance Care
             </CardTitle>
-            <CardDescription className="text-xs">Transparent maintenance, cleaning, and monitoring log</CardDescription>
+            <CardDescription className="text-xs">O&M Support Records</CardDescription>
           </CardHeader>
           <CardContent className="pt-4 space-y-4">
             {serviceEvents.length === 0 ? (
@@ -389,13 +390,15 @@ export default async function ClientPortfolioPage() {
                     </div>
                     <p className="text-muted-foreground leading-relaxed">{evt.description}</p>
 
-                    {evt.photos && evt.photos.length > 0 && (
-                      <div className="flex gap-2 pt-1">
-                        {evt.photos.map((url, i) => (
-                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block">
-                            <img src={url} alt="Service evidence" className="h-10 w-10 object-cover rounded border hover:opacity-90" />
-                          </a>
-                        ))}
+                    {(evt.safety_photo_url || evt.before_photo_url || evt.after_photo_url || evt.damage_photo_url) && (
+                      <div className="pt-1">
+                        <CleaningEvidenceLinks
+                          safetyPhotoUrl={evt.safety_photo_url}
+                          beforePhotoUrl={evt.before_photo_url}
+                          afterPhotoUrl={evt.after_photo_url}
+                          damagePhotoUrl={evt.damage_photo_url}
+                          damageObserved={evt.actionableContext?.damage_observed}
+                        />
                       </div>
                     )}
                     {(evt.actionable === "cleaning_ack" || evt.actionable === "cleaning_schedule_ack") && evt.actionableStatus === "pending" && (
@@ -447,6 +450,10 @@ export default async function ClientPortfolioPage() {
             const siteSavings = calculateFinancialSavings(siteTodayYield, s.grid_tariff_inr_per_kwh);
             const isSiteNormal = siteStatus === "ONLINE";
 
+            const calcNextDate = s.last_cleaned_on
+              ? new Date(new Date(s.last_cleaned_on).getTime() + (s.cleaning_cycle_days || 15) * 86400_000).toISOString().slice(0, 10)
+              : s.next_cleaning_date;
+
             return (
               <Card key={s.id} className="overflow-hidden hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3 border-b flex flex-row items-start justify-between">
@@ -487,7 +494,7 @@ export default async function ClientPortfolioPage() {
                       Last Cleaned: <span className="font-medium text-foreground">{s.last_cleaned_on ? formatDate(s.last_cleaned_on) : "Never recorded"}</span>
                     </div>
                     <div>
-                      Next Planned: <span className="font-medium text-emerald-600 dark:text-emerald-400">{s.next_cleaning_date ? formatDate(s.next_cleaning_date) : "—"}</span>
+                      Next Planned: <span className="font-medium text-emerald-600 dark:text-emerald-400">{calcNextDate ? formatDate(calcNextDate) : "—"}</span>
                     </div>
                   </div>
 

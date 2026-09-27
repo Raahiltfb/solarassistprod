@@ -27,6 +27,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import type { Profile } from "@/lib/types";
+import { CleaningEvidenceLinks } from "@/components/cleaning-evidence-links";
 
 const statusColors: Record<string, string> = {
   open: "bg-red-100 text-red-700 border-red-300",
@@ -528,85 +529,15 @@ export default function TicketDetailsPage({
           {/* READ-ONLY VIEW OF LOG & EVIDENCE */}
           {!showLogForm && (
             <div className="space-y-4">
-              {/* Photo Evidence Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Before Photo */}
-                <div className="border rounded-lg p-3 bg-muted/20 space-y-2">
-                  <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-                    <ImageIcon className="h-3.5 w-3.5 text-blue-600" />
-                    Before Work Photo
-                  </span>
-                  {beforePhoto ? (
-                    <div className="space-y-2">
-                      <div className="relative aspect-video rounded-md overflow-hidden border bg-black/5">
-                        <img
-                          src={beforePhoto}
-                          alt="Before Work Evidence"
-                          className="object-cover w-full h-full hover:scale-105 transition duration-200"
-                        />
-                      </div>
-                      <a
-                        href={beforePhoto}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs text-primary hover:underline inline-flex items-center gap-1 font-medium"
-                      >
-                        View Full Size Image <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </div>
-                  ) : (
-                    <div className="h-28 rounded-md border border-dashed flex items-center justify-center text-xs text-muted-foreground">
-                      No before work photo uploaded
-                    </div>
-                  )}
-                </div>
-
-                {/* After Photo */}
-                <div className="border rounded-lg p-3 bg-muted/20 space-y-2">
-                  <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-                    <ImageIcon className="h-3.5 w-3.5 text-emerald-600" />
-                    After Work Photo
-                  </span>
-                  {afterPhoto ? (
-                    <div className="space-y-2">
-                      <div className="relative aspect-video rounded-md overflow-hidden border bg-black/5">
-                        <img
-                          src={afterPhoto}
-                          alt="After Work Evidence"
-                          className="object-cover w-full h-full hover:scale-105 transition duration-200"
-                        />
-                      </div>
-                      <a
-                        href={afterPhoto}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs text-primary hover:underline inline-flex items-center gap-1 font-medium"
-                      >
-                        View Full Size Image <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </div>
-                  ) : (
-                    <div className="h-28 rounded-md border border-dashed flex items-center justify-center text-xs text-muted-foreground">
-                      No after work photo uploaded
-                    </div>
-                  )}
-                </div>
+              <div className="border rounded-lg p-3 bg-muted/20 space-y-2">
+                <span className="text-xs font-semibold text-muted-foreground block">
+                  Service Evidence Records
+                </span>
+                <CleaningEvidenceLinks
+                  beforePhotoUrl={beforePhoto}
+                  afterPhotoUrl={afterPhoto}
+                />
               </div>
-
-              {/* Remarks View */}
-              {remarks ? (
-                <div className="border rounded-lg p-3 bg-card space-y-1">
-                  <span className="text-xs font-semibold text-muted-foreground">Technician Remarks &amp; Actions Taken</span>
-                  <p className="text-sm text-foreground whitespace-pre-wrap">{remarks}</p>
-                </div>
-              ) : (
-                !beforePhoto &&
-                !afterPhoto && (
-                  <p className="text-xs text-muted-foreground italic text-center py-4 border rounded-md border-dashed">
-                    No field operational logs or evidence photos submitted yet for this ticket.
-                  </p>
-                )
-              )}
             </div>
           )}
 

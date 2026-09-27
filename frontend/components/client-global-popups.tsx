@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2, AlertTriangle, CalendarCheck } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
+import { CleaningEvidenceLinks } from "@/components/cleaning-evidence-links";
 
 export function ClientGlobalPopups({ events }: { events: any[] }) {
   const sb = createClient();
@@ -42,8 +43,8 @@ export function ClientGlobalPopups({ events }: { events: any[] }) {
         if (error) throw error;
       } else {
         const { error } = await sb.from("cleaning_logs").update({
-          client_acknowledged_at: new Date().toISOString(),
-          client_acknowledged_damage: true
+          client_acknowledged: true,
+          client_acknowledged_at: new Date().toISOString()
         }).eq("id", currentEvent.actionableId);
         if (error) throw error;
       }
@@ -56,6 +57,7 @@ export function ClientGlobalPopups({ events }: { events: any[] }) {
         setCurrentIndex(prev => prev + 1);
       }
     } catch (e: any) {
+      console.error("Acknowledge error:", e);
       toast.error("Failed to acknowledge");
     } finally {
       setSubmitting(false);
@@ -110,16 +112,16 @@ export function ClientGlobalPopups({ events }: { events: any[] }) {
             </div>
           )}
 
-          {!isSchedule && currentEvent.photos && currentEvent.photos.length > 0 && (
+          {!isSchedule && (
             <div>
               <div className="font-semibold text-xs uppercase tracking-wider text-muted-foreground mb-2">Service Evidence</div>
-              <div className="flex gap-3 overflow-x-auto pb-2">
-                {currentEvent.photos.map((p: string, i: number) => (
-                  <a key={i} href={p} target="_blank" rel="noopener noreferrer" className="shrink-0">
-                    <img src={p} className="h-24 w-24 object-cover rounded-md border shadow-sm hover:opacity-80 transition-opacity" />
-                  </a>
-                ))}
-              </div>
+              <CleaningEvidenceLinks
+                safetyPhotoUrl={currentEvent.safety_photo_url}
+                beforePhotoUrl={currentEvent.before_photo_url}
+                afterPhotoUrl={currentEvent.after_photo_url}
+                damagePhotoUrl={currentEvent.damage_photo_url}
+                damageObserved={currentEvent.actionableContext?.damage_observed}
+              />
             </div>
           )}
         </div>

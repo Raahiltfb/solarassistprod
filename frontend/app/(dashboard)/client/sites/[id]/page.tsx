@@ -28,6 +28,7 @@ import { getSanitizedInverterStatus, calculateFinancialSavings, sanitizeServiceE
 import { calculateClientHealthScore } from "@/lib/client-health-score";
 import { getSiteStatus } from "@/lib/status-utils";
 import { kWh, formatDateTime, formatDate } from "@/lib/utils";
+import { CleaningEvidenceLinks } from "@/components/cleaning-evidence-links";
 
 export default async function ClientSiteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -379,7 +380,7 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
               <div>
                 <div className="text-muted-foreground">Next Planned Service</div>
                 <div className="font-semibold text-sm text-emerald-600 dark:text-emerald-400">
-                  {site.next_cleaning_date ? formatDate(site.next_cleaning_date) : formatDate(nextScheduledCleaningDate.toISOString())}
+                  {formatDate(nextScheduledCleaningDate.toISOString())}
                 </div>
               </div>
             </div>
@@ -398,27 +399,16 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
                       <span className="text-muted-foreground">{formatDateTime(log.performed_at)}</span>
                     </div>
 
-                    {/* Before / After Photos */}
-                    {(log.before_photo_url || log.after_photo_url) && (
-                      <div className="grid grid-cols-2 gap-2 pt-1">
-                        {log.before_photo_url && (
-                          <div className="space-y-1">
-                            <span className="text-[10px] text-muted-foreground">Before Cleaning Inspection</span>
-                            <a href={log.before_photo_url} target="_blank" rel="noopener noreferrer">
-                              <img src={log.before_photo_url} alt="Before cleaning inspection" className="h-24 w-full object-cover rounded border hover:opacity-90" />
-                            </a>
-                          </div>
-                        )}
-                        {log.after_photo_url && (
-                          <div className="space-y-1">
-                            <span className="text-[10px] text-muted-foreground">After Cleaning Proof</span>
-                            <a href={log.after_photo_url} target="_blank" rel="noopener noreferrer">
-                              <img src={log.after_photo_url} alt="After cleaning proof" className="h-24 w-full object-cover rounded border hover:opacity-90" />
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    {/* Evidence links - no inline images */}
+                    <div className="pt-1">
+                      <CleaningEvidenceLinks
+                        safetyPhotoUrl={log.safety_photo_url}
+                        beforePhotoUrl={log.before_photo_url}
+                        afterPhotoUrl={log.after_photo_url}
+                        damagePhotoUrl={log.damage_photo_url}
+                        damageObserved={log.damage_observed}
+                      />
+                    </div>
                   </div>
                 ))
               )}
@@ -432,7 +422,7 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <Wrench className="h-4 w-4 text-primary" /> Service & Maintenance Care
             </CardTitle>
-            <CardDescription className="text-xs">Reassuring O&M support timeline</CardDescription>
+            <CardDescription className="text-xs">O&M Support Records</CardDescription>
           </CardHeader>
           <CardContent className="pt-4 space-y-4 text-xs">
             {serviceEvents.length === 0 ? (
@@ -455,15 +445,20 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
                       <span className="text-[10px] text-muted-foreground">{formatDateTime(evt.timestamp)}</span>
                     </div>
                     <p className="text-muted-foreground leading-relaxed">{evt.description}</p>
-                    {evt.photos && evt.photos.length > 0 && (
-                      <div className="flex gap-2 pt-1">
-                        {evt.photos.map((url, i) => (
-                          <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                            <img src={url} alt="Service evidence" className="h-12 w-12 object-cover rounded border hover:opacity-90" />
-                          </a>
-                        ))}
+                    
+                    {/* Evidence links without inline images */}
+                    {(evt.safety_photo_url || evt.before_photo_url || evt.after_photo_url || evt.damage_photo_url) && (
+                      <div className="pt-1">
+                        <CleaningEvidenceLinks
+                          safetyPhotoUrl={evt.safety_photo_url}
+                          beforePhotoUrl={evt.before_photo_url}
+                          afterPhotoUrl={evt.after_photo_url}
+                          damagePhotoUrl={evt.damage_photo_url}
+                          damageObserved={evt.actionableContext?.damage_observed}
+                        />
                       </div>
                     )}
+
                     {evt.actionable === "cleaning_ack" && (
                       <div className="pt-2">
                         {evt.actionableStatus === "pending" ? (

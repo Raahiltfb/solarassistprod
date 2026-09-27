@@ -13,6 +13,7 @@ import { kWh, pct, formatDate, formatDateTime } from "@/lib/utils";
 import { getInverterStatus } from "@/lib/status-utils";
 import { expectedDailyGeneration } from "@/lib/integrations/solcast";
 import { SiteCleaningConfigButton } from "@/components/sites/site-cleaning-config-button";
+import { CleaningEvidenceLinks } from "@/components/cleaning-evidence-links";
 
 export default async function SiteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -305,17 +306,25 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ id:
             </CardHeader>
             <CardContent className="p-0">
               <Table>
-              <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Remarks</TableHead><TableHead>Before</TableHead><TableHead>After</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Remarks</TableHead><TableHead className="text-right">Evidence Records</TableHead></TableRow></TableHeader>
               <TableBody>
                 {cleaning.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell>{formatDate(c.performed_at)}</TableCell>
                     <TableCell className="text-sm">{c.remarks ?? "—"}</TableCell>
-                    <TableCell>{c.before_photo_url ? <a href={c.before_photo_url} className="text-primary underline" target="_blank" rel="noopener noreferrer">view</a> : "—"}</TableCell>
-                    <TableCell>{c.after_photo_url ? <a href={c.after_photo_url} className="text-primary underline" target="_blank" rel="noopener noreferrer">view</a> : "—"}</TableCell>
+                    <TableCell className="text-right">
+                      <CleaningEvidenceLinks
+                        safetyPhotoUrl={c.safety_photo_url}
+                        beforePhotoUrl={c.before_photo_url}
+                        afterPhotoUrl={c.after_photo_url}
+                        damagePhotoUrl={c.damage_photo_url}
+                        damageObserved={c.damage_observed}
+                        className="justify-end"
+                      />
+                    </TableCell>
                   </TableRow>
                 ))}
-                {cleaning.length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-6 text-muted-foreground">No cleaning logs yet.</TableCell></TableRow>}
+                {cleaning.length === 0 && <TableRow><TableCell colSpan={3} className="text-center py-6 text-muted-foreground">No cleaning logs yet.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </CardContent></Card>
