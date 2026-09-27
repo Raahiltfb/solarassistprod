@@ -205,14 +205,14 @@ export function PerformanceAnalyticsSection({
           />
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           {rangeLabels.map((r) => (
             <Button
               key={r.id}
               size="sm"
               variant={range === r.id ? "default" : "outline"}
               onClick={() => handleRangeChange(r.id as typeof range)}
-              className="text-xs h-7 px-3"
+              className="text-xs h-7 px-2.5 sm:px-3"
             >
               {r.label}
             </Button>
@@ -227,7 +227,7 @@ export function PerformanceAnalyticsSection({
       ) : chartData.length > 0 ? (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               {range === "today" && (
                 <Button
                   size="sm"

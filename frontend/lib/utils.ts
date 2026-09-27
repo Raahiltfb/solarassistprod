@@ -7,13 +7,32 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDate(date: string | Date, fmt = "MMM d, yyyy"): string {
-  const d = typeof date === "string" ? parseISO(date) : date;
-  return format(d, fmt);
+  if (!date) return "—";
+  const d = typeof date === "string" ? (date.includes("T") ? new Date(date) : parseISO(date)) : date;
+  if (isNaN(d.getTime())) return "—";
+
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(d);
 }
 
 export function formatDateTime(date: string | Date): string {
-  const d = typeof date === "string" ? parseISO(date) : date;
-  return format(d, "MMM d, yyyy HH:mm");
+  if (!date) return "—";
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(d.getTime())) return "—";
+
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
 }
 
 export function formatNumber(n: number, digits = 1): string {

@@ -57,7 +57,7 @@ export default function CleaningPage() {
   const sb = createClient();
 
   async function load() {
-    const [{ data: l }, { data: s }, { data: t }, { data: r }] = await Promise.all([
+    const [lRes, sRes, tRes, teamsRes, rRes] = await Promise.all([
       sb.from("cleaning_logs").select("*, sites(name, cleaning_cycle_days, last_cleaned_on)").order("performed_at", { ascending: false }),
       sb.from("sites").select("*").order("name"),
       sb.from("profiles").select("*").eq("role", "technician").order("full_name"),
@@ -65,11 +65,11 @@ export default function CleaningPage() {
       sb.from("site_cleaning_rules").select("*"),
     ]);
 
-    setLogs((l as any) ?? []);
-    setSites((s as Site[]) ?? []);
-    setTechnicians((t as Profile[]) ?? []);
-    setTeams((arguments[0][2].data as any) ?? []);
-    setRules((arguments[0][3].data as SiteCleaningRule[]) ?? []);
+    setLogs((lRes.data as any) ?? []);
+    setSites((sRes.data as Site[]) ?? []);
+    setTechnicians((tRes.data as Profile[]) ?? []);
+    setTeams((teamsRes.data as any) ?? []);
+    setRules((rRes.data as SiteCleaningRule[]) ?? []);
   }
 
   useEffect(() => {

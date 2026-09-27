@@ -144,7 +144,6 @@ export function Shell({ profile, children }: { profile: Profile; children: React
         <header className="h-16 md:h-20 border-b bg-card/80 backdrop-blur flex items-center px-4 md:px-6 sticky top-0 z-30">
           <div className="md:hidden flex items-center gap-2">
             <img src="/logo-full.png" alt="Solar Assist Logo" className="h-10 w-10 object-contain" />
-            <span className="font-bold text-sm tracking-tight">SolarAssist</span>
           </div>
 
           <div className="ml-auto flex items-center gap-2 sm:gap-3">

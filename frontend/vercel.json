@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
-    { "path": "/api/cron/poll-oem", "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/poll-oem", "schedule": "0 0 * * *" },
     { "path": "/api/cron/check-cleaning", "schedule": "0 9 * * *" }
   ]
 }

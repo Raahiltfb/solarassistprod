@@ -157,7 +157,7 @@ export default async function InverterDetailsPage({ params }: { params: Promise<
       </div>
 
       <Tabs defaultValue="performance">
-        <TabsList>
+        <TabsList className="flex flex-wrap h-auto w-full justify-start gap-1 p-1 bg-muted rounded-lg">
           <TabsTrigger value="performance" data-testid="tab-performance">Performance Analytics</TabsTrigger>
           <TabsTrigger value="electrical" data-testid="tab-electrical">Electrical Diagnostics</TabsTrigger>
           <TabsTrigger value="strings" data-testid="tab-strings">Live Strings ({strings.length})</TabsTrigger>

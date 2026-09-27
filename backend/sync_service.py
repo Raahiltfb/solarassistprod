@@ -183,18 +183,27 @@ STRING_DEVIATION_THRESHOLD = float(os.getenv("STRING_DEVIATION_THRESHOLD") or 0.
 MIN_STRING_POWER_KW = 0.1
 
 def analyze_strings_for_anomalies(inv_id, site_id, org_id, string_telemetries, telemetry) -> list:
-    """Returns a list of active synthetic alert keys."""
+    """
+    Returns a list of active synthetic alert keys.
+    Detects string performance deviations on the FIRST qualifying telemetry cycle,
+    escalates on persistence, and auto-resolves on recovery while retaining history.
+    """
     active_keys = []
     if not string_telemetries or len(string_telemetries) < 2:
         return active_keys
         
-    if not telemetry or telemetry.dc_power_kw < 0.5:
+    if not telemetry or (telemetry.dc_power_kw is not None and telemetry.dc_power_kw < 0.2):
         return active_keys
         
-    powers = [st.power_kw for st in string_telemetries if st.power_kw is not None]
-    if not powers:
+    # Active strings: strings producing voltage/current above noise floor
+    active_st_list = [
+        st for st in string_telemetries 
+        if st.power_kw is not None and (st.voltage_v > 10.0 or st.current_a > 0.05)
+    ]
+    if len(active_st_list) < 2:
         return active_keys
-        
+
+    powers = [st.power_kw for st in active_st_list]
     powers.sort()
     mid = len(powers) // 2
     median_power = (powers[mid] + powers[~mid]) / 2.0
@@ -203,8 +212,8 @@ def analyze_strings_for_anomalies(inv_id, site_id, org_id, string_telemetries, t
         return active_keys
         
     anomalous_strings = []
-    for st in string_telemetries:
-        if st.power_kw is not None and st.power_kw < median_power * (1 - STRING_DEVIATION_THRESHOLD):
+    for st in active_st_list:
+        if st.power_kw < median_power * (1 - STRING_DEVIATION_THRESHOLD):
             deviation = (median_power - st.power_kw) / median_power * 100
             anomalous_strings.append({
                 "index": st.string_index,
@@ -215,31 +224,36 @@ def analyze_strings_for_anomalies(inv_id, site_id, org_id, string_telemetries, t
     if not anomalous_strings:
         return active_keys
         
-    code = "STRING_ANOMALY"
+    code = "STRING_PERFORMANCE_DEVIATION"
     active_keys.append(f"{code}:{inv_id}")
+    active_keys.append(f"STRING_ANOMALY:{inv_id}") # Backward-compat key match
     
-    existing = supabase_get("alerts", params={"code": f"eq.{code}", "inverter_id": f"eq.{inv_id}", "status": "eq.open"})
+    existing = supabase_get("alerts", params={"code": f"in.({code},STRING_ANOMALY)", "inverter_id": f"eq.{inv_id}", "status": "eq.open"})
     
     if existing:
         alert = existing[0]
-        if not alert.get("requires_technician"):
-            title = "Persistent String Underperformance" if len(anomalous_strings) == 1 else "Persistent Multi-String Underperformance"
-            desc = f"Strings affected: {', '.join([str(a['index']) for a in anomalous_strings])}. Deviation: {anomalous_strings[0]['deviation']:.1f}% below peer median."
-            
-            supabase_patch("alerts", {
-                "title": title,
-                "description": desc,
-                "severity": "high",
-                "requires_technician": True,
-                "recommended_action": "Field investigation required to check connections or panel shading/damage."
-            }, params={"id": f"eq.{alert['id']}"})
-            
-            updated = supabase_get("alerts", params={"id": f"eq.{alert['id']}"})
-            if updated:
-                process_alert_automation_python(updated[0])
+        # Persistence across subsequent polls: escalate severity and flag for technician action
+        title = "STRING PERFORMANCE DEVIATION"
+        affected_str = ", ".join([f"String #{a['index']}" for a in anomalous_strings])
+        desc = f"Persistent string underperformance: {affected_str} operating {anomalous_strings[0]['deviation']:.1f}% below peer median ({median_power:.2f} kW)."
+        
+        supabase_patch("alerts", {
+            "code": code,
+            "title": title,
+            "description": desc,
+            "severity": "high",
+            "requires_technician": True,
+            "recommended_action": "Field investigation required: inspect string DC connections, module shading, or diode failures."
+        }, params={"id": f"eq.{alert['id']}"})
+        
+        updated = supabase_get("alerts", params={"id": f"eq.{alert['id']}"})
+        if updated:
+            process_alert_automation_python(updated[0])
     else:
-        title = "Transient String Anomaly" if len(anomalous_strings) == 1 else "Transient Multi-String Deviation"
-        desc = f"Strings affected: {', '.join([str(a['index']) for a in anomalous_strings])}. Deviation: {anomalous_strings[0]['deviation']:.1f}% below peer median."
+        # First-cycle detection: surface immediately without multi-poll delay requirement
+        title = "STRING PERFORMANCE DEVIATION"
+        affected_str = ", ".join([f"String #{a['index']}" for a in anomalous_strings])
+        desc = f"First-cycle deviation detected: {affected_str} operating {anomalous_strings[0]['deviation']:.1f}% below peer median ({median_power:.2f} kW)."
         
         supabase_post("alerts", [{
             "org_id": org_id,
@@ -252,11 +266,11 @@ def analyze_strings_for_anomalies(inv_id, site_id, org_id, string_telemetries, t
             "status": "open",
             "triggered_at": telemetry.timestamp,
             "oem": "solis",
-            "alarm_code": "N/A",
+            "alarm_code": "STRING_DEV_01",
             "category": "performance",
             "is_auto_resolvable": True,
             "requires_technician": False,
-            "recommended_action": "Monitor for persistence."
+            "recommended_action": "Monitor on subsequent telemetry cycles for recovery or persistence."
         }], headers_override={"Prefer": "return=representation"})
         
     return active_keys

@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { toast } from "sonner";
-import { Camera, AlertTriangle, ArrowLeft } from "lucide-react";
+import { Camera, Image as ImageIcon, AlertTriangle, ArrowLeft } from "lucide-react";
 
 import type { Site } from "@/lib/types";
 
@@ -335,20 +335,33 @@ function CleaningFormContent() {
               <Label>
                 Safety Gear Photo <span className="text-red-500">*</span>
               </Label>
-
-              <Input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={(e) =>
-                  e.target.files?.[0] &&
-                  uploadPhoto(
-                    e.target.files[0],
-                    "safety"
-                  )
-                }
-              />
-
+              <div className="grid grid-cols-2 gap-2">
+                <label className="flex items-center justify-center gap-1.5 px-3 py-2 bg-muted hover:bg-muted/80 rounded-lg text-xs font-medium cursor-pointer border text-foreground">
+                  <Camera className="h-4 w-4 shrink-0 text-primary" />
+                  <span>Take Photo</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) =>
+                      e.target.files?.[0] && uploadPhoto(e.target.files[0], "safety")
+                    }
+                  />
+                </label>
+                <label className="flex items-center justify-center gap-1.5 px-3 py-2 bg-muted hover:bg-muted/80 rounded-lg text-xs font-medium cursor-pointer border text-foreground">
+                  <ImageIcon className="h-4 w-4 shrink-0 text-primary" />
+                  <span>Choose Gallery</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) =>
+                      e.target.files?.[0] && uploadPhoto(e.target.files[0], "safety")
+                    }
+                  />
+                </label>
+              </div>
               {form.safety ? (
                 <p className="text-xs text-green-600 font-medium">
                   ✓ Safety gear photo uploaded
@@ -364,20 +377,33 @@ function CleaningFormContent() {
               <Label>
                 Before Cleaning Photo <span className="text-red-500">*</span>
               </Label>
-
-              <Input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={(e) =>
-                  e.target.files?.[0] &&
-                  uploadPhoto(
-                    e.target.files[0],
-                    "before"
-                  )
-                }
-              />
-
+              <div className="grid grid-cols-2 gap-2">
+                <label className="flex items-center justify-center gap-1.5 px-3 py-2 bg-muted hover:bg-muted/80 rounded-lg text-xs font-medium cursor-pointer border text-foreground">
+                  <Camera className="h-4 w-4 shrink-0 text-primary" />
+                  <span>Take Photo</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) =>
+                      e.target.files?.[0] && uploadPhoto(e.target.files[0], "before")
+                    }
+                  />
+                </label>
+                <label className="flex items-center justify-center gap-1.5 px-3 py-2 bg-muted hover:bg-muted/80 rounded-lg text-xs font-medium cursor-pointer border text-foreground">
+                  <ImageIcon className="h-4 w-4 shrink-0 text-primary" />
+                  <span>Choose Gallery</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) =>
+                      e.target.files?.[0] && uploadPhoto(e.target.files[0], "before")
+                    }
+                  />
+                </label>
+              </div>
               {form.before ? (
                 <p className="text-xs text-green-600 font-medium">
                   ✓ Before cleaning photo uploaded
@@ -393,20 +419,33 @@ function CleaningFormContent() {
               <Label>
                 After Cleaning Photo <span className="text-red-500">*</span>
               </Label>
-
-              <Input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={(e) =>
-                  e.target.files?.[0] &&
-                  uploadPhoto(
-                    e.target.files[0],
-                    "after"
-                  )
-                }
-              />
-
+              <div className="grid grid-cols-2 gap-2">
+                <label className="flex items-center justify-center gap-1.5 px-3 py-2 bg-muted hover:bg-muted/80 rounded-lg text-xs font-medium cursor-pointer border text-foreground">
+                  <Camera className="h-4 w-4 shrink-0 text-primary" />
+                  <span>Take Photo</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) =>
+                      e.target.files?.[0] && uploadPhoto(e.target.files[0], "after")
+                    }
+                  />
+                </label>
+                <label className="flex items-center justify-center gap-1.5 px-3 py-2 bg-muted hover:bg-muted/80 rounded-lg text-xs font-medium cursor-pointer border text-foreground">
+                  <ImageIcon className="h-4 w-4 shrink-0 text-primary" />
+                  <span>Choose Gallery</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) =>
+                      e.target.files?.[0] && uploadPhoto(e.target.files[0], "after")
+                    }
+                  />
+                </label>
+              </div>
               {form.after ? (
                 <p className="text-xs text-green-600 font-medium">
                   ✓ After cleaning photo uploaded
@@ -503,19 +542,33 @@ function CleaningFormContent() {
                   <Label>
                     Damage Photo
                   </Label>
-
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={(e) =>
-                      e.target.files?.[0] &&
-                      uploadPhoto(
-                        e.target.files[0],
-                        "damagePhoto"
-                      )
-                    }
-                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="flex items-center justify-center gap-1.5 px-3 py-2 bg-muted hover:bg-muted/80 rounded-lg text-xs font-medium cursor-pointer border text-foreground">
+                      <Camera className="h-4 w-4 shrink-0 text-primary" />
+                      <span>Take Photo</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        onChange={(e) =>
+                          e.target.files?.[0] && uploadPhoto(e.target.files[0], "damagePhoto")
+                        }
+                      />
+                    </label>
+                    <label className="flex items-center justify-center gap-1.5 px-3 py-2 bg-muted hover:bg-muted/80 rounded-lg text-xs font-medium cursor-pointer border text-foreground">
+                      <ImageIcon className="h-4 w-4 shrink-0 text-primary" />
+                      <span>Choose Gallery</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          e.target.files?.[0] && uploadPhoto(e.target.files[0], "damagePhoto")
+                        }
+                      />
+                    </label>
+                  </div>
 
                   {form.damagePhoto && (
                     <p className="text-xs text-green-600 font-medium">

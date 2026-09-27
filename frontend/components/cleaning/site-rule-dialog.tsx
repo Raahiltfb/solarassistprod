@@ -109,21 +109,11 @@ export function SiteRuleDialog({ open, onOpenChange, site, rule, onSaved }: Site
     if (error) {
       toast.error(error.message);
     } else {
-      // Also update site's next_cleaning_date and cleaning_cycle_days
+      // Also update site's next_cleaning_date and cleaning_cycle_days dynamically from last_cleaned_on + configured interval
       const baseDateStr = site.last_cleaned_on || new Date().toISOString().slice(0, 10);
       const baseDate = new Date(baseDateStr);
       if (!isNaN(baseDate.getTime())) {
-        const mm = String(baseDate.getMonth() + 1).padStart(2, "0");
-        const dd = String(baseDate.getDate()).padStart(2, "0");
-        const currentMD = `${mm}-${dd}`;
-        const isMonsoon = monsoonStart <= monsoonEnd
-          ? (currentMD >= monsoonStart && currentMD <= monsoonEnd)
-          : (currentMD >= monsoonStart || currentMD <= monsoonEnd);
-
-        const intervalDays = isMonsoon
-          ? (Number(monsoonInterval) || 30)
-          : (Number(normalInterval) || 15);
-
+        const intervalDays = Number(normalInterval) || 15;
         const nextDate = new Date(baseDate.getTime() + intervalDays * 86400_000);
         if (allowedWeekdays && allowedWeekdays.length > 0) {
           for (let i = 0; i < 7; i++) {
