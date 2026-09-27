@@ -24,7 +24,7 @@ import { calculateClientHealthScore } from "@/lib/client-health-score";
 import { calculateFinancialSavings, sanitizeServiceEvents } from "@/lib/client-sanitizer";
 import { ClientGlobalPopups } from "@/components/client-global-popups";
 import { getSiteStatus } from "@/lib/status-utils";
-import { kWh, formatDateTime } from "@/lib/utils";
+import { kWh, formatDateTime, formatDate } from "@/lib/utils";
 
 export default async function ClientPortfolioPage() {
   const sb = await createClient();
@@ -482,7 +482,16 @@ export default async function ClientPortfolioPage() {
                     </div>
                   </div>
 
-                  <div className="pt-3 border-t flex justify-end">
+                  <div className="pt-2 border-t flex items-center justify-between text-[11px] text-muted-foreground">
+                    <div>
+                      Last Cleaned: <span className="font-medium text-foreground">{s.last_cleaned_on ? formatDate(s.last_cleaned_on) : "Never recorded"}</span>
+                    </div>
+                    <div>
+                      Next Planned: <span className="font-medium text-emerald-600 dark:text-emerald-400">{s.next_cleaning_date ? formatDate(s.next_cleaning_date) : "—"}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
                     <Link href={`/client/sites/${s.id}`}>
                       <Button variant="outline" size="sm" className="text-xs gap-1 h-7">
                         View Site Details <ArrowUpRight className="h-3 w-3" />

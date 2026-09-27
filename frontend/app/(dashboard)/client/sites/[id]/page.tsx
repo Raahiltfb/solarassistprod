@@ -365,15 +365,21 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
             <CardDescription className="text-xs">Routine cleaning interval and maintenance history</CardDescription>
           </CardHeader>
           <CardContent className="pt-4 space-y-4 text-xs">
-            <div className="grid grid-cols-2 gap-4 bg-accent/30 p-3.5 rounded-xl border">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-accent/30 p-3.5 rounded-xl border">
+              <div>
+                <div className="text-muted-foreground">Last Cleaning Completed</div>
+                <div className="font-semibold text-sm text-foreground">
+                  {site.last_cleaned_on ? formatDate(site.last_cleaned_on) : "—"}
+                </div>
+              </div>
               <div>
                 <div className="text-muted-foreground">Routine Interval</div>
                 <div className="font-semibold text-sm text-foreground">Every {cycleDays} days</div>
               </div>
               <div>
-                <div className="text-muted-foreground">Next Service Date</div>
+                <div className="text-muted-foreground">Next Planned Service</div>
                 <div className="font-semibold text-sm text-emerald-600 dark:text-emerald-400">
-                  {formatDate(nextScheduledCleaningDate.toISOString())}
+                  {site.next_cleaning_date ? formatDate(site.next_cleaning_date) : formatDate(nextScheduledCleaningDate.toISOString())}
                 </div>
               </div>
             </div>

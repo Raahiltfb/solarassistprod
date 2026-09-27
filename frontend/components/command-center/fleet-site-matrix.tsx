@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Building2, ExternalLink, Calendar } from "lucide-react";
 import { Site, Inverter } from "@/lib/types";
 import { getSiteStatus } from "@/lib/status-utils";
+import { formatDate } from "@/lib/utils";
 
 export interface ExtendedSiteMatrix extends Site {
   inverters?: Inverter[];
@@ -201,7 +202,7 @@ export function FleetSiteMatrix({ sites, inverters }: FleetSiteMatrixProps) {
                           <div className="flex items-center gap-1.5">
                             <Calendar className="h-3 w-3 text-muted-foreground shrink-0" />
                             <span className="font-mono text-[11px]">
-                              {site.next_cleaning_date ? site.next_cleaning_date : "No date"}
+                              {site.next_cleaning_date ? formatDate(site.next_cleaning_date) : "No date"}
                             </span>
                             {site.cleaning_schedule_type && (
                               <Badge variant="outline" className="text-[9px] px-1 py-0 capitalize">
@@ -210,7 +211,7 @@ export function FleetSiteMatrix({ sites, inverters }: FleetSiteMatrixProps) {
                             )}
                           </div>
                           <div className="text-[10px] text-muted-foreground">
-                            Last: {site.last_cleaned_on || "Never recorded"}
+                            Last: {site.last_cleaned_on ? formatDate(site.last_cleaned_on) : "Never recorded"}
                           </div>
                         </div>
                       </td>

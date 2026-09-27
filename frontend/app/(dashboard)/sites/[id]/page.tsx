@@ -131,7 +131,13 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ id:
         <KpiCard label="Current Power" value={`${currentPower.toFixed(2)} kW`} sub="Active fleet output" icon={Zap} accent="primary" />
         <KpiCard label="Today's generation" value={kWh(todayGeneration)} sub={`Expected: ${kWh(expectedGenerationDaily)}`} icon={Sun} accent={performance > 85 ? "success" : "warning"} />
         <KpiCard label="Health score" value={`${healthScore}%`} sub={`${communicatingCount}/${inverters.length} communicating`} icon={Activity} accent={healthScore > 90 ? "success" : "warning"} />
-        <KpiCard label="Cleaning" value={daysSinceClean !== null ? `${daysSinceClean}d` : "—"} sub={daysSinceClean !== null && daysSinceClean > site.cleaning_cycle_days ? "Overdue" : `Cycle: ${site.cleaning_cycle_days}d`} icon={Thermometer} accent={daysSinceClean !== null && daysSinceClean > site.cleaning_cycle_days ? "destructive" : "success"} />
+        <KpiCard
+          label="Cleaning"
+          value={daysSinceClean !== null ? `${daysSinceClean}d ago` : "—"}
+          sub={site.last_cleaned_on ? `Last: ${formatDate(site.last_cleaned_on)} · Cycle: ${site.cleaning_cycle_days}d` : "Never recorded"}
+          icon={Thermometer}
+          accent={daysSinceClean !== null && daysSinceClean > site.cleaning_cycle_days ? "destructive" : "success"}
+        />
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
