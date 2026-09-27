@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Users, Plus, UserCheck, MapPin, Wrench, Calendar, CheckCircle2, Clock, ShieldAlert, Settings } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { SubNav } from "@/components/sub-nav";
 import type { TechnicianTeam, Profile, WorkOrder, CleaningLog } from "@/lib/types";
 
 interface ExtendedTeamMember {
@@ -178,6 +179,8 @@ export default function WorkforcePage() {
 
   return (
     <div className="space-y-6 pb-12" data-testid="workforce-page">
+      <SubNav hub="operations" />
+
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -275,7 +278,7 @@ export default function WorkforcePage() {
                     </div>
 
                     <div className="pt-2 border-t flex justify-between text-[11px] text-muted-foreground font-mono">
-                      <span>Assigned Work Orders: <strong>{teamWos.length}</strong></span>
+                      <span>Assigned Service Tasks: <strong>{teamWos.length}</strong></span>
                       <span>Completed: <strong>{completedTeamWos.length}</strong></span>
                     </div>
                   </CardContent>
@@ -418,7 +421,8 @@ export default function WorkforcePage() {
             <DialogTitle>Manage Members for {manageTeam?.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 text-xs max-h-64 overflow-y-auto pr-1">
-            <Label className="font-bold">Select Technicians to assign to {manageTeam?.name}</Label>
+            <Label className="font-bold">Select 2 members (Technician + Helper) for {manageTeam?.name}</Label>
+            <div className="text-muted-foreground text-[10px] mb-2">Selected: {selectedTechIds.length} / 2 required</div>
             <div className="space-y-2">
               {technicians.map((t) => {
                 const isSelected = selectedTechIds.includes(t.id);
@@ -445,8 +449,8 @@ export default function WorkforcePage() {
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleSaveTeamMembers} disabled={savingMembers} size="sm">
-              {savingMembers ? "Saving..." : "Save Team Members"}
+            <Button onClick={handleSaveTeamMembers} disabled={savingMembers || selectedTechIds.length !== 2} size="sm">
+              {savingMembers ? "Saving..." : "Save Team Details"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
+import { SubNav } from "@/components/sub-nav";
 import type { Ticket, Site } from "@/lib/types";
 
 export default function TicketsPage() {
@@ -63,6 +64,7 @@ export default function TicketsPage() {
 
   return (
     <div className="space-y-6" data-testid="tickets-page">
+      <SubNav hub="operations" />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display font-semibold">Tickets</h1>

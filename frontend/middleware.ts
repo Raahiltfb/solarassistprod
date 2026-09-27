@@ -4,7 +4,6 @@ import { updateSession } from "@/lib/supabase/middleware";
 
 const technicianBlockedRoutes = [
   "/alerts",
-  "/tickets",
   "/reports",
   "/users",
   "/sites",
@@ -15,10 +14,15 @@ const technicianBlockedRoutes = [
 export async function middleware(request: NextRequest) {
   const response = await updateSession(request);
 
+  const pathname = request.nextUrl.pathname;
+
+  if (pathname.startsWith("/work-orders") || pathname.startsWith("/workorders")) {
+    const newPath = pathname.replace(/^\/(work-orders|workorders)/, "/service-requests");
+    return NextResponse.redirect(new URL(newPath + request.nextUrl.search, request.url));
+  }
+
   const role =
     request.cookies.get("user-role")?.value;
-
-  const pathname = request.nextUrl.pathname;
 
   if (role === "client") {
     if (pathname === "/dashboard" || pathname === "/") {

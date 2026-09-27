@@ -56,12 +56,12 @@ export function TodaysOperationsTracker({
               </Badge>
             </div>
             <CardDescription className="text-sm">
-              Real-time route execution and technician work order progress across the operational fleet.
+              Real-time route execution and technician service request progress across the operational fleet.
             </CardDescription>
           </div>
 
           <Button asChild size="sm" variant="default" className="text-xs h-8 gap-1.5">
-            <Link href="/routes">
+            <Link href="/operations/routes">
               <Navigation className="h-3.5 w-3.5" />
               <span>Optimize & Dispatch Routes</span>
             </Link>
@@ -112,7 +112,7 @@ export function TodaysOperationsTracker({
               All 8 technician test accounts are available. Create work orders and dispatch daily optimized routes.
             </p>
             <Button asChild size="sm" variant="outline" className="mt-3 text-xs">
-              <Link href="/routes">Create Today's Routes</Link>
+              <Link href="/operations/routes">Create Today's Routes</Link>
             </Button>
           </div>
         ) : (

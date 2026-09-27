@@ -193,9 +193,9 @@ function CleaningFormContent() {
           .eq("id", queryWoId);
 
         if (woErr) {
-          console.error("Failed to update work order status:", woErr);
+          console.error("Failed to update service request status:", woErr);
         } else {
-          toast.success("Work Order completed!");
+          toast.success("Service Request completed!");
         }
       }
 
@@ -217,7 +217,7 @@ function CleaningFormContent() {
       loadSites();
 
       if (queryWoId) {
-        router.push(`/work-orders/${queryWoId}`);
+        router.push(`/service-requests/${queryWoId}`);
       }
     } finally {
       setSubmitting(false);

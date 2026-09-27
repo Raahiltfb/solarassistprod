@@ -17,6 +17,7 @@ interface PlannerMatrixProps {
   teams: TechnicianTeam[];
   sites: Site[];
   assignments: CleaningPlanAssignment[];
+  serviceRequests?: any[];
   planningCapacityMins: number;
   schedulingToleranceDays: number;
   onUpdateAssignment: (assignmentId: string, newTeamId: string, newDateStr: string) => void;
@@ -30,6 +31,7 @@ export function PlannerMatrix({
   teams,
   sites,
   assignments,
+  serviceRequests = [],
   planningCapacityMins,
   schedulingToleranceDays,
   onUpdateAssignment,
@@ -55,11 +57,22 @@ export function PlannerMatrix({
   // Map assignments by key `${team_id}:${day}`
   const assignmentGrid = new Map<string, CleaningPlanAssignment[]>();
   assignments.forEach((a) => {
-    const day = new Date(a.scheduled_date).getDate();
+    const dateStr = a.scheduled_date.split("T")[0];
+    const day = parseInt(dateStr.split("-")[2], 10);
     const key = `${a.team_id}:${day}`;
     const list = assignmentGrid.get(key) || [];
     list.push(a);
     assignmentGrid.set(key, list);
+  });
+
+  const srGrid = new Map<string, any[]>();
+  serviceRequests.forEach((sr) => {
+    const dateStr = (sr.scheduled_date || sr.created_at).split("T")[0];
+    const day = parseInt(dateStr.split("-")[2], 10);
+    const key = `${sr.team_id}:${day}`;
+    const list = srGrid.get(key) || [];
+    list.push(sr);
+    srGrid.set(key, list);
   });
 
   // Calculate team monthly summary metrics
@@ -74,7 +87,8 @@ export function PlannerMatrix({
     // Calculate daily workloads
     const dayWorkloadMap = new Map<number, number>();
     teamAssigns.forEach((a) => {
-      const day = new Date(a.scheduled_date).getDate();
+      const dateStr = a.scheduled_date.split("T")[0];
+      const day = parseInt(dateStr.split("-")[2], 10);
       const current = dayWorkloadMap.get(day) || 0;
       const mins = (a.estimated_cleaning_mins || 90) + (a.estimated_travel_mins || 0);
       dayWorkloadMap.set(day, current + mins);
@@ -194,11 +208,11 @@ export function PlannerMatrix({
         </CardHeader>
 
         <CardContent className="p-0">
-          <div className="w-full overflow-hidden">
-            <table className="w-full table-fixed border-collapse text-xs">
+          <div className="w-full overflow-x-auto">
+            <table className="w-full min-w-[2000px] border-collapse text-xs">
               <thead className="bg-muted/60 border-y text-muted-foreground font-semibold">
                 <tr>
-                  <th className="py-2 px-2 text-left w-36 border-r text-[11px]">
+                  <th className="py-3 px-3 text-left w-48 border-r text-xs">
                     Team / Date
                   </th>
                   {daysArray.map((day) => {
@@ -209,12 +223,11 @@ export function PlannerMatrix({
                     return (
                       <th
                         key={day}
-                        className={`py-1 px-0.5 text-center border-r ${
-                          isWeekend ? "bg-muted/80 text-muted-foreground font-normal" : ""
-                        }`}
+                        className={`py-2 px-1 w-32 text-center border-r ${isWeekend ? "bg-muted/80 text-muted-foreground font-normal" : ""
+                          }`}
                       >
-                        <div className="text-[9px] uppercase leading-none text-muted-foreground">{dayOfWeek}</div>
-                        <div className="font-bold text-xs text-foreground mt-0.5">{day}</div>
+                        <div className="text-[10px] uppercase leading-none text-muted-foreground">{dayOfWeek}</div>
+                        <div className="font-bold text-sm text-foreground mt-1">{day}</div>
                       </th>
                     );
                   })}
@@ -242,6 +255,7 @@ export function PlannerMatrix({
                       const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                       const key = `${team.id}:${dateStr}`;
                       const cellAssigns = assignmentGrid.get(key) || [];
+                      const cellSr = srGrid.get(`${team.id}:${day}`) || [];
 
                       let totalDayMins = 0;
                       cellAssigns.forEach(
@@ -261,31 +275,37 @@ export function PlannerMatrix({
                               handleOpenManual(team.id, day);
                             }
                           }}
-                          className={`p-0.5 border-r border-b text-center align-middle cursor-pointer transition-colors hover:bg-primary/10 ${
-                            isOverloaded ? "bg-amber-500/10" : ""
-                          }`}
+                          className={`p-0.5 border-r border-b text-center align-middle cursor-pointer transition-colors hover:bg-primary/10 ${isOverloaded ? "bg-amber-500/10" : ""
+                            }`}
                         >
-                          <div className="h-10 flex flex-col items-center justify-center p-0.5 gap-0.5">
-                            {cellAssigns.length > 0 ? (
+                          <div className="min-h-24 h-full flex flex-col items-center justify-start p-1.5 gap-1.5">
+                            {cellAssigns.length > 0 && cellAssigns.map((assign, idx) => (
                               <div
-                                className={`w-full py-1 px-0.5 rounded text-[10px] font-bold font-mono truncate flex items-center justify-center gap-0.5 ${
-                                  hasBlocking
-                                    ? "bg-destructive text-destructive-foreground"
+                                key={idx}
+                                className={`w-full p-1.5 rounded-md text-xs text-left shadow-sm border ${hasBlocking
+                                    ? "bg-destructive/10 border-destructive/30 text-destructive-foreground"
                                     : isOverloaded
-                                    ? "bg-amber-500 text-white"
-                                    : "bg-emerald-600 text-white"
-                                }`}
-                                title={`${cellAssigns.length} visit(s) assigned: ${cellAssigns.map((a) => a.sites?.name || "Site").join(", ")}`}
+                                      ? "bg-amber-500/10 border-amber-500/30 text-amber-900"
+                                      : "bg-emerald-50 border-emerald-200 text-emerald-900"
+                                  }`}
                               >
-                                <span>{cellAssigns.length}</span>
-                                {cellAssigns.length === 1 && (
-                                  <span className="truncate text-[9px] font-sans font-normal hidden xl:inline">
-                                    {(cellAssigns[0].sites?.name || "Site").slice(0, 4)}
-                                  </span>
-                                )}
+                                <div className="font-bold truncate" title={assign.sites?.name}>{assign.sites?.name}</div>
+                                <div className="text-[10px] mt-0.5 font-medium opacity-80">Cleaning</div>
                               </div>
-                            ) : (
-                              <span className="text-[10px] text-muted-foreground/30 hover:text-muted-foreground">·</span>
+                            ))}
+                            
+                            {cellSr.length > 0 && cellSr.map((sr, idx) => (
+                              <div
+                                key={idx}
+                                className="w-full p-1.5 rounded-md text-xs text-left shadow-sm border bg-purple-50 border-purple-200 text-purple-900"
+                              >
+                                <div className="font-bold truncate" title={sr.sites?.name}>{sr.sites?.name}</div>
+                                <div className="text-[10px] mt-0.5 font-medium opacity-80">SR</div>
+                              </div>
+                            ))}
+
+                            {cellAssigns.length === 0 && cellSr.length === 0 && (
+                              <span className="text-xs text-muted-foreground/30 hover:text-muted-foreground py-4">·</span>
                             )}
                           </div>
                         </td>

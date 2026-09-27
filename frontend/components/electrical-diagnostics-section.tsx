@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { format, parseISO, subDays, startOfDay } from "date-fns";
+import { format, parseISO, subDays, startOfDay, endOfDay, isSameDay } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Clock, Zap, Activity, Sun } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
+import { MiniCalendarPicker } from "@/components/ui/mini-calendar-picker";
 
 interface ElectricalProps {
   inverterId: string;
@@ -17,7 +18,8 @@ interface ElectricalProps {
 
 export function ElectricalDiagnosticsSection({ inverterId, latestTelemetry }: ElectricalProps) {
   const sb = createClient();
-  const [range, setRange] = useState<"today" | "week" | "month" | "year">("today");
+  const [startDate, setStartDate] = useState<Date>(startOfDay(new Date()));
+  const [endDate, setEndDate] = useState<Date>(endOfDay(new Date()));
   const [metric, setMetric] = useState<string>("voltage_r_v");
   const [telemetry, setTelemetry] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -132,17 +134,12 @@ export function ElectricalDiagnosticsSection({ inverterId, latestTelemetry }: El
     async function loadTelemetry() {
       setLoading(true);
       try {
-        let startDate = new Date();
-        if (range === "today") startDate = startOfDay(new Date());
-        else if (range === "week") startDate = subDays(startOfDay(new Date()), 7);
-        else if (range === "month") startDate = subDays(startOfDay(new Date()), 30);
-        else startDate = subDays(startOfDay(new Date()), 365);
-
         const { data } = await sb
           .from("telemetry")
           .select("timestamp, voltage_r_v, voltage_s_v, voltage_t_v, current_r_a, current_s_a, current_t_a, frequency_hz, power_factor, reactive_power_kvar, apparent_power_kva, dc_power_kw, temperature_c, efficiency_pct, battery_soc_pct, battery_soh_pct, battery_power_kw, battery_voltage_v, battery_current_a, load_power_kw, grid_purchased_today_kwh, grid_sell_today_kwh, load_today_kwh, metrics")
           .eq("inverter_id", inverterId)
           .gte("timestamp", startDate.toISOString())
+          .lte("timestamp", endDate.toISOString())
           .order("timestamp", { ascending: true });
 
         setTelemetry(data ?? []);
@@ -152,7 +149,7 @@ export function ElectricalDiagnosticsSection({ inverterId, latestTelemetry }: El
       setLoading(false);
     }
     loadTelemetry();
-  }, [inverterId, range]);
+  }, [inverterId, startDate.getTime(), endDate.getTime()]);
 
   // Format data for chart
   function getMetricValue(row: any, keyPath: string) {
@@ -181,17 +178,14 @@ export function ElectricalDiagnosticsSection({ inverterId, latestTelemetry }: El
         </div>
 
         <div className="flex items-center gap-1.5">
-          {(["today", "week", "month", "year"] as const).map((r) => (
-            <Button
-              key={r}
-              size="sm"
-              variant={range === r ? "default" : "outline"}
-              onClick={() => setRange(r)}
-              className="text-xs h-7 px-3 capitalize"
-            >
-              {r}
-            </Button>
-          ))}
+          <MiniCalendarPicker
+            startDate={startDate}
+            endDate={endDate}
+            onChange={(start, end) => {
+              setStartDate(start);
+              setEndDate(end);
+            }}
+          />
         </div>
       </div>
 
@@ -323,7 +317,7 @@ export function ElectricalDiagnosticsSection({ inverterId, latestTelemetry }: El
                     dataKey="timestamp" 
                     tickFormatter={(t) => {
                       try {
-                        return format(parseISO(t), range === "today" ? "HH:mm" : "d MMM");
+                        return format(parseISO(t), isSameDay(startDate, endDate) ? "HH:mm" : "d MMM HH:mm");
                       } catch {
                         return "";
                       }

@@ -109,6 +109,37 @@ export function SiteRuleDialog({ open, onOpenChange, site, rule, onSaved }: Site
     if (error) {
       toast.error(error.message);
     } else {
+      // Also update site's next_cleaning_date and cleaning_cycle_days
+      const baseDateStr = site.last_cleaned_on || new Date().toISOString().slice(0, 10);
+      const baseDate = new Date(baseDateStr);
+      if (!isNaN(baseDate.getTime())) {
+        const mm = String(baseDate.getMonth() + 1).padStart(2, "0");
+        const dd = String(baseDate.getDate()).padStart(2, "0");
+        const currentMD = `${mm}-${dd}`;
+        const isMonsoon = monsoonStart <= monsoonEnd
+          ? (currentMD >= monsoonStart && currentMD <= monsoonEnd)
+          : (currentMD >= monsoonStart || currentMD <= monsoonEnd);
+
+        const intervalDays = isMonsoon
+          ? (Number(monsoonInterval) || 30)
+          : (Number(normalInterval) || 15);
+
+        const nextDate = new Date(baseDate.getTime() + intervalDays * 86400_000);
+        if (allowedWeekdays && allowedWeekdays.length > 0) {
+          for (let i = 0; i < 7; i++) {
+            const day = nextDate.getDay();
+            const isoWeekday = day === 0 ? 7 : day;
+            if (allowedWeekdays.includes(isoWeekday)) break;
+            nextDate.setDate(nextDate.getDate() + 1);
+          }
+        }
+        const nextStr = nextDate.toISOString().slice(0, 10);
+        await sb.from("sites").update({
+          next_cleaning_date: nextStr,
+          cleaning_cycle_days: Number(normalInterval) || 15
+        }).eq("id", site.id);
+      }
+
       toast.success(`Cleaning policy saved for ${site.name}`);
       onSaved();
       onOpenChange(false);
@@ -249,16 +280,50 @@ export function SiteRuleDialog({ open, onOpenChange, site, rule, onSaved }: Site
                 <span>Cleaning Policy Summary</span>
               </div>
               <div className="space-y-1 text-muted-foreground text-[11px] leading-relaxed">
-                <div>Normal: Every {normalInterval || "10"} days</div>
+                <div>Normal: Every {normalInterval || "15"} days</div>
                 <div>Monsoon: Every {monsoonInterval || "30"} days</div>
                 <div>Monsoon period: {monsoonStart} – {monsoonEnd}</div>
                 <div>Allowed days: {daysSummary}</div>
                 <div>Estimated duration: {estimatedMins} minutes</div>
                 {site?.last_cleaned_on && (
-                  <div className="text-foreground font-medium pt-0.5">
-                    Next planned cleaning: {site.last_cleaned_on}
+                  <div>
+                    Last completed cleaning: <span className="font-mono text-foreground font-medium">{site.last_cleaned_on}</span>
                   </div>
                 )}
+                {(() => {
+                  const baseDateStr = site?.last_cleaned_on || new Date().toISOString().slice(0, 10);
+                  const baseDate = new Date(baseDateStr);
+                  if (isNaN(baseDate.getTime())) return null;
+
+                  const mm = String(baseDate.getMonth() + 1).padStart(2, "0");
+                  const dd = String(baseDate.getDate()).padStart(2, "0");
+                  const currentMD = `${mm}-${dd}`;
+                  const isMonsoon = monsoonStart <= monsoonEnd
+                    ? (currentMD >= monsoonStart && currentMD <= monsoonEnd)
+                    : (currentMD >= monsoonStart || currentMD <= monsoonEnd);
+
+                  const intervalDays = isMonsoon
+                    ? (Number(monsoonInterval) || 30)
+                    : (Number(normalInterval) || 15);
+
+                  const nextDate = new Date(baseDate.getTime() + intervalDays * 86400_000);
+
+                  if (allowedWeekdays && allowedWeekdays.length > 0) {
+                    for (let i = 0; i < 7; i++) {
+                      const day = nextDate.getDay();
+                      const isoWeekday = day === 0 ? 7 : day;
+                      if (allowedWeekdays.includes(isoWeekday)) break;
+                      nextDate.setDate(nextDate.getDate() + 1);
+                    }
+                  }
+
+                  const nextStr = nextDate.toISOString().slice(0, 10);
+                  return (
+                    <div className="text-foreground font-medium pt-0.5">
+                      Next planned cleaning: <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{nextStr}</span>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>

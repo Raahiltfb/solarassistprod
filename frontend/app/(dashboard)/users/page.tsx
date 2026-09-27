@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ROLE_LABELS } from "@/lib/permissions";
+import { SubNav } from "@/components/sub-nav";
 
 export default async function UsersPage() {
   const sb = await createClient();
@@ -10,6 +11,7 @@ export default async function UsersPage() {
 
   return (
     <div className="space-y-6" data-testid="users-page">
+      <SubNav hub="configuration" />
       <div>
         <h1 className="text-3xl font-display font-semibold">Users</h1>
         <p className="text-sm text-muted-foreground mt-1">People with access to your organisation.</p>

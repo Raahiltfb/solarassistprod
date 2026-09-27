@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { SubNav } from "@/components/sub-nav";
 
 export default async function SettingsPage() {
   const sb = await createClient();
@@ -18,8 +19,9 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-6" data-testid="settings-page">
+      <SubNav hub="configuration" />
       <div>
-        <h1 className="text-3xl font-display font-semibold">Settings</h1>
+        <h1 className="text-3xl font-display font-semibold">System Settings</h1>
         <p className="text-sm text-muted-foreground mt-1">Organisation, integrations and alerting.</p>
       </div>
 

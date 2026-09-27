@@ -1,6 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ import { kWh, formatDateTime, formatDate } from "@/lib/utils";
 export default async function ClientSiteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const sb = await createClient();
+  const serviceClient = createServiceClient();
 
   const {
     data: { user },
@@ -40,11 +42,21 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
     redirect("/login");
   }
 
-  const { data: site } = await sb
-    .from("sites")
+  const { data: profile } = await serviceClient
+    .from("profiles")
     .select("*")
-    .eq("id", id)
+    .eq("id", user.id)
     .single();
+
+  if (!profile) {
+    redirect("/login");
+  }
+
+  let siteQuery = serviceClient.from("sites").select("*").eq("id", id);
+  if (profile.role === "client" && profile.org_id) {
+    siteQuery = siteQuery.eq("client_org_id", profile.org_id);
+  }
+  const { data: site } = await siteQuery.maybeSingle();
 
   if (!site) {
     notFound();
@@ -52,10 +64,10 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
 
   // Fetch inverters, telemetry, alerts, cleaning logs, work orders for this site
   const [invRes, altRes, clnRes, woRes] = await Promise.all([
-    sb.from("inverters").select("*").eq("site_id", site.id),
-    sb.from("alerts").select("*").eq("site_id", site.id),
-    sb.from("cleaning_logs").select("*").eq("site_id", site.id).order("performed_at", { ascending: false }),
-    sb.from("work_orders").select("*").eq("site_id", site.id).order("created_at", { ascending: false }),
+    serviceClient.from("inverters").select("*").eq("site_id", site.id),
+    serviceClient.from("alerts").select("*").eq("site_id", site.id),
+    serviceClient.from("cleaning_logs").select("*").eq("site_id", site.id).order("performed_at", { ascending: false }),
+    serviceClient.from("work_orders").select("*, tickets(before_photo_url, after_photo_url)").eq("site_id", site.id).order("created_at", { ascending: false }),
   ]);
 
   const inverters = invRes.data ?? [];
@@ -68,7 +80,7 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
   let latestTelemetry: any[] = [];
 
   if (inverterIds.length > 0) {
-    const latestTelsRes = await sb.rpc("get_latest_telemetry", { inverter_ids: inverterIds });
+    const latestTelsRes = await serviceClient.rpc("get_latest_telemetry", { inverter_ids: inverterIds });
     latestTelemetry = latestTelsRes.data ?? [];
   }
 
@@ -118,8 +130,21 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
     ? new Date(lastCleanedDate.getTime() + cycleDays * 86400_000)
     : new Date(Date.now() + 7 * 86400_000);
 
-  const daysUntilCleaning = Math.ceil((nextScheduledCleaningDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-  const isCleaningTomorrow = daysUntilCleaning === 1 || (daysUntilCleaning > 0 && daysUntilCleaning <= 1.5);
+  // Find any scheduled cleaning work order
+  const scheduledCleaningWo = workOrders.find((wo) => wo.type === "cleaning" && wo.status === "scheduled");
+  const isCleaningScheduled = !!scheduledCleaningWo;
+
+  async function acknowledgeCleaning(formData: FormData) {
+    "use server";
+    const logId = formData.get("logId") as string;
+    if (!logId) return;
+    const sbClient = await createClient();
+    await sbClient
+      .from("cleaning_logs")
+      .update({ client_acknowledged: true, client_acknowledged_at: new Date().toISOString() })
+      .eq("id", logId);
+    revalidatePath(`/client/sites/${id}`);
+  }
 
   // Sanitized Service Timeline Events
   const serviceEvents = sanitizeServiceEvents(alerts, workOrders, cleaningLogs);
@@ -161,22 +186,22 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
         </div>
       </div>
 
-      {/* 24-Hour Cleaning Reminder Banner */}
-      {isCleaningTomorrow && (
+      {/* Scheduled Cleaning Banner */}
+      {isCleaningScheduled && scheduledCleaningWo && (
         <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-lg flex items-center justify-between gap-4 text-xs">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
               <SprayCan className="h-4 w-4" />
             </div>
             <div>
-              <div className="font-semibold text-sm text-foreground">Scheduled Solar Panel Cleaning Tomorrow</div>
+              <div className="font-semibold text-sm text-foreground">Scheduled Maintenance</div>
               <p className="text-muted-foreground mt-0.5">
-                Our SolarAssist technician team is scheduled to clean solar panels at {site.name} tomorrow ({formatDate(nextScheduledCleaningDate.toISOString())}).
+                Cleaning scheduled for {formatDate(scheduledCleaningWo.scheduled_date)}. Our SolarAssist technician team is dispatched to maintain peak performance at {site.name}.
               </p>
             </div>
           </div>
           <Badge variant="secondary" className="shrink-0 font-medium">
-            24h Reminder
+            Scheduled
           </Badge>
         </div>
       )}
@@ -431,6 +456,22 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
                             <img src={url} alt="Service evidence" className="h-12 w-12 object-cover rounded border hover:opacity-90" />
                           </a>
                         ))}
+                      </div>
+                    )}
+                    {evt.actionable === "cleaning_ack" && (
+                      <div className="pt-2">
+                        {evt.actionableStatus === "pending" ? (
+                          <form action={acknowledgeCleaning}>
+                            <input type="hidden" name="logId" value={evt.actionableId} />
+                            <Button type="submit" size="sm" variant="default" className="text-xs h-8">
+                              Acknowledge Cleaning
+                            </Button>
+                          </form>
+                        ) : (
+                          <Badge variant="success" className="text-[10px] gap-1 px-2 py-0.5">
+                            <CheckCircle2 className="h-3 w-3" /> Acknowledged
+                          </Badge>
+                        )}
                       </div>
                     )}
                   </div>

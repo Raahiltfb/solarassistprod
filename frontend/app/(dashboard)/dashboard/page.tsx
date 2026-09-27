@@ -210,6 +210,7 @@ export default async function DashboardPage() {
     techniciansRes,
     alertsRes,
     cleaningLogsRes,
+    syncRunsRes,
   ] = await Promise.all([
     sb
       .from("sites")
@@ -233,8 +234,9 @@ export default async function DashboardPage() {
       .select("*, profiles!daily_routes_technician_id_fkey(full_name, base_address), route_stops(*, work_orders(*, sites(name)))")
       .eq("date", todayStr),
     sb.from("profiles").select("*").eq("role", "technician").order("full_name"),
-    sb.from("alerts").select("*, sites(name)").order("triggered_at", { ascending: false }).limit(20),
+    sb.from("alerts").select("*, sites(name)").order("triggered_at", { ascending: false }).limit(50),
     sb.from("cleaning_logs").select("*, sites(name)").order("performed_at", { ascending: false }).limit(10),
+    sb.from("sync_runs").select("*").order("started_at", { ascending: false }).limit(1),
   ]);
 
   const sites = sitesRes.data ?? [];
@@ -245,6 +247,7 @@ export default async function DashboardPage() {
   const technicians = techniciansRes.data ?? [];
   const alerts = alertsRes.data ?? [];
   const cleaningLogs = cleaningLogsRes.data ?? [];
+  const latestSyncRun = (syncRunsRes.data && syncRunsRes.data.length > 0) ? syncRunsRes.data[0] : null;
 
   // Fetch telemetry snapshots per inverter
   const inverterIds = inverters.map((i) => i.id);
@@ -294,30 +297,38 @@ export default async function DashboardPage() {
     const status = getSiteStatus(siteInvs, latestTimestampMap);
 
     const siteTickets = tickets.filter((t) => t.site_id === site.id && t.status !== "resolved" && t.status !== "closed");
-    const siteAlerts = alerts.filter((a) => a.site_id === site.id && a.status === "open");
+    const siteAlerts = alerts.filter((a) => a.site_id === site.id && (a.status === "open" || a.status === "acknowledged"));
 
-    if (status === "ONLINE" || status === "PARTIALLY ONLINE") {
-      onlineSites++;
-      if (siteTickets.length > 0 || siteAlerts.length > 0 || status === "PARTIALLY ONLINE") {
-        attentionSites++;
-      } else {
-        normalSites++;
-      }
-    } else {
-      offlineSites++;
+    const offlineInvsCount = siteInvs.filter((i) => {
+      const st = getSiteStatus([i], latestTimestampMap);
+      return st === "OFFLINE";
+    }).length;
+
+    if (status === "OFFLINE" || status === "PARTIALLY ONLINE" || offlineInvsCount > 0) {
       attentionSites++;
+      if (status === "OFFLINE") {
+        offlineSites++;
+      }
+
       offlineSitesList.push({
         ...site,
-        offlineInvertersCount: siteInvs.filter((i) => i.status === "offline").length || 1,
+        status,
+        offlineInvertersCount: offlineInvsCount || (status === "OFFLINE" ? siteInvs.length || 1 : 1),
+        totalInvertersCount: siteInvs.length || 1,
+        isPartialOutage: status === "PARTIALLY ONLINE",
       });
+    } else if (siteTickets.length > 0 || siteAlerts.length > 0) {
+      attentionSites++;
+    } else {
+      normalSites++;
     }
   }
 
-  const onlineInverters = inverters.filter((i) => i.status === "online").length;
-  const offlineInverters = inverters.filter((i) => i.status === "offline").length;
+  const onlineInverters = inverters.filter((i) => getSiteStatus([i], latestTimestampMap) !== "OFFLINE").length;
+  const offlineInverters = inverters.filter((i) => getSiteStatus([i], latestTimestampMap) === "OFFLINE").length;
 
   const openTickets = tickets.filter((t) => t.status !== "resolved" && t.status !== "closed");
-  const openAlerts = alerts.filter((a) => a.status === "open");
+  const openAlerts = alerts.filter((a) => a.status === "open" || a.status === "acknowledged");
 
   // Today's work orders (scheduled, en_route, in_progress, completed)
   const todayWorkOrders = workOrders.filter((wo) => wo.scheduled_date === todayStr);
@@ -370,16 +381,25 @@ export default async function DashboardPage() {
     };
   });
 
+  const unassignedWorkOrdersCount = workOrders.filter(
+    (wo) => !wo.technician_id && wo.status !== "completed" && wo.status !== "cancelled"
+  ).length;
+
   return (
     <div className="space-y-8 pb-12" data-testid="dashboard-page">
       {/* Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl lg:text-4xl font-display font-bold tracking-tight text-foreground">
-            Operations Command Center
+          <h1 className="text-3xl lg:text-4xl font-display font-bold tracking-tight text-foreground flex items-center gap-3">
+            <span>Operations Command Center</span>
+            {attentionSites > 0 && (
+              <Badge variant="destructive" className="text-xs font-mono font-bold uppercase tracking-wider">
+                {attentionSites} {attentionSites === 1 ? "Site Needs Action" : "Sites Need Action"}
+              </Badge>
+            )}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Real-time operational monitoring, deduplicated incident queue, route dispatches, and fleet performance.
+            Real-time incident dispatch, outage alerts, equipment fault tracking, and field execution supervision.
           </p>
         </div>
       </div>
@@ -396,8 +416,8 @@ export default async function DashboardPage() {
         offlineInverters={offlineInverters}
         openTicketsCount={openTickets.length}
         openAlertsCount={openAlerts.length}
-        currentPowerKw={currentPowerKw}
-        todayEnergyKwh={todayEnergyKwh}
+        overdueCleanings={overdueCleanings}
+        unassignedJobsCount={unassignedWorkOrdersCount}
       />
 
       {/* 2. Needs Attention Deduplicated Incident Queue */}
@@ -406,6 +426,7 @@ export default async function DashboardPage() {
         workOrders={workOrders}
         offlineSites={offlineSitesList}
         alerts={alerts}
+        latestSyncRun={latestSyncRun}
       />
 
       {/* 3. Field Operations & Technician Dispatch Tracker */}
@@ -428,12 +449,12 @@ export default async function DashboardPage() {
                   {cleaningsDueThisWeek + overdueCleanings} Cleanings Scheduled This Week
                   {overdueCleanings > 0 && (
                     <span className="text-destructive font-semibold ml-2">
-                      · {overdueCleanings} Overdue
+                      · {overdueCleanings} Overdue Cycle(s)
                     </span>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Review Option A manual schedules & Option B suggested cycle dates for all 35 operational fleet sites.
+                  Inspect site soiling levels and dispatch daily panel washing teams.
                 </p>
               </div>
             </div>
@@ -445,23 +466,6 @@ export default async function DashboardPage() {
               </Link>
             </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* 5. Fleet Performance Analytics (Reused Baseline Component) */}
-      <Card className="border shadow-sm">
-        <CardHeader className="p-6 pb-2">
-          <CardTitle className="text-lg font-bold">Fleet Production & Generation Analytics</CardTitle>
-          <CardDescription className="text-sm">
-            Fleet-wide energy generation and power output history with Daily, Weekly, Monthly, Yearly, and Lifetime range controls.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-6 pt-2">
-          <PerformanceAnalyticsSection
-            isPortfolio={true}
-            initialInverterIds={inverterIds}
-            initialTotalCapacity={sites.reduce((sum, s) => sum + Number(s.capacity_kwp || 0), 0)}
-          />
         </CardContent>
       </Card>
 

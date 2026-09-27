@@ -188,7 +188,6 @@ export async function pollAndSyncAll(supabaseUrl: string, supabaseKey: string, t
           }
 
           const siteFields = {
-            org_id: orgId,
             name: station.name,
             location: station.location,
             latitude: station.location !== "Unknown" ? 19.0 : 0.0,
@@ -206,7 +205,7 @@ export async function pollAndSyncAll(supabaseUrl: string, supabaseKey: string, t
           } else {
             const { data: newSite } = await supabase
               .from("sites")
-              .insert([siteFields])
+              .insert([{ ...siteFields, org_id: orgId }])
               .select("id")
               .single();
             if (!newSite) throw new Error("Failed to insert site");

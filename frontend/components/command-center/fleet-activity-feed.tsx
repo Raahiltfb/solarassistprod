@@ -70,11 +70,11 @@ export function FleetActivityFeed({
       timestamp: new Date(wo.created_at).getTime(),
       timestampStr: wo.created_at,
       siteName: wo.sites?.name || "Site",
-      title: `Work Order ${wo.status === "completed" ? "Completed" : "Scheduled"}`,
+      title: `Service Request ${wo.status === "completed" ? "Completed" : "Scheduled"}`,
       description: `${wo.title} (${wo.type}) ${wo.profiles?.full_name ? `· Tech: ${wo.profiles.full_name}` : ""}`,
       status: wo.status,
       icon: Wrench,
-      link: `/work-orders?id=${wo.id}`,
+      link: `/service-requests/${wo.id}`,
     })),
 
     ...cleaningLogs.map((cl) => ({

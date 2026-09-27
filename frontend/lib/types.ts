@@ -94,6 +94,28 @@ export interface Telemetry {
   temperature_c: number;
 }
 
+export type ActionDecisionClass =
+  | "MONITOR"
+  | "NOTIFY"
+  | "INVESTIGATE"
+  | "SCHEDULE"
+  | "DISPATCH_IMMEDIATELY"
+  | "ESCALATE";
+
+export interface DecisionResult {
+  decision_class: ActionDecisionClass;
+  confidence_pct: number;
+  reasoning: string;
+  affected_capacity_kwp?: number;
+  recurrence_count_7d?: number;
+  recommended_technician_id?: string | null;
+  recommended_technician_name?: string | null;
+  automated_ticket_created: boolean;
+  automated_job_created: boolean;
+  automated_job_id?: string | null;
+  admin_override_required: boolean;
+}
+
 export interface Alert {
   id: string;
   org_id: string;
@@ -108,6 +130,16 @@ export interface Alert {
   acknowledged_at: string | null;
   acknowledged_by: string | null;
   resolved_at: string | null;
+  requires_technician?: boolean | null;
+  ticket_id?: string | null;
+  alarm_code?: string | null;
+  oem?: string | null;
+  category?: string | null;
+  is_auto_resolvable?: boolean | null;
+  recommended_action?: string | null;
+  action_decision_class?: ActionDecisionClass | null;
+  decision_confidence_pct?: number | null;
+  decision_reasoning?: string | null;
 }
 
 export interface Ticket {
@@ -124,6 +156,9 @@ export interface Ticket {
   sla_due_at: string | null;
   resolved_at: string | null;
   created_at: string;
+  action_decision_class?: ActionDecisionClass | null;
+  decision_confidence_pct?: number | null;
+  decision_reasoning?: string | null;
 }
 
 export interface WorkOrder {
@@ -143,6 +178,7 @@ export interface WorkOrder {
   check_in_lat?: number | null;
   check_in_lng?: number | null;
   completed_at?: string | null;
+  client_acknowledged_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -200,6 +236,8 @@ export interface CleaningLog {
   damage_observed: boolean;
   damage_type: string | null;
   damage_photo_url: string | null;
+  client_acknowledged_at?: string | null;
+  client_acknowledged_damage?: boolean | null;
 }
 
 export interface MaintenanceRemark {

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { KpiCard } from "@/components/kpi-card";
@@ -22,11 +22,13 @@ import {
 } from "lucide-react";
 import { calculateClientHealthScore } from "@/lib/client-health-score";
 import { calculateFinancialSavings, sanitizeServiceEvents } from "@/lib/client-sanitizer";
+import { ClientGlobalPopups } from "@/components/client-global-popups";
 import { getSiteStatus } from "@/lib/status-utils";
 import { kWh, formatDateTime } from "@/lib/utils";
 
 export default async function ClientPortfolioPage() {
   const sb = await createClient();
+  const serviceClient = createServiceClient();
 
   const {
     data: { user },
@@ -36,7 +38,7 @@ export default async function ClientPortfolioPage() {
     redirect("/login");
   }
 
-  const { data: profile } = await sb
+  const { data: profile } = await serviceClient
     .from("profiles")
     .select("*")
     .eq("id", user.id)
@@ -49,15 +51,16 @@ export default async function ClientPortfolioPage() {
   // Fetch Customer Organization details if assigned
   let customerOrg = null;
   if (profile.org_id) {
-    const { data: org } = await sb.from("organizations").select("*").eq("id", profile.org_id).single();
+    const { data: org } = await serviceClient.from("organizations").select("*").eq("id", profile.org_id).single();
     customerOrg = org;
   }
 
-  // Fetch client accessible sites
-  const { data: sitesRes } = await sb
-    .from("sites")
-    .select("*")
-    .order("name");
+  // Fetch client accessible sites (scoped strictly to client's organization if role is client)
+  let sitesQuery = serviceClient.from("sites").select("*").order("name");
+  if (profile.role === "client" && profile.org_id) {
+    sitesQuery = sitesQuery.eq("client_org_id", profile.org_id);
+  }
+  const { data: sitesRes } = await sitesQuery;
 
   const sites = sitesRes ?? [];
   const siteIds = sites.map((s) => s.id);
@@ -69,10 +72,10 @@ export default async function ClientPortfolioPage() {
 
   if (siteIds.length > 0) {
     const [invRes, altRes, clnRes, woRes] = await Promise.all([
-      sb.from("inverters").select("*").in("site_id", siteIds),
-      sb.from("alerts").select("*").in("site_id", siteIds),
-      sb.from("cleaning_logs").select("*").in("site_id", siteIds).order("performed_at", { ascending: false }).limit(20),
-      sb.from("work_orders").select("*").in("site_id", siteIds).order("created_at", { ascending: false }).limit(20),
+      serviceClient.from("inverters").select("*").in("site_id", siteIds),
+      serviceClient.from("alerts").select("*").in("site_id", siteIds),
+      serviceClient.from("cleaning_logs").select("*").in("site_id", siteIds).order("performed_at", { ascending: false }).limit(20),
+      serviceClient.from("work_orders").select("*").in("site_id", siteIds).order("created_at", { ascending: false }).limit(20),
     ]);
 
     inverters = invRes.data ?? [];
@@ -85,7 +88,7 @@ export default async function ClientPortfolioPage() {
 
   let latestTelemetry: any[] = [];
   if (inverterIds.length > 0) {
-    const latestTelsRes = await sb.rpc("get_latest_telemetry", { inverter_ids: inverterIds });
+    const latestTelsRes = await serviceClient.rpc("get_latest_telemetry", { inverter_ids: inverterIds });
     latestTelemetry = latestTelsRes.data ?? [];
   }
 
@@ -166,6 +169,8 @@ export default async function ClientPortfolioPage() {
 
   return (
     <div className="space-y-6" data-testid="client-portfolio-page">
+      <ClientGlobalPopups events={serviceEvents} />
+      
       {/* Portfolio Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-5">
         <div>
@@ -391,6 +396,20 @@ export default async function ClientPortfolioPage() {
                             <img src={url} alt="Service evidence" className="h-10 w-10 object-cover rounded border hover:opacity-90" />
                           </a>
                         ))}
+                      </div>
+                    )}
+                    {(evt.actionable === "cleaning_ack" || evt.actionable === "cleaning_schedule_ack") && evt.actionableStatus === "pending" && (
+                      <div className="pt-2">
+                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                          Awaiting Acknowledgment
+                        </Badge>
+                      </div>
+                    )}
+                    
+                    {(evt.actionable === "cleaning_ack" || evt.actionable === "cleaning_schedule_ack") && evt.actionableStatus === "completed" && (
+                      <div className="pt-2 flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Acknowledged
                       </div>
                     )}
                   </div>

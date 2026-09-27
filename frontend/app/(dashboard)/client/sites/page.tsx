@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { calculateFinancialSavings } from "@/lib/client-sanitizer";
 
 export default async function ClientSitesListPage() {
   const sb = await createClient();
+  const serviceClient = createServiceClient();
 
   const {
     data: { user },
@@ -19,7 +20,7 @@ export default async function ClientSitesListPage() {
     redirect("/login");
   }
 
-  const { data: profile } = await sb
+  const { data: profile } = await serviceClient
     .from("profiles")
     .select("*")
     .eq("id", user.id)
@@ -29,24 +30,25 @@ export default async function ClientSitesListPage() {
     redirect("/login");
   }
 
-  const { data: sitesRes } = await sb
-    .from("sites")
-    .select("*")
-    .order("name");
+  let sitesQuery = serviceClient.from("sites").select("*").order("name");
+  if (profile.role === "client" && profile.org_id) {
+    sitesQuery = sitesQuery.eq("client_org_id", profile.org_id);
+  }
+  const { data: sitesRes } = await sitesQuery;
 
   const sites = sitesRes ?? [];
   const siteIds = sites.map((s) => s.id);
 
   let inverters: any[] = [];
   if (siteIds.length > 0) {
-    const { data: invs } = await sb.from("inverters").select("*").in("site_id", siteIds);
+    const { data: invs } = await serviceClient.from("inverters").select("*").in("site_id", siteIds);
     inverters = invs ?? [];
   }
 
   const inverterIds = inverters.map((i) => i.id);
   let latestTelemetry: any[] = [];
   if (inverterIds.length > 0) {
-    const { data: tels } = await sb.rpc("get_latest_telemetry", { inverter_ids: inverterIds });
+    const { data: tels } = await serviceClient.rpc("get_latest_telemetry", { inverter_ids: inverterIds });
     latestTelemetry = tels ?? [];
   }
 

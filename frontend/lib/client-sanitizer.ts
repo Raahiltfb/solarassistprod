@@ -54,6 +54,48 @@ export interface ClientServiceEvent {
   description: string;
   timestamp: string;
   photos?: string[];
+  actionable?: "cleaning_ack" | "cleaning_schedule_ack";
+  actionableId?: string;
+  actionableStatus?: "pending" | "completed";
+  actionableContext?: any;
+}
+
+export function getMacroTechnicalDescription(alert: any, siteName: string): { title: string; description: string } {
+  const codeUpper = (alert.code || alert.alarm_code || "").toUpperCase();
+  const titleUpper = (alert.title || "").toUpperCase();
+
+  if (codeUpper.includes("SOLIS_ERR_01") || titleUpper.includes("SHUTDOWN") || titleUpper.includes("ISOLATION")) {
+    return {
+      title: "Inverter Safety Inspection Underway",
+      description: `Inverter isolation resistance boundary reached at ${siteName}. SolarAssist automated O&M system has safely paused the unit and dispatched an engineer for physical inspection.`,
+    };
+  }
+
+  if (codeUpper.includes("SUNGROW_STR") || titleUpper.includes("STRING") || titleUpper.includes("UNDERPERFORM")) {
+    return {
+      title: "String Performance Optimization Scheduled",
+      description: `String voltage variation detected at ${siteName}. SolarAssist team has scheduled routine maintenance to ensure full daily generation.`,
+    };
+  }
+
+  if (codeUpper.includes("GRID") || titleUpper.includes("GRID")) {
+    return {
+      title: "External Grid Outage Monitored",
+      description: `External DISCOM grid feeder power is currently unavailable at ${siteName}. SolarAssist is monitoring grid restoration.`,
+    };
+  }
+
+  if (codeUpper.includes("RECURRING") || titleUpper.includes("RECURRING") || titleUpper.includes("OVER-TEMPERATURE")) {
+    return {
+      title: "Thermal Inspection & Escalation",
+      description: `Inverter operating temperature has exceeded its normal range at ${siteName}. Escalated for technical inspection.`,
+    };
+  }
+
+  return {
+    title: "System Item Under Investigation",
+    description: `SolarAssist identified an operational item at ${siteName}. Our O&M team is taking care of it.`,
+  };
 }
 
 export function sanitizeServiceEvents(
@@ -63,15 +105,16 @@ export function sanitizeServiceEvents(
 ): ClientServiceEvent[] {
   const events: ClientServiceEvent[] = [];
 
-  // 1. Sanitized Alerts (Detected or Auto-Resolved)
+  // 1. Sanitized Alerts (Detected or Auto-Resolved with Macro-Technical Descriptions)
   for (const a of alerts) {
     const siteName = a.site_name || a.sites?.name || "your solar installation";
     if (a.status === "open") {
+      const macro = getMacroTechnicalDescription(a, siteName);
       events.push({
         id: `alert-open-${a.id}`,
         type: "detected",
-        title: "System Item Under Investigation",
-        description: `SolarAssist identified an item at ${siteName}. Our O&M team is taking care of it.`,
+        title: macro.title,
+        description: macro.description,
         timestamp: a.triggered_at,
       });
     } else if (a.status === "resolved") {
@@ -90,6 +133,9 @@ export function sanitizeServiceEvents(
     const siteName = wo.sites?.name || "your site";
     if (wo.status === "completed") {
       const photos: string[] = [];
+      if (wo.tickets?.before_photo_url) photos.push(wo.tickets.before_photo_url);
+      if (wo.tickets?.after_photo_url) photos.push(wo.tickets.after_photo_url);
+      
       events.push({
         id: `wo-${wo.id}`,
         type: "technician_visit",
@@ -100,20 +146,49 @@ export function sanitizeServiceEvents(
         timestamp: wo.completed_at || wo.created_at,
         photos: photos.length > 0 ? photos : undefined,
       });
+    } else if (wo.status !== "cancelled") {
+      const isCleaning = wo.type === "cleaning";
+      events.push({
+        id: `wo-active-${wo.id}`,
+        type: "technician_visit",
+        title: isCleaning ? "Solar Panel Cleaning Scheduled" : "Technician Visit Dispatched",
+        description: isCleaning
+          ? `SolarAssist has scheduled a routine solar panel cleaning for ${siteName}.`
+          : `SolarAssist automated O&M system has dispatched an engineer to ${siteName}. (Job #${wo.id.slice(0, 8)})`,
+        timestamp: wo.created_at,
+        actionable: isCleaning ? "cleaning_schedule_ack" : undefined,
+        actionableId: isCleaning ? wo.id : undefined,
+        actionableStatus: isCleaning ? (wo.client_acknowledged_at ? "completed" : "pending") : undefined,
+        actionableContext: isCleaning ? {
+          scheduled_date: wo.scheduled_date
+        } : undefined
+      });
     }
   }
 
   // 3. Cleaning Logs
   for (const cl of cleaningLogs) {
     const siteName = cl.sites?.name || "your site";
-    const photos = [cl.before_photo_url, cl.after_photo_url].filter(Boolean) as string[];
+    const photos = [cl.before_photo_url, cl.after_photo_url, cl.damage_photo_url].filter(Boolean) as string[];
+    let desc = `Comprehensive solar panel cleaning completed at ${siteName} to maximize output.`;
+    if (cl.damage_observed) {
+      desc += ` Damage Observation recorded: ${cl.damage_type || 'unspecified issue'}.`;
+    }
     events.push({
       id: `cln-${cl.id}`,
       type: "technician_visit",
       title: "Solar Panel Cleaning Completed",
-      description: `Comprehensive solar panel cleaning completed at ${siteName} to maximize output.`,
+      description: desc,
       timestamp: cl.performed_at,
       photos: photos.length > 0 ? photos : undefined,
+      actionable: "cleaning_ack",
+      actionableId: cl.id,
+      actionableStatus: cl.client_acknowledged_at ? "completed" : "pending",
+      actionableContext: {
+        damage_observed: cl.damage_observed,
+        damage_type: cl.damage_type,
+        remarks: cl.remarks
+      }
     });
   }
 

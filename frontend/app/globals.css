@@ -76,3 +76,11 @@
 /* Chart overrides */
 .recharts-cartesian-axis-tick-value { fill: hsl(var(--muted-foreground)); font-size: 11px; }
 .recharts-tooltip-wrapper { outline: none !important; }
+
+/* Safe area padding utilities for iOS mobile PWA notched displays */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-area-pt {
+  padding-top: env(safe-area-inset-top, 0px);
+}

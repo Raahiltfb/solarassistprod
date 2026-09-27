@@ -10,6 +10,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { formatDateTime } from "@/lib/utils";
+import { SubNav } from "@/components/sub-nav";
 import type { Alert } from "@/lib/types";
 import { Check, Ticket } from "lucide-react";
 
@@ -78,6 +79,7 @@ export default function AlertsPage() {
 
   return (
     <div className="space-y-6" data-testid="alerts-page">
+      <SubNav hub="assets" />
       <div>
         <h1 className="text-3xl font-display font-semibold">Alerts</h1>
         <p className="text-sm text-muted-foreground mt-1">Unified alert stream — inverter faults, string underperformance, missed cleanings.</p>
@@ -140,13 +142,21 @@ export default function AlertsPage() {
                 </TableCell>
                 <TableCell>
                   <Badge 
+                    variant={a.severity === "critical" ? "destructive" : a.severity === "high" ? "warning" : "secondary"} 
+                    className="uppercase text-[10px] font-bold"
+                  >
+                    {a.severity}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge 
                     variant={a.status === "open" ? "default" : a.status === "acknowledged" ? "secondary" : "outline"} 
-                    className={`capitalize ${a.status === "resolved" ? "bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300" : ""}`}
+                    className="capitalize font-mono text-[11px]"
                   >
                     {a.status}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-xs text-muted-foreground">{formatDateTime(a.triggered_at)}</TableCell>
+                <TableCell className="text-xs text-muted-foreground font-mono">{formatDateTime(a.triggered_at)}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1.5">
                     {a.status === "open" && (

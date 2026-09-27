@@ -103,27 +103,39 @@ class SolisAdapter(OemAdapter):
                 inv_detail_res = self._call_solis("/v1/api/inverterDetail", {"id": inv_oem_id})
                 inv_data = inv_detail_res.get("data", {}) if inv_detail_res.get("code") == "0" else {}
                 
-                state_val = inv_data.get("state") if inv_data.get("state") is not None else d.get("state")
-                pac_val = float(inv_data.get("pac") or d.get("pac") or 0.0)
+                ts = inv_data.get("dataTimestamp") or inv_data.get("updateTime") or d.get("dataTimestamp")
+                if ts:
+                    try:
+                        ts_int = int(ts)
+                        last_seen_dt = datetime.fromtimestamp(ts_int / 1000.0, tz=timezone.utc)
+                    except (ValueError, TypeError):
+                        last_seen_dt = datetime.now(timezone.utc)
+                else:
+                    last_seen_dt = datetime.now(timezone.utc)
                 
-                if state_val == 1 or state_val == "1" or pac_val > 0:
+                last_seen_at = last_seen_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+                
+                state_val = inv_data.get("state")
+                pac_val = float(inv_data.get("pac") or 0.0)
+                
+                # Evaluate connectivity vs operating condition
+                # State 1 = Generating, State 2 = Stopped/Standby (e.g. night), State 3 = Fault
+                is_fresh = (datetime.now(timezone.utc) - last_seen_dt).total_seconds() <= 1800
+                if not is_fresh:
+                    status = "offline"
+                elif state_val == 1 or state_val == "1" or pac_val > 0:
                     status = "online"
                 elif state_val == 3 or state_val == "3":
                     status = "fault"
-                elif state_val == 2 or state_val == "2":
-                    status = "offline"
                 else:
-                    status = "standby" if pac_val == 0 else "online"
-                    
+                    status = "standby"
+                
                 model = d.get("machine") or d.get("model") or inv_data.get("model") or "Solis Inverter"
                 capacity_kw = float(inv_data.get("power") or d.get("power") or 0.0)
                 dc_input_type = inv_data.get("dcInputType") or inv_data.get("dcInputtype")
                 if dc_input_type is None:
                     dc_input_type = d.get("dcInputType") or d.get("dcInputtype")
                 string_count = int(dc_input_type) + 1 if dc_input_type is not None else 8
-                
-                ts = inv_data.get("dataTimestamp") or inv_data.get("updateTime") or d.get("dataTimestamp")
-                last_seen_at = datetime.fromtimestamp(int(ts)/1000, tz=timezone.utc).isoformat() if ts else datetime.now(timezone.utc).isoformat()
                 
                 devices.append(NormalizedDevice(
                     oem_device_id=inv_oem_id,
@@ -172,7 +184,14 @@ class SolisAdapter(OemAdapter):
             specific_yield = round(daily_generation_kwh / capacity_kw, 2)
         
         ts = inv_data.get("dataTimestamp") or inv_data.get("updateTime")
-        last_seen_at = datetime.fromtimestamp(int(ts)/1000, tz=timezone.utc).isoformat() if ts else datetime.now(timezone.utc).isoformat()
+        if ts:
+            try:
+                last_seen_dt = datetime.fromtimestamp(int(ts) / 1000.0, tz=timezone.utc)
+            except (ValueError, TypeError):
+                last_seen_dt = datetime.now(timezone.utc)
+        else:
+            last_seen_dt = datetime.now(timezone.utc)
+        last_seen_at = last_seen_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
         
         frequency_hz = float(inv_data.get("fac") or 0.0)
         reactive_power_kvar = float(inv_data.get("reactivePower") or 0.0)

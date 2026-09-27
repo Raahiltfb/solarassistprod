@@ -64,11 +64,13 @@ export async function POST(req: Request) {
       const teamMembers = assign.technician_teams?.technician_team_members || [];
       const teamLeadTechId = teamMembers[0]?.technician_id || user.id;
 
-      // Check existing Work Order by plan_assignment_id
+      // Check existing Work Order by site_id and scheduled_date for cleaning type
       const { data: existingWo } = await sb
         .from("work_orders")
         .select("id")
-        .eq("plan_assignment_id", assign.id)
+        .eq("site_id", assign.site_id)
+        .eq("scheduled_date", assign.scheduled_date)
+        .eq("type", "cleaning")
         .maybeSingle();
 
       let woId: string;
@@ -81,6 +83,7 @@ export async function POST(req: Request) {
             scheduled_date: assign.scheduled_date,
             technician_id: teamLeadTechId,
             team_id: assign.team_id,
+            plan_assignment_id: assign.id,
             status: "scheduled",
             estimated_duration_mins: assign.estimated_cleaning_mins,
             updated_at: new Date().toISOString(),
@@ -119,33 +122,35 @@ export async function POST(req: Request) {
         publishedWorkOrdersCount++;
       }
 
-      // Upsert Daily Route for Team Lead on Scheduled Date
-      const routePayload = {
-        org_id: plan.org_id,
-        technician_id: teamLeadTechId,
-        team_id: assign.team_id,
-        date: assign.scheduled_date,
-        status: "published" as const,
-      };
+      // Upsert Daily Route for EVERY Team Member on Scheduled Date
+      for (const member of teamMembers) {
+        const routePayload = {
+          org_id: plan.org_id,
+          technician_id: member.technician_id,
+          team_id: assign.team_id,
+          date: assign.scheduled_date,
+          status: "published" as const,
+        };
 
-      const { data: routeRow } = await sb
-        .from("daily_routes")
-        .upsert(routePayload, { onConflict: "technician_id,date" })
-        .select("id")
-        .single();
+        const { data: routeRow } = await sb
+          .from("daily_routes")
+          .upsert(routePayload, { onConflict: "technician_id,date" })
+          .select("id")
+          .single();
 
-      if (routeRow) {
-        // Upsert Route Stop
-        await sb.from("route_stops").upsert(
-          {
-            route_id: routeRow.id,
-            work_order_id: woId,
-            sequence_order: assign.sequence_order,
-            travel_time_mins: assign.estimated_travel_mins,
-            distance_km: assign.estimated_distance_km,
-          },
-          { onConflict: "route_id,sequence_order" }
-        );
+        if (routeRow) {
+          // Upsert Route Stop
+          await sb.from("route_stops").upsert(
+            {
+              route_id: routeRow.id,
+              work_order_id: woId,
+              sequence_order: assign.sequence_order,
+              travel_time_mins: assign.estimated_travel_mins,
+              distance_km: assign.estimated_distance_km,
+            },
+            { onConflict: "route_id,sequence_order" }
+          );
+        }
       }
     }
 

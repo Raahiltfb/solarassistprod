@@ -1,0 +1,22 @@
+import os
+import requests
+from dotenv import load_dotenv
+
+load_dotenv("frontend/.env.local")
+
+url = os.getenv("NEXT_PUBLIC_SUPABASE_URL")
+key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
+headers = {
+    "apikey": key,
+    "Authorization": f"Bearer {key}",
+    "Content-Type": "application/json"
+}
+
+sql = """
+alter table public.site_cleaning_rules add column if not exists is_override boolean not null default false;
+NOTIFY pgrst, 'reload schema';
+"""
+
+res = requests.post(f"{url}/rest/v1/rpc/exec_sql", headers=headers, json={"sql": sql})
+print(res.status_code, res.text)

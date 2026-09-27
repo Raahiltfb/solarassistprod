@@ -19,12 +19,14 @@ import { formatDate } from "@/lib/utils";
 import type { CleaningLog, Site, Profile, SiteCleaningRule } from "@/lib/types";
 import { SiteRuleDialog } from "@/components/cleaning/site-rule-dialog";
 import { BulkRuleDialog } from "@/components/cleaning/bulk-rule-dialog";
+import { SubNav } from "@/components/sub-nav";
 
 export default function CleaningPage() {
   const [logs, setLogs] = useState<(CleaningLog & { sites?: { name: string; cleaning_cycle_days: number; last_cleaned_on: string | null } })[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [rules, setRules] = useState<SiteCleaningRule[]>([]);
   const [technicians, setTechnicians] = useState<Profile[]>([]);
+  const [teams, setTeams] = useState<any[]>([]);
   const [openLogDialog, setOpenLogDialog] = useState(false);
   const [openScheduleDialog, setOpenScheduleDialog] = useState(false);
   const [openWorkOrderDialog, setOpenWorkOrderDialog] = useState(false);
@@ -42,9 +44,9 @@ export default function CleaningPage() {
     schedule_notes: "",
   });
 
-  // Work Order Creation Form
+  // Service Request Creation Form
   const [woForm, setWoForm] = useState({
-    technician_id: "",
+    team_id: "",
     scheduled_date: "",
     notes: "",
   });
@@ -59,13 +61,15 @@ export default function CleaningPage() {
       sb.from("cleaning_logs").select("*, sites(name, cleaning_cycle_days, last_cleaned_on)").order("performed_at", { ascending: false }),
       sb.from("sites").select("*").order("name"),
       sb.from("profiles").select("*").eq("role", "technician").order("full_name"),
+      sb.from("technician_teams").select("*").eq("is_active", true).order("name"),
       sb.from("site_cleaning_rules").select("*"),
     ]);
 
     setLogs((l as any) ?? []);
     setSites((s as Site[]) ?? []);
     setTechnicians((t as Profile[]) ?? []);
-    setRules((r as SiteCleaningRule[]) ?? []);
+    setTeams((arguments[0][2].data as any) ?? []);
+    setRules((arguments[0][3].data as SiteCleaningRule[]) ?? []);
   }
 
   useEffect(() => {
@@ -142,10 +146,26 @@ export default function CleaningPage() {
     load();
   }
 
-  // Create Work Order from Schedule
+  // Create Service Request from Schedule
   async function handleCreateWorkOrder() {
     if (!selectedSite || !woForm.scheduled_date) {
       return toast.error("Scheduled date is required.");
+    }
+
+    // Duplicate check
+    const { data: existing } = await sb
+      .from("work_orders")
+      .select("id")
+      .eq("site_id", selectedSite.id)
+      .eq("scheduled_date", woForm.scheduled_date)
+      .eq("type", "cleaning")
+      .neq("status", "cancelled")
+      .maybeSingle();
+
+    if (existing) {
+      return toast.error(
+        `Cleaning already scheduled for this site on ${woForm.scheduled_date}. View scheduled cleaning or edit it instead.`
+      );
     }
 
     const {
@@ -155,7 +175,7 @@ export default function CleaningPage() {
     const { error } = await sb.from("work_orders").insert({
       org_id: selectedSite.org_id,
       site_id: selectedSite.id,
-      technician_id: woForm.technician_id || null,
+      team_id: woForm.team_id || null,
       created_by: user?.id || null,
       title: `Panel Cleaning: ${selectedSite.name}`,
       description: woForm.notes || `Scheduled solar panel module cleaning work order.`,
@@ -169,7 +189,7 @@ export default function CleaningPage() {
       return toast.error(error.message);
     }
 
-    toast.success(`Cleaning work order created for ${selectedSite.name}`);
+    toast.success(`Cleaning service request created for ${selectedSite.name}`);
     setOpenWorkOrderDialog(false);
     setSelectedSite(null);
     load();
@@ -227,6 +247,8 @@ export default function CleaningPage() {
 
   return (
     <div className="space-y-6 pb-12" data-testid="cleaning-page">
+      <SubNav hub="operations" />
+
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -326,14 +348,14 @@ export default function CleaningPage() {
       <Tabs defaultValue="schedules" className="space-y-6">
         <TabsList className="bg-muted p-1">
           <TabsTrigger value="schedules" className="text-xs font-semibold px-4">
-            Cleaning Schedules & Work Orders
+            Cleaning Schedules & Service Requests
           </TabsTrigger>
           <TabsTrigger value="history" className="text-xs font-semibold px-4">
             Cleaning Log History ({logs.length})
           </TabsTrigger>
         </TabsList>
 
-        {/* Tab 1: Schedules & Work Orders */}
+        {/* Tab 1: Schedules & Service Requests */}
         <TabsContent value="schedules" className="space-y-6">
           <Card className="border shadow-sm">
             <CardHeader className="p-6 pb-4">
@@ -353,43 +375,15 @@ export default function CleaningPage() {
                     <TableRow>
                       <TableHead className="py-3 px-6">Site</TableHead>
                       <TableHead className="py-3 px-4">Last Cleaned</TableHead>
-                      <TableHead className="py-3 px-4">Cycle</TableHead>
-                      <TableHead className="py-3 px-4">Suggested Next Date</TableHead>
-                      <TableHead className="py-3 px-4">Current Scheduled Date</TableHead>
+                      <TableHead className="py-3 px-4">Policy Config</TableHead>
+                      <TableHead className="py-3 px-4">Intervals</TableHead>
+                      <TableHead className="py-3 px-4">Allowed Days</TableHead>
                       <TableHead className="py-3 px-6 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {sites.map((site) => {
-                      const suggestion = getSuggestedDate(site);
-                      const isSuggestedAvailable = suggestion.date !== null;
-
-                      let statusBadge = (
-                        <Badge variant="outline" className="text-[10px] px-2 py-0.5 capitalize">
-                          {site.cleaning_schedule_type || "Unscheduled"}
-                        </Badge>
-                      );
-
-                      if (site.cleaning_schedule_type === "approved") {
-                        statusBadge = (
-                          <Badge variant="success" className="text-[10px] px-2 py-0.5 font-medium">
-                            Approved
-                          </Badge>
-                        );
-                      } else if (site.cleaning_schedule_type === "manual") {
-                        statusBadge = (
-                          <Badge variant="secondary" className="text-[10px] px-2 py-0.5 font-medium">
-                            Manually Scheduled
-                          </Badge>
-                        );
-                      } else if (site.cleaning_schedule_type === "suggested") {
-                        statusBadge = (
-                          <Badge variant="warning" className="text-[10px] px-2 py-0.5 font-medium">
-                            Suggested
-                          </Badge>
-                        );
-                      }
-
+                      const rule = rules.find((r) => r.site_id === site.id);
                       return (
                         <TableRow key={site.id} className="hover:bg-muted/30">
                           <TableCell className="py-3.5 px-6 font-semibold">
@@ -407,37 +401,35 @@ export default function CleaningPage() {
                             )}
                           </TableCell>
 
-                          <TableCell className="py-3.5 px-4 font-mono">
-                            Every {site.cleaning_cycle_days} days
-                          </TableCell>
-
                           <TableCell className="py-3.5 px-4">
-                            {isSuggestedAvailable ? (
-                              <div className="space-y-0.5">
-                                <div className="font-mono font-semibold text-foreground flex items-center gap-1.5">
-                                  <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                                  <span>{suggestion.date}</span>
-                                </div>
-                                <div className="text-[10px] text-muted-foreground">Option B Cycle Rule</div>
-                              </div>
+                            {rule && rule.is_configured ? (
+                              <Badge variant="success" className="text-[10px] px-2 py-0.5 font-medium">Configured</Badge>
                             ) : (
-                              <div className="space-y-0.5">
-                                <span className="text-amber-600 dark:text-amber-400 font-medium text-[11px] flex items-center gap-1">
-                                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                                  Unable to suggest schedule
-                                </span>
-                                <div className="text-[10px] text-muted-foreground">Admin manual date selection required</div>
-                              </div>
+                              <Badge variant="secondary" className="text-[10px] px-2 py-0.5 font-medium">Unconfigured</Badge>
                             )}
                           </TableCell>
 
-                          <TableCell className="py-3.5 px-4">
-                            <div className="space-y-1">
-                              <div className="font-mono font-bold text-foreground">
-                                {site.next_cleaning_date || (isSuggestedAvailable ? suggestion.date : "Not set")}
+                          <TableCell className="py-3.5 px-4 font-mono text-xs space-y-1">
+                            {rule ? (
+                              <>
+                                <div>Normal: <span className="font-semibold">{rule.normal_interval_days}d</span></div>
+                                <div>Monsoon: <span className="font-semibold">{rule.monsoon_interval_days}d</span></div>
+                              </>
+                            ) : (
+                              <span className="text-muted-foreground italic">Not set</span>
+                            )}
+                          </TableCell>
+
+                          <TableCell className="py-3.5 px-4 text-xs">
+                            {rule && rule.allowed_weekdays ? (
+                              <div className="font-medium text-muted-foreground">
+                                {rule.allowed_weekdays.length === 7 ? "Any day" :
+                                 rule.allowed_weekdays.length === 5 && rule.allowed_weekdays.every((d: number, i: number) => d === i + 1) ? "Mon - Fri" :
+                                 `${rule.allowed_weekdays.length} days selected`}
                               </div>
-                              <div>{statusBadge}</div>
-                            </div>
+                            ) : (
+                              <span className="text-muted-foreground italic">Not set</span>
+                            )}
                           </TableCell>
 
                           <TableCell className="py-3.5 px-6 text-right">
@@ -464,7 +456,7 @@ export default function CleaningPage() {
                                 onClick={() => {
                                   setSelectedSite(site);
                                   setScheduleForm({
-                                    next_date: site.next_cleaning_date || suggestion.date || "",
+                                    next_date: site.next_cleaning_date || "",
                                     schedule_notes: site.cleaning_schedule_notes || "",
                                   });
                                   setOpenScheduleDialog(true);
@@ -474,20 +466,7 @@ export default function CleaningPage() {
                                 <span>Manual Date</span>
                               </Button>
 
-                              {/* Option B: Approve Suggested CTA */}
-                              {isSuggestedAvailable && site.cleaning_schedule_type !== "approved" && (
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  className="h-7 text-xs gap-1 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                                  onClick={() => handleApproveSuggestedSchedule(site, suggestion.date!)}
-                                >
-                                  <CheckCircle2 className="h-3 w-3" />
-                                  <span>Approve Suggested</span>
-                                </Button>
-                              )}
-
-                              {/* Dispatch Work Order CTA */}
+                              {/* Dispatch Service Request CTA */}
                               <Button
                                 size="sm"
                                 variant="default"
@@ -495,15 +474,15 @@ export default function CleaningPage() {
                                 onClick={() => {
                                   setSelectedSite(site);
                                   setWoForm({
-                                    technician_id: "",
-                                    scheduled_date: site.next_cleaning_date || suggestion.date || new Date().toISOString().split("T")[0],
+                                    team_id: "",
+                                    scheduled_date: site.next_cleaning_date || new Date().toISOString().split("T")[0],
                                     notes: `Solar panel module cleaning work order for ${site.name}`,
                                   });
                                   setOpenWorkOrderDialog(true);
                                 }}
                               >
                                 <Wrench className="h-3 w-3" />
-                                <span>Create Work Order</span>
+                                <span>Create Service Request</span>
                               </Button>
                             </div>
                           </TableCell>
@@ -542,21 +521,33 @@ export default function CleaningPage() {
                       <TableCell className="py-3.5 px-6 font-semibold">{l.sites?.name ?? "—"}</TableCell>
                       <TableCell className="py-3.5 px-4 font-mono">{formatDate(l.performed_at)}</TableCell>
                       <TableCell className="py-3.5 px-4 text-muted-foreground max-w-sm">
-                        {l.remarks ?? "Cleaned as per schedule."}
+                        <div className="space-y-1">
+                          <p>{l.remarks ?? "Cleaned as per schedule."}</p>
+                          {(l as any).damage_observed && (
+                            <p className="text-destructive font-medium text-[10px]">
+                              Damage Observed: {(l as any).damage_type}
+                            </p>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="py-3.5 px-6 text-right">
-                        <div className="flex items-center justify-end gap-3 text-xs">
-                          {l.before_photo_url ? (
+                        <div className="flex flex-col items-end gap-1.5 text-xs">
+                          {l.before_photo_url && (
                             <a className="text-primary underline font-medium" href={l.before_photo_url} target="_blank" rel="noopener noreferrer">
                               Before Photo
                             </a>
-                          ) : null}
-                          {l.after_photo_url ? (
+                          )}
+                          {l.after_photo_url && (
                             <a className="text-primary underline font-medium" href={l.after_photo_url} target="_blank" rel="noopener noreferrer">
                               After Photo
                             </a>
-                          ) : null}
-                          {!l.before_photo_url && !l.after_photo_url && <span className="text-muted-foreground">—</span>}
+                          )}
+                          {(l as any).damage_photo_url && (
+                            <a className="text-destructive underline font-medium" href={(l as any).damage_photo_url} target="_blank" rel="noopener noreferrer">
+                              Damage Evidence
+                            </a>
+                          )}
+                          {!l.before_photo_url && !l.after_photo_url && !(l as any).damage_photo_url && <span className="text-muted-foreground">—</span>}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -618,17 +609,17 @@ export default function CleaningPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Create Work Order Dialog */}
+      {/* Create Service Request Dialog */}
       <Dialog open={openWorkOrderDialog} onOpenChange={setOpenWorkOrderDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Cleaning Work Order</DialogTitle>
+            <DialogTitle>Create Cleaning Service Request</DialogTitle>
           </DialogHeader>
           {selectedSite && (
             <div className="space-y-4 text-xs">
               <div className="p-3 bg-muted/40 rounded-lg border space-y-1">
                 <div className="font-bold text-sm text-foreground">{selectedSite.name}</div>
-                <div className="text-muted-foreground">Formal work order dispatch for execution</div>
+                <div className="text-muted-foreground">Formal service request dispatch for execution</div>
               </div>
 
               <div className="space-y-1.5">
@@ -641,19 +632,19 @@ export default function CleaningPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label>Assign Field Technician (8 Test Accounts)</Label>
+                <Label>Assign Cleaning Team (Required for Cleaning)</Label>
                 <Select
-                  value={woForm.technician_id}
-                  onValueChange={(v) => setWoForm({ ...woForm, technician_id: v })}
+                  value={woForm.team_id}
+                  onValueChange={(v) => setWoForm({ ...woForm, team_id: v })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select technician (optional)" />
+                    <SelectValue placeholder="Select team" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="unassigned">Unassigned (Queue)</SelectItem>
-                    {technicians.map((t) => (
+                    {teams.map((t) => (
                       <SelectItem key={t.id} value={t.id}>
-                        {t.full_name} ({t.base_address || "Test Account"})
+                        {t.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -661,7 +652,7 @@ export default function CleaningPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label>Work Order Instructions</Label>
+                <Label>Service Request Instructions</Label>
                 <Textarea
                   value={woForm.notes}
                   onChange={(e) => setWoForm({ ...woForm, notes: e.target.value })}
@@ -671,7 +662,7 @@ export default function CleaningPage() {
           )}
           <DialogFooter>
             <Button onClick={handleCreateWorkOrder} variant="default">
-              Create Work Order
+              Create Service Request
             </Button>
           </DialogFooter>
         </DialogContent>

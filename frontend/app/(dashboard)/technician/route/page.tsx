@@ -91,6 +91,7 @@ function TechnicianRouteContent() {
 
     setDailyRoute(routeData as DailyRoute | null);
 
+    let routeStops: any[] = [];
     if (routeData) {
       const { data: stopData } = await sb
         .from("route_stops")
@@ -101,9 +102,60 @@ function TechnicianRouteContent() {
         .eq("route_id", routeData.id)
         .order("sequence_order", { ascending: true });
 
-      setStops(stopData ?? []);
+      routeStops = stopData ?? [];
     }
 
+    // DYNAMIC ROUTE GENERATION:
+    // If no explicit published daily_route exists for today, query all work orders assigned to this technician OR their team
+    if (routeStops.length === 0) {
+      // Find technician's team
+      const { data: techTeams } = await sb
+        .from("technician_team_members")
+        .select("team_id")
+        .eq("technician_id", user.id);
+      
+      const teamIds = techTeams?.map(t => t.team_id) || [];
+      const orFilter = teamIds.length > 0 
+        ? `technician_id.eq.${user.id},team_id.in.(${teamIds.join(',')})`
+        : `technician_id.eq.${user.id}`;
+
+      const { data: assignedWOs } = await sb
+        .from("work_orders")
+        .select(`
+          *,
+          sites(*)
+        `)
+        .or(orFilter)
+        .in("status", ["scheduled", "en_route", "in_progress", "completed"])
+        .order("created_at", { ascending: false });
+
+      if (assignedWOs && assignedWOs.length > 0) {
+        const statusWeight: Record<string, number> = {
+          in_progress: 1,
+          en_route: 2,
+          scheduled: 3,
+          completed: 4,
+          draft: 5,
+          cancelled: 6,
+        };
+
+        const sortedWOs = [...assignedWOs].sort((a, b) => {
+          const wA = statusWeight[a.status] || 99;
+          const wB = statusWeight[b.status] || 99;
+          if (wA !== wB) return wA - wB;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+
+        routeStops = sortedWOs.map((wo, idx) => ({
+          id: `dynamic-${wo.id}`,
+          sequence_order: idx + 1,
+          estimated_arrival: null,
+          work_orders: wo,
+        }));
+      }
+    }
+
+    setStops(routeStops);
     setLoading(false);
   }
 
@@ -135,16 +187,16 @@ function TechnicianRouteContent() {
         </Badge>
       </div>
 
-      {!dailyRoute || stops.length === 0 ? (
+      {stops.length === 0 ? (
         <Card className="border-dashed p-8 text-center space-y-3">
           <Navigation className="h-10 w-10 text-muted-foreground mx-auto" />
           <h2 className="text-base font-semibold">No Published Route for Today</h2>
           <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-            Your operations coordinator has not published a sequential route for today yet. Check your individual assigned jobs under <strong>My Jobs</strong>.
+            Your operations coordinator has not published a sequential route for today yet. Check your individual assigned tasks under <strong>My Tasks</strong>.
           </p>
-          <Link href="/work-orders" className="block pt-2">
+          <Link href="/service-requests" className="block pt-2">
             <Button variant="outline" size="sm">
-              View My Jobs
+              View My Tasks
             </Button>
           </Link>
         </Card>
@@ -228,12 +280,12 @@ function TechnicianRouteContent() {
                     </div>
 
                     <div className="pl-11 pt-1">
-                      <Link href={`/work-orders/${wo?.id}`}>
+                      <Link href={wo?.type === 'cleaning' ? `/technician/cleaning?work_order_id=${wo?.id}&site_id=${wo?.site_id}` : `/service-requests/${wo?.id}`}>
                         <Button
                           className="w-full h-10 text-sm font-semibold justify-between"
                           variant={isActive ? "default" : "outline"}
                         >
-                          <span>{isActive ? "Continue Job Execution" : "Open Stop Details"}</span>
+                          <span>{isActive ? "Continue Task Execution" : "Open Stop Details"}</span>
                           <ChevronRight className="h-4 w-4 ml-1" />
                         </Button>
                       </Link>

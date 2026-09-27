@@ -6,7 +6,15 @@ export const metadata: Metadata = {
   title: "Solar Assist",
   description: "Multi-tenant solar operations and monitoring platform",
   manifest: "/manifest.json",
-  icons: { icon: "/favicon.ico" },
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/icon-192.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "SolarAssist",
+  },
 };
 
 export const viewport: Viewport = {
@@ -14,6 +22,11 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#0b1220" },
   ],
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

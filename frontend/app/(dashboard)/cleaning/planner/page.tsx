@@ -43,6 +43,7 @@ export default function CleaningPlannerPage() {
   const [teams, setTeams] = useState<TechnicianTeam[]>([]);
   const [plan, setPlan] = useState<CleaningPlan | null>(null);
   const [assignments, setAssignments] = useState<CleaningPlanAssignment[]>([]);
+  const [serviceRequests, setServiceRequests] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -70,13 +71,14 @@ export default function CleaningPlannerPage() {
         sb.from("sites").select("*").order("name"),
         sb.from("site_cleaning_rules").select("*"),
         sb.from("technician_teams").select("*, technician_team_members(*, profiles(*))").eq("is_active", true).order("name"),
-        sb.from("work_orders").select("*").eq("type", "cleaning"),
+        sb.from("work_orders").select("*, sites(name)"),
       ]);
 
       setSites((s as Site[]) ?? []);
       setRules((r as SiteCleaningRule[]) ?? []);
       setTeams((t as TechnicianTeam[]) ?? []);
-      setExecutionWos(wo ?? []);
+      setExecutionWos(wo?.filter(w => w.type === "cleaning") ?? []);
+      setServiceRequests(wo?.filter(w => w.type !== "cleaning" && w.team_id) ?? []);
 
       // Fetch or create plan for this month
       const { data: p } = await sb
@@ -224,6 +226,17 @@ export default function CleaningPlannerPage() {
       toast.error(err?.message || "Server error publishing schedule");
     }
     setPublishing(false);
+  }
+
+  async function handleUpdatePlanStatus(newStatus: PlanStatus) {
+    if (!plan) return;
+    const { error } = await sb.from("cleaning_plans").update({ status: newStatus }).eq("id", plan.id);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success(`Plan moved to ${newStatus.toUpperCase()}`);
+      loadData();
+    }
   }
 
   // Handle Manual Assignment Modifications
@@ -473,17 +486,37 @@ export default function CleaningPlannerPage() {
         </div>
 
         {/* Dispatch Action */}
-        {assignments.length > 0 && (
-          <Button
-            onClick={handlePublishSchedule}
-            disabled={publishing}
-            size="sm"
-            variant="default"
-            className="text-xs h-9 bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-sm"
-          >
-            <CheckCircle2 className="h-4 w-4" />
-            <span>{publishing ? "Publishing..." : "Publish Schedule"}</span>
-          </Button>
+        {assignments.length > 0 && plan && (
+          <div className="flex items-center gap-3 bg-card px-3 py-1.5 rounded-md border">
+            <div className="flex items-center gap-2 border-r pr-3">
+              <span className="text-xs font-semibold text-muted-foreground uppercase">Status:</span>
+              <Badge variant={plan.status === "published" ? "success" : "secondary"} className="uppercase tracking-wide">
+                {plan.status}
+              </Badge>
+            </div>
+            {plan.status === "draft" && (
+              <Button size="sm" onClick={() => handleUpdatePlanStatus("review")} variant="outline" className="h-8 text-xs">
+                Submit for Review
+              </Button>
+            )}
+            {plan.status === "review" && (
+              <Button size="sm" onClick={() => handleUpdatePlanStatus("approved")} variant="outline" className="h-8 text-xs bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 border-amber-500/30">
+                <Check className="h-3 w-3 mr-1" /> Approve Plan
+              </Button>
+            )}
+            {plan.status === "approved" && (
+              <Button
+                onClick={handlePublishSchedule}
+                disabled={publishing}
+                size="sm"
+                variant="default"
+                className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-sm"
+              >
+                <Rocket className="h-3.5 w-3.5" />
+                <span>{publishing ? "Publishing..." : "Publish to Workforce"}</span>
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
@@ -512,6 +545,7 @@ export default function CleaningPlannerPage() {
           teams={teams}
           sites={sites}
           assignments={assignments}
+          serviceRequests={serviceRequests}
           planningCapacityMins={plan?.planning_capacity_mins || 480}
           schedulingToleranceDays={plan?.scheduling_tolerance_days || 2}
           onUpdateAssignment={handleUpdateAssignment}

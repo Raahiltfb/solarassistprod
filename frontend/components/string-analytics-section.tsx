@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
-import { format, parseISO, subDays, startOfDay } from "date-fns";
+import { format, parseISO, subDays, startOfDay, endOfDay, isSameDay } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { MiniCalendarPicker } from "@/components/ui/mini-calendar-picker";
 
 const STRING_COLORS = [
   "#3b82f6", // Blue
@@ -31,8 +32,10 @@ export function StringAnalyticsSection({ inverters }: { inverters: any[] }) {
   const [selectedInvId, setSelectedInvId] = useState<string>(inverters[0]?.id || "");
   const [strings, setStrings] = useState<any[]>([]);
   const [selectedStrIds, setSelectedStrIds] = useState<string[]>([]);
-  const [range, setRange] = useState<"today" | "week" | "month" | "year">("today");
   
+  const [startDate, setStartDate] = useState<Date>(startOfDay(new Date()));
+  const [endDate, setEndDate] = useState<Date>(endOfDay(new Date()));
+
   const [telemetry, setTelemetry] = useState<any[]>([]);
   const [metric, setMetric] = useState<"voltage_v" | "current_a" | "power_kw">("voltage_v");
   const [loading, setLoading] = useState<boolean>(false);
@@ -60,7 +63,7 @@ export function StringAnalyticsSection({ inverters }: { inverters: any[] }) {
     loadStrings();
   }, [selectedInvId]);
 
-  // Fetch string telemetry when string or range changes
+  // Fetch string telemetry when string or date range changes
   useEffect(() => {
     if (selectedStrIds.length === 0) {
       setTelemetry([]);
@@ -69,17 +72,12 @@ export function StringAnalyticsSection({ inverters }: { inverters: any[] }) {
     async function loadTelemetry() {
       setLoading(true);
       try {
-        let startDate = new Date();
-        if (range === "today") startDate = startOfDay(new Date());
-        else if (range === "week") startDate = subDays(startOfDay(new Date()), 7);
-        else if (range === "month") startDate = subDays(startOfDay(new Date()), 30);
-        else startDate = subDays(startOfDay(new Date()), 365);
-
         const { data } = await sb
           .from("string_telemetry")
           .select("timestamp, string_id, voltage_v, current_a, power_kw")
           .in("string_id", selectedStrIds)
           .gte("timestamp", startDate.toISOString())
+          .lte("timestamp", endDate.toISOString())
           .order("timestamp", { ascending: true });
 
         setTelemetry(data ?? []);
@@ -89,7 +87,7 @@ export function StringAnalyticsSection({ inverters }: { inverters: any[] }) {
       setLoading(false);
     }
     loadTelemetry();
-  }, [selectedStrIds, range]);
+  }, [selectedStrIds, startDate, endDate]);
 
   const defaultMetrics = [
     { key: "voltage_v", label: "Voltage", unit: "V" },
@@ -190,18 +188,15 @@ export function StringAnalyticsSection({ inverters }: { inverters: any[] }) {
           )}
         </div>
 
-        <div className="flex items-center gap-1.5">
-          {(["today", "week", "month", "year"] as const).map((r) => (
-            <Button
-              key={r}
-              size="sm"
-              variant={range === r ? "default" : "outline"}
-              onClick={() => setRange(r)}
-              className="text-xs h-7 px-3 capitalize"
-            >
-              {r}
-            </Button>
-          ))}
+        <div className="flex items-center gap-2">
+          <MiniCalendarPicker
+            startDate={startDate}
+            endDate={endDate}
+            onChange={(start, end) => {
+              setStartDate(start);
+              setEndDate(end);
+            }}
+          />
         </div>
       </div>
 
@@ -233,7 +228,7 @@ export function StringAnalyticsSection({ inverters }: { inverters: any[] }) {
                   dataKey="timestamp" 
                   tickFormatter={(t) => {
                     try {
-                      return format(parseISO(t), range === "today" ? "HH:mm" : "d MMM");
+                      return format(parseISO(t), isSameDay(startDate, endDate) ? "HH:mm" : "d MMM HH:mm");
                     } catch {
                       return "";
                     }

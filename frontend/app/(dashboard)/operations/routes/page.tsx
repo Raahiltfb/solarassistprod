@@ -51,6 +51,7 @@ import {
   Info,
 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
+import { SubNav } from "@/components/sub-nav";
 import type {
   DailyRoute,
   RouteStop,
@@ -335,6 +336,8 @@ function RoutePlannerContent() {
 
   return (
     <div className="space-y-6" data-testid="admin-route-planner">
+      <SubNav hub="operations" />
+
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -606,7 +609,7 @@ function RoutePlannerContent() {
               {stops.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
-                    No work orders scheduled for this technician on {selectedDate}.
+                    No tasks or service requests scheduled for this technician on {selectedDate}.
                   </TableCell>
                 </TableRow>
               )}

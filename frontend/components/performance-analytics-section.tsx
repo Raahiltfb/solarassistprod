@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { format, parseISO, startOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
+import { format, parseISO, startOfDay, subDays, startOfMonth, startOfYear, endOfDay, isSameDay } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Info } from "lucide-react";
+import { MiniCalendarPicker } from "@/components/ui/mini-calendar-picker";
 
 interface PerformanceProps {
   inverterId?: string;
@@ -31,6 +32,7 @@ export function PerformanceAnalyticsSection({
   const sb = createClient();
   const [range, setRange] = useState<"today" | "week" | "month" | "year" | "lifetime">("today");
   const [referenceDate, setReferenceDate] = useState<Date>(new Date());
+  const [customRange, setCustomRange] = useState<{ start: Date; end: Date } | null>(null);
   const [metric, setMetric] = useState<"power" | "generation" | "specific_yield">("generation");
   const [chartData, setChartData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -39,6 +41,7 @@ export function PerformanceAnalyticsSection({
   const handleRangeChange = (newRange: typeof range) => {
     setRange(newRange);
     setReferenceDate(new Date());
+    setCustomRange(null);
   };
 
   // Calculate start/end boundaries and dynamic label
@@ -48,7 +51,13 @@ export function PerformanceAnalyticsSection({
 
   const refStart = startOfDay(referenceDate);
 
-  if (range === "today") {
+  if (customRange) {
+    startDate = customRange.start;
+    endDate = customRange.end;
+    dateLabel = isSameDay(startDate, endDate)
+      ? format(startDate, "d MMM yyyy")
+      : `${format(startDate, "d MMM")} - ${format(endDate, "d MMM yyyy")}`;
+  } else if (range === "today") {
     startDate = refStart;
     endDate = new Date(refStart.getTime() + 24 * 60 * 60 * 1000 - 1);
     dateLabel = format(referenceDate, "d MMM yyyy");
@@ -72,32 +81,11 @@ export function PerformanceAnalyticsSection({
     dateLabel = "System Lifetime";
   }
 
-  const isLatest = range === "lifetime" || endDate >= new Date();
-
-  const handlePrev = () => {
-    if (range === "today") {
-      setReferenceDate(new Date(referenceDate.getTime() - 24 * 60 * 60 * 1000));
-    } else if (range === "week") {
-      setReferenceDate(new Date(referenceDate.getTime() - 7 * 24 * 60 * 60 * 1000));
-    } else if (range === "month") {
-      setReferenceDate(new Date(referenceDate.getFullYear(), referenceDate.getMonth() - 1, 1));
-    } else if (range === "year") {
-      setReferenceDate(new Date(referenceDate.getFullYear() - 1, referenceDate.getMonth(), 1));
-    }
-  };
-
-  const handleNext = () => {
-    if (isLatest) return;
-    if (range === "today") {
-      setReferenceDate(new Date(referenceDate.getTime() + 24 * 60 * 60 * 1000));
-    } else if (range === "week") {
-      setReferenceDate(new Date(referenceDate.getTime() + 7 * 24 * 60 * 60 * 1000));
-    } else if (range === "month") {
-      setReferenceDate(new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 1));
-    } else if (range === "year") {
-      setReferenceDate(new Date(referenceDate.getFullYear() + 1, referenceDate.getMonth(), 1));
-    }
-  };
+  // Determine effective aggregation range for PostgreSQL RPC
+  const isSingleDayView = isSameDay(startDate, endDate);
+  const effectiveRange = customRange 
+    ? (isSingleDayView ? "today" : "week")
+    : range;
 
   useEffect(() => {
     async function loadData() {
@@ -130,7 +118,7 @@ export function PerformanceAnalyticsSection({
         // Fast Database Aggregation RPC Call
         const { data: rpcData, error: rpcError } = await sb.rpc("get_telemetry_analytics", {
           p_inverter_ids: inverterIds,
-          p_range: range,
+          p_range: effectiveRange,
           p_start_date: startDate.toISOString(),
           p_end_date: endDate.toISOString(),
           p_total_capacity: totalCapacity,
@@ -154,7 +142,7 @@ export function PerformanceAnalyticsSection({
       setLoading(false);
     }
     loadData();
-  }, [range, referenceDate, inverterId, siteId, siteIds, isSite]);
+  }, [effectiveRange, startDate.getTime(), endDate.getTime(), inverterId, siteId, siteIds, isSite]);
 
   // Determine chart configurations
   const metricConfigs = {
@@ -171,7 +159,7 @@ export function PerformanceAnalyticsSection({
       key: "generation",
     },
     specific_yield: { 
-      label: isClientView ? (range === "today" ? "Today's Specific Yield" : "Specific Yield") : "Specific Yield", 
+      label: isClientView ? (isSingleDayView ? "Today's Specific Yield" : "Specific Yield") : "Specific Yield", 
       unit: "kWh/kWp", 
       stroke: "#f59e0b", 
       key: "specific_yield" 
@@ -180,23 +168,12 @@ export function PerformanceAnalyticsSection({
 
   const activeMetric = metricConfigs[metric];
 
-  const rangeTitlesAdmin = {
-    today: `Generation & Power · Today`,
-    week: `Daily Generation · Week`,
-    month: `Daily Generation · Month`,
-    year: `Monthly Generation · Year`,
-    lifetime: `Monthly Generation · System Lifetime`,
-  };
-
-  const rangeTitlesClient = {
-    today: `Daily Solar Production`,
-    week: `Weekly Daily Production`,
-    month: `Monthly Daily Production`,
-    year: `Yearly Monthly Production`,
-    lifetime: `Historical Monthly Production`,
-  };
-
-  const currentTitle = isClientView ? rangeTitlesClient[range] : rangeTitlesAdmin[range];
+  // Dynamic header title based on active date range
+  const currentTitle = isClientView
+    ? `Solar Production (${dateLabel})`
+    : isSingleDayView
+    ? `Generation & Power · ${dateLabel}`
+    : `Daily Generation · ${dateLabel}`;
 
   const rangeLabels = isClientView
     ? [
@@ -219,30 +196,13 @@ export function PerformanceAnalyticsSection({
       <div className="flex flex-wrap items-center justify-between gap-4 bg-accent/30 p-3.5 rounded-xl border border-border/40">
         <div className="flex items-center gap-3">
           <h4 className="text-sm font-semibold tracking-tight">{currentTitle}</h4>
-          {range !== "lifetime" && (
-            <div className="flex items-center gap-1 bg-background px-1.5 py-0.5 rounded-lg border border-border/60 shadow-sm select-none">
-              <button
-                type="button"
-                onClick={handlePrev}
-                className="p-1 hover:bg-accent rounded text-muted-foreground hover:text-foreground text-[10px] leading-none transition-colors"
-                title="Previous Period"
-              >
-                &larr;
-              </button>
-              <span className="text-[11px] font-semibold px-2 text-foreground tracking-tight">
-                {dateLabel}
-              </span>
-              <button
-                type="button"
-                onClick={handleNext}
-                disabled={isLatest}
-                className="p-1 hover:bg-accent rounded text-muted-foreground hover:text-foreground text-[10px] leading-none disabled:opacity-20 disabled:pointer-events-none transition-colors"
-                title="Next Period"
-              >
-                &rarr;
-              </button>
-            </div>
-          )}
+          <MiniCalendarPicker
+            startDate={startDate}
+            endDate={endDate}
+            onChange={(start, end) => {
+              setCustomRange({ start, end });
+            }}
+          />
         </div>
 
         <div className="flex items-center gap-1.5">

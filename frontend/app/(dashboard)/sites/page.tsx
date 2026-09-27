@@ -7,6 +7,7 @@ import { MapPin, Zap, AlertTriangle } from "lucide-react";
 import { getSiteStatus } from "@/lib/status-utils";
 import { formatDateTime } from "@/lib/utils";
 import { SitesConfigurationTable } from "@/components/sites/sites-configuration-table";
+import { SubNav } from "@/components/sub-nav";
 
 export default async function SitesPage() {
   const sb = await createClient();
@@ -52,9 +53,10 @@ export default async function SitesPage() {
 
   return (
     <div className="space-y-6" data-testid="sites-page">
+      <SubNav hub="assets" />
       <div>
-        <h1 className="text-3xl font-display font-semibold">Sites</h1>
-        <p className="text-sm text-muted-foreground mt-1">All installations under your organisation.</p>
+        <h1 className="text-3xl font-display font-semibold">Fleet Assets & Solar Sites</h1>
+        <p className="text-sm text-muted-foreground mt-1">Solar installations, capacity specs, and technical asset configurations.</p>
       </div>
 
       <Tabs defaultValue="table" className="space-y-6">
