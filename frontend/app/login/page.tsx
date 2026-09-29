@@ -24,15 +24,10 @@ import { toast } from "sonner";
 export default function LoginPage() {
   const router = useRouter();
 
-  const [email, setEmail] = useState(
-    "admin@solarassist.dev"
-  );
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const [password, setPassword] =
-    useState("Solar@12345");
-
-  const [loading, setLoading] =
-    useState(false);
+  const [loading, setLoading] = useState(false);
 
   async function onSubmit(
     e: React.FormEvent
@@ -246,57 +241,6 @@ export default function LoginPage() {
                   ? "Signing in…"
                   : "Sign in"}
               </Button>
-
-              <div className="text-xs text-muted-foreground bg-muted/50 rounded-md p-3 space-y-2">
-                <div>
-                  <div className="font-medium text-foreground mb-1">Courtyard Ivy Demo Logins (Click to fill)</div>
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => { setEmail("admin@demo.com"); setPassword("password123"); }}
-                      className="px-2 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded border border-emerald-500/20 hover:bg-emerald-500/20 font-mono text-[11px]"
-                    >
-                      admin@demo.com
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setEmail("tech1@demo.com"); setPassword("password123"); }}
-                      className="px-2 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded border border-emerald-500/20 hover:bg-emerald-500/20 font-mono text-[11px]"
-                    >
-                      tech1@demo.com
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setEmail("client@demo.com"); setPassword("password123"); }}
-                      className="px-2 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded border border-emerald-500/20 hover:bg-emerald-500/20 font-mono text-[11px]"
-                    >
-                      client@demo.com
-                    </button>
-                  </div>
-                  <div className="mt-1 text-[11px]">Password: <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">password123</span></div>
-                </div>
-
-                <div className="pt-2 border-t border-border/50">
-                  <div className="font-medium text-foreground mb-1">Operational Accounts (Click to fill)</div>
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => { setEmail("admin@solarassist.dev"); setPassword("Solar@12345"); }}
-                      className="px-2 py-1 bg-sky-500/10 text-sky-600 dark:text-sky-400 rounded border border-sky-500/20 hover:bg-sky-500/20 font-mono text-[11px]"
-                    >
-                      admin@solarassist.dev
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setEmail("tech@solarassist.dev"); setPassword("Solar@12345"); }}
-                      className="px-2 py-1 bg-sky-500/10 text-sky-600 dark:text-sky-400 rounded border border-sky-500/20 hover:bg-sky-500/20 font-mono text-[11px]"
-                    >
-                      tech@solarassist.dev
-                    </button>
-                  </div>
-                  <div className="mt-1 text-[11px]">Password: <span className="font-mono font-semibold">Solar@12345</span></div>
-                </div>
-              </div>
             </form>
           </CardContent>
         </Card>
