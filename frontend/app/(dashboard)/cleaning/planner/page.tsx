@@ -40,7 +40,7 @@ import { validateAssignmentConstraint } from "@/lib/cleaning-scheduler";
 export default function CleaningPlannerPage() {
   const sb = createClient();
 
-  const [currentDate, setCurrentDate] = useState<Date>(new Date(2026, 8, 1)); // Default Sept 2026
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [sites, setSites] = useState<Site[]>([]);
   const [rules, setRules] = useState<SiteCleaningRule[]>([]);
   const [teams, setTeams] = useState<TechnicianTeam[]>([]);
@@ -175,15 +175,16 @@ export default function CleaningPlannerPage() {
 
   const conflictsCount = assignments.filter((a) => a.constraint_state !== "valid").length;
 
-  // Month navigation range: Previous Month, Current Month, +1, +2, +3 Months
-  const baseDate = new Date(2026, 8, 1); // Sept 2026
-  const monthNavItems = [
-    { label: "Aug 2026", year: 2026, month: 8 },
-    { label: "Sep 2026", year: 2026, month: 9 },
-    { label: "Oct 2026", year: 2026, month: 10 },
-    { label: "Nov 2026", year: 2026, month: 11 },
-    { label: "Dec 2026", year: 2026, month: 12 },
-  ];
+  // Month navigation range: Dynamic months relative to current date (Aug 2026 - Dec 2026 or dynamic range)
+  const baseYear = currentDate.getFullYear();
+  const baseMonth = currentDate.getMonth();
+  const monthNavItems = [-2, -1, 0, 1, 2].map((offset) => {
+    const d = new Date(baseYear, baseMonth + offset, 1);
+    const mNum = d.getMonth() + 1;
+    const yNum = d.getFullYear();
+    const label = d.toLocaleString("en-IN", { month: "short", year: "numeric" });
+    return { label, year: yNum, month: mNum };
+  });
 
   // Clear schedule handler
   const [clearing, setClearing] = useState(false);

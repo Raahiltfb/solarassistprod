@@ -144,6 +144,14 @@ function RoutePlannerContent() {
     const activeTech = technicians.find((t) => t.id === selectedTechId) || null;
     setCurrentTech(activeTech);
 
+    // Fetch team memberships for active technician
+    const { data: techTeamMembers } = await sb
+      .from("technician_team_members")
+      .select("team_id")
+      .eq("technician_id", selectedTechId);
+
+    const teamIds = (techTeamMembers ?? []).map((tm) => tm.team_id).filter(Boolean);
+
     // Fetch existing route & canonical visits for this date
     const [{ data: routeData }, { data: cvData }] = await Promise.all([
       sb
@@ -174,17 +182,40 @@ function RoutePlannerContent() {
 
       setStops(stopData ?? []);
     } else {
-      // Fetch assigned work orders for this tech & date that don't have a route yet
-      const { data: woData } = await sb
+      // Fetch assigned work orders for this tech or team on this date
+      let woQuery = sb
         .from("work_orders")
         .select("*, sites(*)")
-        .eq("technician_id", selectedTechId)
-        .eq("scheduled_date", selectedDate)
-        .order("created_at", { ascending: true });
+        .eq("scheduled_date", selectedDate);
 
-      // Build initial unoptimized stops preview
-      const previewStops = (woData ?? []).map((wo, i) => ({
-        id: `temp-${wo.id}`,
+      if (teamIds.length > 0) {
+        woQuery = woQuery.or(`technician_id.eq.${selectedTechId},team_id.in.(${teamIds.join(",")})`);
+      } else {
+        woQuery = woQuery.eq("technician_id", selectedTechId);
+      }
+
+      const { data: woData } = await woQuery.order("created_at", { ascending: true });
+      const existingWos = (woData ?? []) as WorkOrder[];
+
+      // Fetch scheduled Phase 2 cleaning_visits for this tech or team on this date
+      let techCvQuery = sb
+        .from("cleaning_visits")
+        .select("*, sites(*)")
+        .eq("scheduled_date", selectedDate)
+        .in("status", ["planned", "approved", "published", "required", "scheduled", "in_progress", "completed"]);
+
+      if (teamIds.length > 0) {
+        techCvQuery = techCvQuery.or(`assigned_technician_id.eq.${selectedTechId},assigned_team_id.in.(${teamIds.join(",")})`);
+      } else {
+        techCvQuery = techCvQuery.eq("assigned_technician_id", selectedTechId);
+      }
+
+      const { data: techCvData } = await techCvQuery;
+      const canonicalVisitsList = (techCvData ?? []) as any[];
+
+      // Combine existing work orders and canonical cleaning visits into preview stops
+      const previewStops: any[] = existingWos.map((wo, i) => ({
+        id: `temp-wo-${wo.id}`,
         work_order_id: wo.id,
         sequence_order: i + 1,
         estimated_arrival: null,
@@ -192,6 +223,38 @@ function RoutePlannerContent() {
         distance_km: 0,
         work_orders: wo,
       }));
+
+      const coveredSiteIds = new Set(existingWos.map((wo) => wo.site_id));
+
+      canonicalVisitsList.forEach((cv) => {
+        if (!coveredSiteIds.has(cv.site_id)) {
+          coveredSiteIds.add(cv.site_id);
+          const syntheticWo = {
+            id: `cv-${cv.id}`,
+            org_id: cv.org_id,
+            site_id: cv.site_id,
+            team_id: cv.assigned_team_id,
+            technician_id: selectedTechId,
+            title: `Module Cleaning: ${cv.sites?.name || "Site"}`,
+            description: cv.planner_rationale || `Planned monthly cleaning visit`,
+            type: "cleaning",
+            status: cv.status === "published" ? "scheduled" : "draft",
+            scheduled_date: cv.scheduled_date,
+            estimated_duration_mins: cv.estimated_cleaning_mins || 120,
+            sites: cv.sites,
+          };
+
+          previewStops.push({
+            id: `temp-cv-${cv.id}`,
+            work_order_id: syntheticWo.id,
+            sequence_order: previewStops.length + 1,
+            estimated_arrival: null,
+            travel_time_mins: cv.estimated_travel_mins || 0,
+            distance_km: cv.estimated_distance_km || 0,
+            work_orders: syntheticWo,
+          });
+        }
+      });
 
       setStops(previewStops);
     }

@@ -45,22 +45,81 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Fetch Technician Profile for Base Location
+    // 2. Fetch Technician Profile & Team Memberships
     const { data: techProfile } = await sb
       .from("profiles")
       .select("id, full_name, email, base_latitude, base_longitude")
       .eq("id", technician_id)
       .single();
 
-    // 3. Fetch Scheduled Work Orders for Technician & Date
-    const { data: workOrders } = await sb
+    const { data: techTeams } = await sb
+      .from("technician_team_members")
+      .select("team_id")
+      .eq("technician_id", technician_id);
+
+    const teamIds = (techTeams ?? []).map((t) => t.team_id).filter(Boolean);
+
+    // 3. Fetch Scheduled Work Orders for Technician OR Team & Date
+    let woQuery = sb
       .from("work_orders")
       .select("*, sites(id, name, location, latitude, longitude)")
-      .eq("technician_id", technician_id)
       .eq("scheduled_date", date)
       .eq("org_id", org_id)
-      .in("status", ["scheduled", "en_route", "in_progress", "draft"])
-      .order("created_at", { ascending: true });
+      .in("status", ["scheduled", "en_route", "in_progress", "draft"]);
+
+    if (teamIds.length > 0) {
+      woQuery = woQuery.or(`technician_id.eq.${technician_id},team_id.in.(${teamIds.join(",")})`);
+    } else {
+      woQuery = woQuery.eq("technician_id", technician_id);
+    }
+
+    const { data: fetchedWos } = await woQuery.order("created_at", { ascending: true });
+    let workOrders = (fetchedWos ?? []) as any[];
+
+    // 3b. Fetch canonical Phase 2 cleaning_visits for Technician OR Team & Date
+    let cvQuery = sb
+      .from("cleaning_visits")
+      .select("*, sites(id, name, location, latitude, longitude)")
+      .eq("scheduled_date", date)
+      .in("status", ["planned", "approved", "published", "required", "scheduled", "in_progress", "completed"]);
+
+    if (teamIds.length > 0) {
+      cvQuery = cvQuery.or(`assigned_technician_id.eq.${technician_id},assigned_team_id.in.(${teamIds.join(",")})`);
+    } else {
+      cvQuery = cvQuery.eq("assigned_technician_id", technician_id);
+    }
+
+    const { data: cvVisits } = await cvQuery;
+
+    // Auto-convert any missing cleaning_visits into real Work Orders so they can be routed and tracked
+    if (cvVisits && cvVisits.length > 0) {
+      const existingSiteIds = new Set(workOrders.map((w) => w.site_id));
+      for (const cv of cvVisits) {
+        if (!existingSiteIds.has(cv.site_id)) {
+          existingSiteIds.add(cv.site_id);
+          const { data: newWo } = await sb
+            .from("work_orders")
+            .insert({
+              org_id,
+              site_id: cv.site_id,
+              team_id: cv.assigned_team_id,
+              technician_id: technician_id,
+              title: `Module Cleaning: ${cv.sites?.name || "Site"}`,
+              description: cv.planner_rationale || `Planned monthly cleaning visit`,
+              type: "cleaning",
+              status: "scheduled",
+              scheduled_date: date,
+              estimated_duration_mins: cv.estimated_cleaning_mins || 120,
+            })
+            .select("*, sites(id, name, location, latitude, longitude)")
+            .single();
+
+          if (newWo) {
+            workOrders.push(newWo);
+          }
+        }
+      }
+    }
 
     if (!workOrders || workOrders.length === 0) {
       return NextResponse.json({
