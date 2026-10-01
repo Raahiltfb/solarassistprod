@@ -261,13 +261,15 @@ export default function CleaningPlannerPage() {
       if (!res.ok) {
         toast.error(data.error || "Failed to publish schedule");
       } else {
+        setPlan((prev) => (prev ? { ...prev, status: "published" } : prev));
         toast.success(data.message || "Schedule published! Today's field work dispatched.");
-        loadData();
+        await loadData();
       }
     } catch (err: any) {
       toast.error(err?.message || "Server error publishing schedule");
+    } finally {
+      setPublishing(false);
     }
-    setPublishing(false);
   }
 
   async function handleUpdatePlanStatus(newStatus: PlanStatus) {
@@ -546,17 +548,11 @@ export default function CleaningPlannerPage() {
                 {plan.status}
               </Badge>
             </div>
-            {plan.status === "draft" && (
-              <Button size="sm" onClick={() => handleUpdatePlanStatus("review")} variant="outline" className="h-8 text-xs">
-                Submit for Review
-              </Button>
-            )}
-            {plan.status === "review" && (
-              <Button size="sm" onClick={() => handleUpdatePlanStatus("approved")} variant="outline" className="h-8 text-xs bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 border-amber-500/30">
-                <Check className="h-3 w-3 mr-1" /> Approve Plan
-              </Button>
-            )}
-            {plan.status === "approved" && (
+            {plan.status === "published" ? (
+              <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white font-medium text-xs py-1 px-3 gap-1.5 shadow-sm">
+                <CheckCircle2 className="h-3.5 w-3.5" /> Published to Workforce
+              </Badge>
+            ) : (
               <Button
                 onClick={handlePublishSchedule}
                 disabled={publishing}
@@ -564,7 +560,7 @@ export default function CleaningPlannerPage() {
                 variant="default"
                 className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-sm"
               >
-                <Rocket className="h-3.5 w-3.5" />
+                <Rocket className={`h-3.5 w-3.5 ${publishing ? "animate-spin" : ""}`} />
                 <span>{publishing ? "Publishing..." : "Publish to Workforce"}</span>
               </Button>
             )}

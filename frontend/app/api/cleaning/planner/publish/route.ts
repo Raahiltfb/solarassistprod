@@ -38,9 +38,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Cleaning plan not found" }, { status: 404 });
     }
 
-    if (plan.status !== "approved" && plan.status !== "published") {
+    if (plan.status !== "approved" && plan.status !== "published" && plan.status !== "draft" && plan.status !== "review") {
       return NextResponse.json(
-        { error: "Plan must be in APPROVED state before publishing operational schedule." },
+        { error: "Invalid plan state for publishing operational schedule." },
         { status: 400 }
       );
     }
