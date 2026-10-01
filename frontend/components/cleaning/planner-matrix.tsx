@@ -27,7 +27,7 @@ import {
   Ban,
 } from "lucide-react";
 import { Site, TechnicianTeam, CleaningPlanAssignment, SiteCleaningRule } from "@/lib/types";
-import { validateAssignmentConstraint, getIsoWeekday, validateDragDropCellPlacement } from "@/lib/cleaning-scheduler";
+import { validateAssignmentConstraint, getIsoWeekday, validateDragDropCellPlacement, buildGeographicClusters } from "@/lib/cleaning-scheduler";
 
 interface PlannerMatrixProps {
   year: number;
@@ -180,8 +180,28 @@ export function PlannerMatrix({
       return;
     }
 
-    // Perform Assignment Move
+    // Move this assignment
     onUpdateAssignment(draggedAssignment.id, targetTeamId, targetDateStr);
+
+    // Auto-move other wings in the same location cluster cycle!
+    const site = siteMap.get(draggedAssignment.site_id) || draggedAssignment.sites;
+    if (site) {
+      const clusters = buildGeographicClusters(sites);
+      const cluster = clusters.find((c) => c.sites.some((s) => s.id === site.id));
+      if (cluster && cluster.sites.length > 1) {
+        // Find other wings of this cluster scheduled on the SAME original target/date
+        const otherWings = assignments.filter(
+          (a) =>
+            a.id !== draggedAssignment.id &&
+            a.target_date === draggedAssignment.target_date &&
+            cluster.sites.some((cs) => cs.id === a.site_id && cs.id !== site.id)
+        );
+        otherWings.forEach((otherWing) => {
+          onUpdateAssignment(otherWing.id, targetTeamId, targetDateStr);
+        });
+      }
+    }
+
     toast.success(`Rescheduled ${draggedAssignment.sites?.name || "Visit"} to ${targetDateStr}`);
     setDraggedAssignment(null);
     setHoveredCellKey(null);
