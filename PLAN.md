@@ -49,8 +49,8 @@ The system operates on a reactive O&M loop:
 | **Phase 0: Operating Model + UX Foundation** | DONE | None | Admin can understand fleet state immediately; critical issues are prominent; primary navigation is simplified; internal concepts hidden. |
 | **Phase 1: Reactive O&M Automation** | REFINED & VERIFIED | Phase 0 | Action Decision Engine automates response (MONITOR/NOTIFY/INVESTIGATE/SCHEDULE/DISPATCH/ESCALATE); workload-balanced tech assignment; strict priority sorting (P1 > P2 > P3 > P4); zero 404/broken links; Ack vs Resolve separation; 5-stage ticket lifecycle; macro-technical client descriptions. |
 | **Phase 2: Cleaning Automation** | REFINED & VERIFIED | Phase 0, 1 | Automatic monthly planning, team allocation, route generation, and job creation with admin supervision. |
-| **Phase 3: Field Execution** | REFINED & VERIFIED | Phase 1, 2 | Technician can execute daily work offline (PWA) with GPS/check-in without admin help. |
-| **Phase 4: Production-Grade Routing** | NEXT | Phase 2, 3 | Generated routes use actual road-network travel times, distances, working hours, and capacity. |
+| **Phase 3: Field Execution** | REFINED & VERIFIED | Phase 1, 2 | Technician can execute daily work offline (PWA) with check-in without admin help. |
+| **Phase 4: Production-Grade Routing** | REFINED & VERIFIED | Phase 2, 3 | Generated routes use actual road-network travel times, distances, working hours, and capacity. |
 | **Phase 5: Technical Intelligence** | NOT STARTED | Phase 1 | O&M engineer can investigate technical problems (string anomalies, multi-inverter comparisons) via UI. |
 | **Phase 6: Resolution / Verification Engine** | NOT STARTED | Phase 1, 3 | System verifies if physical intervention fixed the problem using telemetry, auto-reopens/escalates if failed. |
 | **Phase 7: Premium Client Experience** | NOT STARTED | Phase 1, 6 | Client understands performance, health score, maintenance history, and savings via a premium portal. |
@@ -84,14 +84,14 @@ The system operates on a reactive O&M loop:
 
 ### Phase 3: Field Execution
 - [x] Simplify daily workflow UI (Today's Work).
-- [x] Add GPS/check-in capability.
+- [x] Add check-in capability.
 - [x] Add offline/PWA capability for poor connectivity.
 - [x] Support evidence capture and site context natively.
 
 ### Phase 4: Production-Grade Routing
-- [ ] Integrate road-network routing provider (e.g., Mapbox/Google).
-- [ ] Factor in actual travel time, distance, and working hours.
-- [ ] Optimize route sequence and appointment windows.
+- [x] Integrate road-network routing provider (Composite OSRM + Haversine Road Factor fallback engine).
+- [x] Factor in actual travel time, distance, working hours, and shift capacity feasibility.
+- [x] Optimize route sequence preserving physical-location batching.
 
 ### Phase 5: Technical Intelligence
 - [ ] Implement historical string analysis with multi-string comparison.
@@ -143,4 +143,5 @@ For each phase:
 *(To be updated as phases are completed)*
 
 - **2026-09-30**: Completed and verified Phase 2 (Cleaning Automation). Added historical team continuity to macro-scheduler, verified automatic monthly planning, team allocation, route generation, job creation, and admin review matrix UI.
-- **2026-09-30**: Completed Phase 3 (Field Execution). Built PWA offline sync engine (`offline-sync.ts`), GPS location check-in verification (with Haversine distance validation & distance override warning modal), camera photo capture integration (`capture="environment"`), and mobile-first Today's Work task workflow (`/technician/route`).
+- **2026-09-30**: Completed Phase 3 (Field Execution). Built PWA offline sync engine (`offline-sync.ts`), camera photo capture integration (`capture="environment"`), and mobile-first Today's Work task workflow (`/technician/route`).
+- **2026-10-01**: Completed Phase 4 (Production-Grade Routing). Built composite server-side routing provider (`CompositeRoutingProvider` with OSRM and Haversine Road Factor fallback), physical-location batching TSP optimization, working shift feasibility validation, route unpublish/re-edit safety rules, and admin/technician route management UI. Verified against October 2026 real 35-site proving ground without schedule corruption.
