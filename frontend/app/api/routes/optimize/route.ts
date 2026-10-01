@@ -62,7 +62,7 @@ export async function POST(req: Request) {
 
     if (!workOrders || workOrders.length === 0) {
       return NextResponse.json({
-        message: "No scheduled work orders found for this technician on this date.",
+        message: "No scheduled service requests found for this technician on this date.",
         route: null,
         stops: [],
       });
