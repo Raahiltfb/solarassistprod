@@ -19,7 +19,9 @@ import {
   Wrench,
   Check,
   AlertTriangle,
+  Trash2,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { createClient } from "@/lib/supabase/client";
 import {
   Site,
@@ -29,6 +31,7 @@ import {
   CleaningPlanAssignment,
   PlanStatus,
 } from "@/lib/types";
+import { CleaningVisit } from "@/lib/cleaning-domain";
 import { PlannerMatrix } from "@/components/cleaning/planner-matrix";
 import { SiteRuleDialog } from "@/components/cleaning/site-rule-dialog";
 import { BulkRuleDialog } from "@/components/cleaning/bulk-rule-dialog";
@@ -43,6 +46,7 @@ export default function CleaningPlannerPage() {
   const [teams, setTeams] = useState<TechnicianTeam[]>([]);
   const [plan, setPlan] = useState<CleaningPlan | null>(null);
   const [assignments, setAssignments] = useState<CleaningPlanAssignment[]>([]);
+  const [cleaningVisits, setCleaningVisits] = useState<CleaningVisit[]>([]);
   const [serviceRequests, setServiceRequests] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(true);
@@ -67,18 +71,28 @@ export default function CleaningPlannerPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [{ data: s }, { data: r }, { data: t }, { data: wo }] = await Promise.all([
+      const cyclePeriod = `${year}-${String(month).padStart(2, "0")}`;
+
+      const [{ data: s }, { data: r }, { data: t }, { data: wo }, { data: cv }] = await Promise.all([
         sb.from("sites").select("*").order("name"),
         sb.from("site_cleaning_rules").select("*"),
         sb.from("technician_teams").select("*, technician_team_members(*, profiles(*))").eq("is_active", true).order("name"),
         sb.from("work_orders").select("*, sites(name)"),
+        sb.from("cleaning_visits").select("*, sites(*), technician_teams(*)").eq("cycle_period", cyclePeriod).order("target_due_date", { ascending: true }),
       ]);
 
+      const loadedVisits = (cv as CleaningVisit[]) ?? [];
+      const loadedTeams = (t as TechnicianTeam[]) ?? [];
       setSites((s as Site[]) ?? []);
       setRules((r as SiteCleaningRule[]) ?? []);
-      setTeams((t as TechnicianTeam[]) ?? []);
+      setTeams(loadedTeams);
       setExecutionWos(wo?.filter(w => w.type === "cleaning") ?? []);
       setServiceRequests(wo?.filter(w => w.type !== "cleaning" && w.team_id) ?? []);
+      setCleaningVisits(loadedVisits);
+
+      const plannedCount = loadedVisits.filter((v) => v.status === "planned" || v.status === "approved" || v.status === "published").length;
+      const unscheduledCount = loadedVisits.filter((v) => v.status === "unscheduled").length;
+      setPlanResultSummary(`${monthName} planned: ${plannedCount} cleaning visits · ${loadedTeams.length} teams · ${unscheduledCount} unscheduled`);
 
       // Fetch or create plan for this month
       const { data: p } = await sb
@@ -170,6 +184,33 @@ export default function CleaningPlannerPage() {
     { label: "Nov 2026", year: 2026, month: 11 },
     { label: "Dec 2026", year: 2026, month: 12 },
   ];
+
+  // Clear schedule handler
+  const [clearing, setClearing] = useState(false);
+  const [openClearDialog, setOpenClearDialog] = useState(false);
+
+  async function handleClearSchedule() {
+    setClearing(true);
+    try {
+      const res = await fetch("/api/cleaning/planner/clear", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ year, month }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to clear schedule");
+      } else {
+        toast.success(data.message || "Schedule cleared!");
+        setOpenClearDialog(false);
+        loadData();
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Server error clearing schedule");
+    }
+    setClearing(false);
+  }
 
   // Trigger Automatic Optimizer
   async function handlePlanAutomatically() {
@@ -474,6 +515,16 @@ export default function CleaningPlannerPage() {
             <span>{generating ? "Planning Month..." : `Plan ${monthName}`}</span>
           </Button>
 
+          <Button
+            onClick={() => setOpenClearDialog(true)}
+            variant="outline"
+            size="sm"
+            className="text-xs h-9 gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span>Clear Schedule</span>
+          </Button>
+
           <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
             <input
               type="checkbox"
@@ -533,6 +584,108 @@ export default function CleaningPlannerPage() {
         </div>
       )}
 
+      {/* UNSCHEDULED BOTTLENECK BREAKDOWN PANEL */}
+      {(() => {
+        const unscheduledVisits = cleaningVisits.filter((v) => v.status === "unscheduled");
+        const cyclePeriodStr = `${year}-${String(month).padStart(2, "0")}`;
+
+        const bottleneckCounts = {
+          team_capacity: 0,
+          allowed_weekday: 0,
+          blackout_date: 0,
+          scheduling_window_exceeded: 0,
+          no_available_team: 0,
+          admin_cleared: 0,
+          other: 0,
+        };
+
+        unscheduledVisits.forEach((v) => {
+          const reason = (v.unscheduled_reason as keyof typeof bottleneckCounts) || "other";
+          if (bottleneckCounts[reason] !== undefined) {
+            bottleneckCounts[reason]++;
+          } else {
+            bottleneckCounts.other++;
+          }
+        });
+
+        return (
+          <Card className="border shadow-sm bg-card overflow-hidden">
+            <CardContent className="p-4 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className={`h-4 w-4 ${unscheduledVisits.length > 0 ? "text-amber-500" : "text-emerald-500"}`} />
+                  <h3 className="font-bold text-sm text-foreground">
+                    Unscheduled Bottleneck Breakdown
+                  </h3>
+                  <Badge variant={unscheduledVisits.length > 0 ? "warning" : "success"} className="text-[10px]">
+                    {unscheduledVisits.length} Unscheduled
+                  </Badge>
+                </div>
+                <span className="text-xs text-muted-foreground font-mono">
+                  Cycle: <strong className="text-foreground">{cyclePeriodStr}</strong>
+                </span>
+              </div>
+
+              {unscheduledVisits.length === 0 ? (
+                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span>All required cleaning visits for cycle {cyclePeriodStr} are planned without bottleneck constraints.</span>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                    {Object.entries(bottleneckCounts).map(([reason, count]) => (
+                      <div key={reason} className="p-2.5 bg-muted/40 rounded-lg border text-center space-y-0.5">
+                        <div
+                          className="text-[10px] uppercase font-semibold text-muted-foreground truncate"
+                          title={
+                            reason === "admin_cleared"
+                              ? "Visits removed from schedule and returned to unscheduled pool"
+                              : reason.replace(/_/g, " ")
+                          }
+                        >
+                          {reason.replace(/_/g, " ")}
+                        </div>
+                        <div className="text-lg font-bold font-mono text-foreground">{count}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="bg-muted/60 p-2.5 font-semibold text-xs border-b grid grid-cols-12 gap-2 text-muted-foreground">
+                      <div className="col-span-3">Site</div>
+                      <div className="col-span-2">Target Due Date</div>
+                      <div className="col-span-3">Bottleneck Reason</div>
+                      <div className="col-span-4">Planner Rationale</div>
+                    </div>
+                    <div className="divide-y max-h-60 overflow-y-auto text-xs">
+                      {unscheduledVisits.map((v) => (
+                        <div key={v.id} className="p-2.5 grid grid-cols-12 gap-2 items-center hover:bg-muted/20">
+                          <div className="col-span-3 font-medium truncate text-foreground">
+                            {(v as any).sites?.name || v.site_id}
+                          </div>
+                          <div className="col-span-2 font-mono text-muted-foreground">
+                            {v.target_due_date}
+                          </div>
+                          <div className="col-span-3">
+                            <Badge variant="outline" className="text-[10px] uppercase border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-mono">
+                              {v.unscheduled_reason ? v.unscheduled_reason.replace(/_/g, " ") : "other"}
+                            </Badge>
+                          </div>
+                          <div className="col-span-4 text-muted-foreground truncate" title={v.planner_rationale || ""}>
+                            {v.planner_rationale || (v.unscheduled_reason === "admin_cleared" ? "Visits removed from schedule and returned to unscheduled pool." : "Capacity constraint exceeded.")}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       {/* Main Interactive Matrix Calendar */}
       {loading ? (
         <div className="h-96 border border-dashed rounded-xl flex items-center justify-center bg-card">
@@ -571,6 +724,48 @@ export default function CleaningPlannerPage() {
         rule={singleRuleSite ? ruleMap.get(singleRuleSite.id) || null : null}
         onSaved={loadData}
       />
+
+      {/* Clear Schedule Dialog */}
+      <Dialog open={openClearDialog} onOpenChange={setOpenClearDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" /> Clear Schedule for {monthName} {year}?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-xs text-muted-foreground">
+            <p>
+              This will remove all generated draft/future cleaning visits, assignments, and routes for <strong className="text-foreground">{monthName} {year}</strong>.
+            </p>
+            <div className="p-3 bg-muted/40 rounded-lg border space-y-1">
+              <div className="font-semibold text-foreground">What will be preserved:</div>
+              <ul className="list-disc pl-4 space-y-0.5">
+                <li>Historical completed cleaning logs and evidence photos</li>
+                <li>Completed visits and completed work orders</li>
+                <li>Site policy configurations and team settings</li>
+              </ul>
+            </div>
+            {plan?.status === "published" && (
+              <p className="text-amber-600 dark:text-amber-400 font-medium border-l-2 border-amber-500 pl-2 py-0.5">
+                Warning: This month schedule has already been published to field technicians. Clearing will reset active field dispatch for this month.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setOpenClearDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleClearSchedule}
+              disabled={clearing}
+            >
+              {clearing ? "Clearing..." : "Yes, Clear Schedule"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

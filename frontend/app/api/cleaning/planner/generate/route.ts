@@ -67,6 +67,21 @@ export async function POST(req: Request) {
     const prevPlan = prevPlanRes.data ?? null;
     const cleaningLogs = cleaningLogsRes.data ?? [];
 
+    // Map previous team assignments for historical team continuity
+    const previousTeamMap = new Map<string, string>();
+    if (prevPlan && prevPlan.cleaning_plan_assignments) {
+      for (const pa of prevPlan.cleaning_plan_assignments) {
+        if (pa.site_id && pa.team_id) {
+          previousTeamMap.set(pa.site_id, pa.team_id);
+        }
+      }
+    }
+    for (const log of cleaningLogs) {
+      if (log.site_id && log.team_id && !previousTeamMap.has(log.site_id)) {
+        previousTeamMap.set(log.site_id, log.team_id);
+      }
+    }
+
     // Map latest actual cleaning log per site
     const latestCleanedMap = new Map<string, string>();
     for (const log of cleaningLogs) {
@@ -78,7 +93,7 @@ export async function POST(req: Request) {
     // Enhance sites with actual last_cleaned_on if missing
     const enhancedSites = sites.map((s) => ({
       ...s,
-      last_cleaned_on: s.last_cleaned_on || latestCleanedMap.get(s.id) || null,
+      last_cleaned_on: s.last_cleaned_on || null,
     }));
 
     // 3. Run Macro Scheduler
@@ -90,6 +105,7 @@ export async function POST(req: Request) {
       teams,
       planningCapacityMins,
       schedulingToleranceDays,
+      previousTeamAssignments: previousTeamMap,
     });
 
     // 4. Upsert `cleaning_plans` Header
@@ -139,10 +155,53 @@ export async function POST(req: Request) {
       }
     }
 
+    // 6. Upsert Canonical `cleaning_visits`
+    if (result.proposedVisits && result.proposedVisits.length > 0) {
+      const cyclePeriod = `${year}-${String(month).padStart(2, "0")}`;
+
+      // Clear any previous stale unscheduled visits for this cycle_period when generating a fresh complete plan
+      await sb
+        .from("cleaning_visits")
+        .delete()
+        .eq("org_id", orgId)
+        .eq("cycle_period", cyclePeriod)
+        .eq("status", "unscheduled");
+
+      const dbVisits = result.proposedVisits.map((pv) => ({
+        org_id: orgId,
+        site_id: pv.site_id,
+        plan_id: planRow.id,
+        cycle_period: pv.cycle_period,
+        visit_sequence_in_month: pv.visit_sequence_in_month,
+        target_due_date: pv.target_due_date,
+        scheduled_date: pv.scheduled_date,
+        assigned_team_id: pv.assigned_team_id,
+        status: pv.status,
+        constraint_state: pv.constraint_state,
+        constraint_notes: pv.constraint_notes,
+        unscheduled_reason: pv.unscheduled_reason,
+        planner_rationale: pv.planner_rationale,
+        estimated_cleaning_mins: pv.estimated_cleaning_mins,
+        estimated_travel_mins: pv.estimated_travel_mins,
+        estimated_distance_km: pv.estimated_distance_km,
+        updated_at: new Date().toISOString(),
+      }));
+
+      const { error: visitErr } = await sb
+        .from("cleaning_visits")
+        .upsert(dbVisits, { onConflict: "site_id,cycle_period,visit_sequence_in_month" });
+
+      if (visitErr) {
+        console.error("Error upserting cleaning_visits:", visitErr);
+        return NextResponse.json({ error: visitErr.message }, { status: 500 });
+      }
+    }
+
     return NextResponse.json({
       success: true,
       plan: planRow,
       assignmentsCount: result.assignments.length,
+      proposedVisitsCount: result.proposedVisits.length,
       unconfiguredSitesCount: result.unconfiguredSites.length,
       unscheduledSitesCount: result.unscheduledSites.length,
       unconfiguredSites: result.unconfiguredSites,

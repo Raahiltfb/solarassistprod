@@ -1,0 +1,1516 @@
+[
+  {
+    "cluster_name": "Alcove Society Complex (Kharghar)",
+    "sites": [
+      "Alcove society A wing",
+      "Alcove society D Wing",
+      "Alcove Society Club House",
+      "Alcove Society F Wing",
+      "Alcove Society E wing",
+      "Alcove society B Wing",
+      "Alcove Society G Wing",
+      "Alcove society C Wing"
+    ],
+    "req_visits_per_site": {
+      "Alcove society A wing": 3,
+      "Alcove society D Wing": 3,
+      "Alcove Society Club House": 3,
+      "Alcove Society F Wing": 3,
+      "Alcove Society E wing": 3,
+      "Alcove society B Wing": 3,
+      "Alcove Society G Wing": 3,
+      "Alcove society C Wing": 3
+    },
+    "visits_by_date": {
+      "2026-10-16": [
+        {
+          "site_name": "Alcove society A wing",
+          "visit_id": "f7ed6747-d7f0-4d8d-b244-5edf162f9c11",
+          "date": "2026-10-16",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-16. Target due: 2026-10-16."
+        },
+        {
+          "site_name": "Alcove society B Wing",
+          "visit_id": "1ac6c48d-4450-4cbc-9bfe-1180e327246c",
+          "date": "2026-10-16",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-16. Target due: 2026-10-16."
+        }
+      ],
+      "2026-10-31": [
+        {
+          "site_name": "Alcove society A wing",
+          "visit_id": "6bb04c0a-eef4-4952-8951-c6dff57c90e2",
+          "date": "2026-10-31",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-31. Target due: 2026-10-31."
+        },
+        {
+          "site_name": "Alcove society B Wing",
+          "visit_id": "c324995d-de0e-4e65-be7f-147400619c23",
+          "date": "2026-10-31",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-31. Target due: 2026-10-31."
+        },
+        {
+          "site_name": "Alcove society C Wing",
+          "visit_id": "a301a6c8-c49e-4221-8e70-1282f532535d",
+          "date": "2026-10-31",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-31. Target due: 2026-10-31."
+        }
+      ],
+      "2026-10-01": [
+        {
+          "site_name": "Alcove society A wing",
+          "visit_id": "4725bec6-0671-4d3f-9e12-7f610c6db6bd",
+          "date": "2026-10-01",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-01. Target due: 2026-10-01."
+        },
+        {
+          "site_name": "Alcove society B Wing",
+          "visit_id": "d61df129-0919-44f6-a0cc-32301c9b4e98",
+          "date": "2026-10-01",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-01. Target due: 2026-10-01."
+        },
+        {
+          "site_name": "Alcove society C Wing",
+          "visit_id": "ba4c6784-7f07-44a8-9650-32ef5b60a4ce",
+          "date": "2026-10-01",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-01. Target due: 2026-10-01."
+        }
+      ],
+      "2026-10-17": [
+        {
+          "site_name": "Alcove society D Wing",
+          "visit_id": "0084cb35-d926-4a83-8d9d-e322d9980c28",
+          "date": "2026-10-17",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-17. Target due: 2026-10-16. Shifted date to batch same-location work."
+        },
+        {
+          "site_name": "Alcove Society Club House",
+          "visit_id": "82f19a24-f7e6-4f33-a7ff-51e62dbc29c6",
+          "date": "2026-10-17",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-17. Target due: 2026-10-16. Shifted date to batch same-location work."
+        },
+        {
+          "site_name": "Alcove society C Wing",
+          "visit_id": "38935a2d-0573-4347-b96d-82fba2bbac75",
+          "date": "2026-10-17",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-17. Target due: 2026-10-16. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-02": [
+        {
+          "site_name": "Alcove society D Wing",
+          "visit_id": "1d99be73-8504-4ba7-8b8e-9c9c7b1ccdb5",
+          "date": "2026-10-02",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-02. Target due: 2026-10-01. Shifted date to batch same-location work."
+        },
+        {
+          "site_name": "Alcove Society Club House",
+          "visit_id": "1d6163eb-5901-49d5-a8ec-19a8109eea68",
+          "date": "2026-10-02",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-02. Target due: 2026-10-01. Shifted date to batch same-location work."
+        },
+        {
+          "site_name": "Alcove Society E wing",
+          "visit_id": "668b4eb5-0f2a-4d8f-be8f-c46713c1588a",
+          "date": "2026-10-02",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-02. Target due: 2026-10-01. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-30": [
+        {
+          "site_name": "Alcove society D Wing",
+          "visit_id": "5e833e46-2b79-4c97-baac-9c6d53863b68",
+          "date": "2026-10-30",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-30. Target due: 2026-10-31. Shifted date to batch same-location work."
+        },
+        {
+          "site_name": "Alcove Society Club House",
+          "visit_id": "4fd3ec09-53c6-408f-a1ea-56a4068d756f",
+          "date": "2026-10-30",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-30. Target due: 2026-10-31. Shifted date to batch same-location work."
+        },
+        {
+          "site_name": "Alcove Society E wing",
+          "visit_id": "ad1e36fa-b328-47b7-b5d2-34146a0ddb40",
+          "date": "2026-10-30",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-30. Target due: 2026-10-31. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-15": [
+        {
+          "site_name": "Alcove Society F Wing",
+          "visit_id": "3b18b493-a1b4-45ac-b5f9-db4b66ea1740",
+          "date": "2026-10-15",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-15. Target due: 2026-10-16. Shifted date to batch same-location work."
+        },
+        {
+          "site_name": "Alcove Society E wing",
+          "visit_id": "2848535f-4628-4a0a-97e9-f98a28e1985b",
+          "date": "2026-10-15",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-15. Target due: 2026-10-16. Shifted date to batch same-location work."
+        },
+        {
+          "site_name": "Alcove Society G Wing",
+          "visit_id": "20b96c92-e0e6-4f5c-8fad-1451ab88454f",
+          "date": "2026-10-15",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-15. Target due: 2026-10-16. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-29": [
+        {
+          "site_name": "Alcove Society F Wing",
+          "visit_id": "348b6797-50ce-4c4c-9868-7e4b28d0977f",
+          "date": "2026-10-29",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-29. Target due: 2026-10-31. Shifted date to batch same-location work."
+        },
+        {
+          "site_name": "Alcove Society G Wing",
+          "visit_id": "09087272-5ffc-49e1-bee4-c1af90613b65",
+          "date": "2026-10-29",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-29. Target due: 2026-10-31. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-03": [
+        {
+          "site_name": "Alcove Society F Wing",
+          "visit_id": "5b127071-aed5-415a-b249-47fd34e2ad95",
+          "date": "2026-10-03",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-03. Target due: 2026-10-01. Shifted date to batch same-location work."
+        },
+        {
+          "site_name": "Alcove Society G Wing",
+          "visit_id": "57c460a1-18bf-4fa2-9d48-52e1f202ece2",
+          "date": "2026-10-03",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-03. Target due: 2026-10-01. Shifted date to batch same-location work."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "Dosti Jade Complex (Thane)",
+    "sites": [
+      "Dosti Jade Wing B",
+      "Dosti Jade Wing A"
+    ],
+    "req_visits_per_site": {
+      "Dosti Jade Wing B": 4,
+      "Dosti Jade Wing A": 4
+    },
+    "visits_by_date": {
+      "2026-10-10": [
+        {
+          "site_name": "Dosti Jade Wing B",
+          "visit_id": "c10b353b-7b1f-4298-9453-8abe76b49624",
+          "date": "2026-10-10",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-10. Target due: 2026-10-11. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-22": [
+        {
+          "site_name": "Dosti Jade Wing B",
+          "visit_id": "5bc907a1-2e21-4991-83c4-9445eea7abc6",
+          "date": "2026-10-22",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-22. Target due: 2026-10-21. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-05": [
+        {
+          "site_name": "Dosti Jade Wing B",
+          "visit_id": "54e53bc1-0d12-4e5c-9843-72afd9e89e74",
+          "date": "2026-10-05",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-05. Target due: 2026-10-01. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-28": [
+        {
+          "site_name": "Dosti Jade Wing B",
+          "visit_id": "d0edad90-e79b-48ca-a8eb-7ae645353ef2",
+          "date": "2026-10-28",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-28. Target due: 2026-10-31. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-12": [
+        {
+          "site_name": "Dosti Jade Wing A",
+          "visit_id": "aa6d46d5-5559-405f-8bad-8cb88ff65f10",
+          "date": "2026-10-12",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-12. Target due: 2026-10-11. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-21": [
+        {
+          "site_name": "Dosti Jade Wing A",
+          "visit_id": "4288f68b-93c5-4098-8d32-9bd4b2d1d6ad",
+          "date": "2026-10-21",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-21. Target due: 2026-10-21."
+        }
+      ],
+      "2026-10-29": [
+        {
+          "site_name": "Dosti Jade Wing A",
+          "visit_id": "d67ce872-0ea3-4667-90a4-208a2b2899bb",
+          "date": "2026-10-29",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-29. Target due: 2026-10-31. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-03": [
+        {
+          "site_name": "Dosti Jade Wing A",
+          "visit_id": "43ad3a8a-2ef0-4d58-8ab8-20d8a7033916",
+          "date": "2026-10-03",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-03. Target due: 2026-10-01. Shifted date to batch same-location work."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "Madhukosh Society Complex (Airoli)",
+    "sites": [
+      "Madhukosh society A1",
+      "Madhukosh society A2"
+    ],
+    "req_visits_per_site": {
+      "Madhukosh society A1": 3,
+      "Madhukosh society A2": 3
+    },
+    "visits_by_date": {
+      "2026-10-03": [
+        {
+          "site_name": "Madhukosh society A1",
+          "visit_id": "69c15dad-7c8b-4ceb-ac83-ac33c5c7505a",
+          "date": "2026-10-03",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-03. Target due: 2026-10-01. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-14": [
+        {
+          "site_name": "Madhukosh society A1",
+          "visit_id": "e826809d-86ee-41de-ab6b-acdde7d246f5",
+          "date": "2026-10-14",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-14. Target due: 2026-10-16. Shifted date to batch same-location work."
+        },
+        {
+          "site_name": "Madhukosh society A2",
+          "visit_id": "97995f33-b2f0-47bc-8e66-86d247d7e397",
+          "date": "2026-10-14",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-14. Target due: 2026-10-16. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-28": [
+        {
+          "site_name": "Madhukosh society A1",
+          "visit_id": "49022f06-be13-4488-a977-c794783043c7",
+          "date": "2026-10-28",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-28. Target due: 2026-10-31. Shifted date to batch same-location work."
+        },
+        {
+          "site_name": "Madhukosh society A2",
+          "visit_id": "0128e593-ad8e-4aa6-a412-62d2cf717d88",
+          "date": "2026-10-28",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-28. Target due: 2026-10-31. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-05": [
+        {
+          "site_name": "Madhukosh society A2",
+          "visit_id": "d8ab88c0-e698-4d5f-a633-a29f75fd1cac",
+          "date": "2026-10-05",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-05. Target due: 2026-10-01. Shifted date to batch same-location work."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "MK Thakur Complex (Ulwe)",
+    "sites": [
+      "MK Thakur Wing EFGH",
+      "MK Thakur Wing ABCD",
+      "Mk Thakur Wing IJK"
+    ],
+    "req_visits_per_site": {
+      "MK Thakur Wing EFGH": 4,
+      "MK Thakur Wing ABCD": 4,
+      "Mk Thakur Wing IJK": 4
+    },
+    "visits_by_date": {
+      "2026-10-27": [
+        {
+          "site_name": "MK Thakur Wing EFGH",
+          "visit_id": "a91f0a04-4000-47e6-a29a-9f1b9e417bb0",
+          "date": "2026-10-27",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-27. Target due: 2026-10-31. Shifted date to batch same-location work."
+        },
+        {
+          "site_name": "Mk Thakur Wing IJK",
+          "visit_id": "f4b9dcf9-58d5-4f80-a64d-db54c7e2596a",
+          "date": "2026-10-27",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-27. Target due: 2026-10-31. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-22": [
+        {
+          "site_name": "MK Thakur Wing EFGH",
+          "visit_id": "7a910d76-5ff4-4e8d-b11d-5b6f40a97b81",
+          "date": "2026-10-22",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-22. Target due: 2026-10-21. Shifted date to batch same-location work."
+        },
+        {
+          "site_name": "MK Thakur Wing ABCD",
+          "visit_id": "5930fb10-3367-4ad5-b78f-088a777e5f26",
+          "date": "2026-10-22",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-22. Target due: 2026-10-21. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-10": [
+        {
+          "site_name": "MK Thakur Wing EFGH",
+          "visit_id": "87eaecd7-de84-49bc-88d0-f591885bac92",
+          "date": "2026-10-10",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-10. Target due: 2026-10-11. Shifted date to batch same-location work."
+        },
+        {
+          "site_name": "MK Thakur Wing ABCD",
+          "visit_id": "ea785378-196b-4b81-b7f1-afb2f8a97a64",
+          "date": "2026-10-10",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-10. Target due: 2026-10-11. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-06": [
+        {
+          "site_name": "MK Thakur Wing EFGH",
+          "visit_id": "ee81b1cf-3a1b-4569-8ec0-1dcb46104147",
+          "date": "2026-10-06",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-06. Target due: 2026-10-01. Shifted date to batch same-location work."
+        },
+        {
+          "site_name": "Mk Thakur Wing IJK",
+          "visit_id": "02a3465f-a704-4388-a7b0-f6ec0efa0428",
+          "date": "2026-10-06",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-06. Target due: 2026-10-01. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-28": [
+        {
+          "site_name": "MK Thakur Wing ABCD",
+          "visit_id": "e8e0ad8d-a636-4814-a351-c2fff98f8616",
+          "date": "2026-10-28",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-28. Target due: 2026-10-31. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-05": [
+        {
+          "site_name": "MK Thakur Wing ABCD",
+          "visit_id": "9ce33dc6-ea06-447a-bdf4-3f618c2761eb",
+          "date": "2026-10-05",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-05. Target due: 2026-10-01. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-20": [
+        {
+          "site_name": "Mk Thakur Wing IJK",
+          "visit_id": "26df67ad-1eb7-4456-aedc-5cb84e241d18",
+          "date": "2026-10-20",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-20. Target due: 2026-10-21. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-13": [
+        {
+          "site_name": "Mk Thakur Wing IJK",
+          "visit_id": "74d74ade-6977-4c27-9ed6-8da48dfd5cac",
+          "date": "2026-10-13",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-13. Target due: 2026-10-11. Shifted date to batch same-location work."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "Garcinia Complex",
+    "sites": [
+      "Garcinia 11.7",
+      "Garcinia 37.4"
+    ],
+    "req_visits_per_site": {
+      "Garcinia 11.7": 4,
+      "Garcinia 37.4": 4
+    },
+    "visits_by_date": {
+      "2026-10-12": [
+        {
+          "site_name": "Garcinia 11.7",
+          "visit_id": "ed8521d9-6ec4-43ba-98a0-a376a1fd37b9",
+          "date": "2026-10-12",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-12. Target due: 2026-10-11. Shifted date to batch same-location work."
+        },
+        {
+          "site_name": "Garcinia 37.4",
+          "visit_id": "f23e9a57-fb00-4c67-b9fb-fb8780120825",
+          "date": "2026-10-12",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-12. Target due: 2026-10-11. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-21": [
+        {
+          "site_name": "Garcinia 11.7",
+          "visit_id": "1c12af8a-130a-4d55-b418-b073b9ffc80d",
+          "date": "2026-10-21",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-21. Target due: 2026-10-21."
+        },
+        {
+          "site_name": "Garcinia 37.4",
+          "visit_id": "64162336-8f54-48a2-8f23-f892686a0bce",
+          "date": "2026-10-21",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-21. Target due: 2026-10-21."
+        }
+      ],
+      "2026-10-31": [
+        {
+          "site_name": "Garcinia 11.7",
+          "visit_id": "c5b6bb37-8d96-43b4-b658-a32051f6fa88",
+          "date": "2026-10-31",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-31. Target due: 2026-10-31."
+        },
+        {
+          "site_name": "Garcinia 37.4",
+          "visit_id": "08e4e6dc-6e42-4aca-b657-a260f7f8e618",
+          "date": "2026-10-31",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-31. Target due: 2026-10-31."
+        }
+      ],
+      "2026-10-01": [
+        {
+          "site_name": "Garcinia 11.7",
+          "visit_id": "8929031d-5ed5-425a-bce7-0d0720681f44",
+          "date": "2026-10-01",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-01. Target due: 2026-10-01."
+        },
+        {
+          "site_name": "Garcinia 37.4",
+          "visit_id": "6654ab89-9f67-45ef-a1ec-1c862feefc9c",
+          "date": "2026-10-01",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 10,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-01. Target due: 2026-10-01."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "Crestia Solar",
+    "sites": [
+      "Crestia Solar"
+    ],
+    "req_visits_per_site": {
+      "Crestia Solar": 3
+    },
+    "visits_by_date": {
+      "2026-10-16": [
+        {
+          "site_name": "Crestia Solar",
+          "visit_id": "9b531b62-99af-4e8c-b926-09ad156a3879",
+          "date": "2026-10-16",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-16. Target due: 2026-10-16."
+        }
+      ],
+      "2026-10-29": [
+        {
+          "site_name": "Crestia Solar",
+          "visit_id": "ba0b4c84-b998-4c24-ac67-dc23f4a3b1de",
+          "date": "2026-10-29",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-29. Target due: 2026-10-31. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-03": [
+        {
+          "site_name": "Crestia Solar",
+          "visit_id": "997445cd-3b35-42e8-811e-68c0e08a6169",
+          "date": "2026-10-03",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-03. Target due: 2026-10-01. Shifted date to batch same-location work."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "Sophistica Solar",
+    "sites": [
+      "Sophistica Solar"
+    ],
+    "req_visits_per_site": {
+      "Sophistica Solar": 4
+    },
+    "visits_by_date": {
+      "2026-10-12": [
+        {
+          "site_name": "Sophistica Solar",
+          "visit_id": "ebd29ce7-900b-4ab4-ac8a-684062dbacc6",
+          "date": "2026-10-12",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-12. Target due: 2026-10-11. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-05": [
+        {
+          "site_name": "Sophistica Solar",
+          "visit_id": "c386747c-9c51-402c-a6ae-4cdc5ebd11a8",
+          "date": "2026-10-05",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-05. Target due: 2026-10-01. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-21": [
+        {
+          "site_name": "Sophistica Solar",
+          "visit_id": "62a9a922-12b4-43fe-9186-2505070d74c4",
+          "date": "2026-10-21",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-21. Target due: 2026-10-21."
+        }
+      ],
+      "2026-10-28": [
+        {
+          "site_name": "Sophistica Solar",
+          "visit_id": "353c20a2-076f-465c-a00b-578396766b64",
+          "date": "2026-10-28",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-28. Target due: 2026-10-31. Shifted date to batch same-location work."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "Ivy by courtyard",
+    "sites": [
+      "Ivy by courtyard"
+    ],
+    "req_visits_per_site": {
+      "Ivy by courtyard": 3
+    },
+    "visits_by_date": {
+      "2026-10-14": [
+        {
+          "site_name": "Ivy by courtyard",
+          "visit_id": "aa9d15ae-c434-470f-b7b3-5232233fafce",
+          "date": "2026-10-14",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 90,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-14. Target due: 2026-10-16. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-05": [
+        {
+          "site_name": "Ivy by courtyard",
+          "visit_id": "182a6e33-1532-4898-8a0e-56dad503b285",
+          "date": "2026-10-05",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 90,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-05. Target due: 2026-10-01. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-29": [
+        {
+          "site_name": "Ivy by courtyard",
+          "visit_id": "8e1bfc18-cb9a-45d8-a810-bb6fb110b042",
+          "date": "2026-10-29",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 90,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-29. Target due: 2026-10-31. Shifted date to batch same-location work."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "Suyash Heights Solar",
+    "sites": [
+      "Suyash Heights Solar"
+    ],
+    "req_visits_per_site": {
+      "Suyash Heights Solar": 3
+    },
+    "visits_by_date": {
+      "2026-10-06": [
+        {
+          "site_name": "Suyash Heights Solar",
+          "visit_id": "11792872-cfe0-4968-b343-a9df590f4455",
+          "date": "2026-10-06",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-06. Target due: 2026-10-01. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-19": [
+        {
+          "site_name": "Suyash Heights Solar",
+          "visit_id": "dc815199-3210-4d5d-afdf-58e978ae9a96",
+          "date": "2026-10-19",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-19. Target due: 2026-10-16. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-27": [
+        {
+          "site_name": "Suyash Heights Solar",
+          "visit_id": "293e2ad9-5363-4555-8bd2-1f11775f1732",
+          "date": "2026-10-27",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-27. Target due: 2026-10-31. Shifted date to batch same-location work."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "Vijay Vatika Solar",
+    "sites": [
+      "Vijay Vatika Solar"
+    ],
+    "req_visits_per_site": {
+      "Vijay Vatika Solar": 3
+    },
+    "visits_by_date": {
+      "2026-10-16": [
+        {
+          "site_name": "Vijay Vatika Solar",
+          "visit_id": "da78f2da-3afd-4e5d-88c2-08a22a9af51e",
+          "date": "2026-10-16",
+          "team_id": "bed9e56b-d0a6-4575-8209-08e71ed5a19d",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 4 (Kalyan & North) on 2026-10-16. Target due: 2026-10-16."
+        }
+      ],
+      "2026-10-01": [
+        {
+          "site_name": "Vijay Vatika Solar",
+          "visit_id": "69a55ed1-fceb-4476-ac6a-2ca1f2d93350",
+          "date": "2026-10-01",
+          "team_id": "bed9e56b-d0a6-4575-8209-08e71ed5a19d",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 4 (Kalyan & North) on 2026-10-01. Target due: 2026-10-01."
+        }
+      ],
+      "2026-10-31": [
+        {
+          "site_name": "Vijay Vatika Solar",
+          "visit_id": "3bc4e961-0c33-4e81-b946-81cc2c0b9c34",
+          "date": "2026-10-31",
+          "team_id": "bed9e56b-d0a6-4575-8209-08e71ed5a19d",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 4 (Kalyan & North) on 2026-10-31. Target due: 2026-10-31."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "Maitri Anand 14.5kwh",
+    "sites": [
+      "Maitri Anand 14.5kwh"
+    ],
+    "req_visits_per_site": {
+      "Maitri Anand 14.5kwh": 3
+    },
+    "visits_by_date": {
+      "2026-10-15": [
+        {
+          "site_name": "Maitri Anand 14.5kwh",
+          "visit_id": "42b30a45-778e-4d5f-96bc-e729adcdc8e9",
+          "date": "2026-10-15",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-15. Target due: 2026-10-16. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-28": [
+        {
+          "site_name": "Maitri Anand 14.5kwh",
+          "visit_id": "03ebf092-9d80-4c06-9220-4d2a36badb16",
+          "date": "2026-10-28",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-28. Target due: 2026-10-31. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-05": [
+        {
+          "site_name": "Maitri Anand 14.5kwh",
+          "visit_id": "46bb9963-1fdf-40d2-a43a-6bf16d46a532",
+          "date": "2026-10-05",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-05. Target due: 2026-10-01. Shifted date to batch same-location work."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "Bwssb WTP Bangalore",
+    "sites": [
+      "Bwssb WTP Bangalore"
+    ],
+    "req_visits_per_site": {
+      "Bwssb WTP Bangalore": 3
+    },
+    "visits_by_date": {
+      "2026-10-17": [
+        {
+          "site_name": "Bwssb WTP Bangalore",
+          "visit_id": "e6f190dc-898f-418b-9bd0-ff8c7131f0b3",
+          "date": "2026-10-17",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-17. Target due: 2026-10-16. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-30": [
+        {
+          "site_name": "Bwssb WTP Bangalore",
+          "visit_id": "bf467225-e2e3-4e3a-ab76-fbde2a82be59",
+          "date": "2026-10-30",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-30. Target due: 2026-10-31. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-02": [
+        {
+          "site_name": "Bwssb WTP Bangalore",
+          "visit_id": "0924fb72-b824-476c-8ed0-9959d65070b9",
+          "date": "2026-10-02",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-02. Target due: 2026-10-01. Shifted date to batch same-location work."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "Cilantro",
+    "sites": [
+      "Cilantro"
+    ],
+    "req_visits_per_site": {
+      "Cilantro": 4
+    },
+    "visits_by_date": {
+      "2026-10-12": [
+        {
+          "site_name": "Cilantro",
+          "visit_id": "d2fea3e3-02af-436f-9ac8-2740f8388dc2",
+          "date": "2026-10-12",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-12. Target due: 2026-10-11. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-21": [
+        {
+          "site_name": "Cilantro",
+          "visit_id": "3471c929-fff7-4132-9853-979d6077e920",
+          "date": "2026-10-21",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-21. Target due: 2026-10-21."
+        }
+      ],
+      "2026-10-29": [
+        {
+          "site_name": "Cilantro",
+          "visit_id": "5a050d72-9102-4963-b7c1-beae1e6142ec",
+          "date": "2026-10-29",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-29. Target due: 2026-10-31. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-03": [
+        {
+          "site_name": "Cilantro",
+          "visit_id": "3635b736-b3c4-4c5f-9f0c-dd5381fc3fe0",
+          "date": "2026-10-03",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-03. Target due: 2026-10-01. Shifted date to batch same-location work."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "Belmac Panvel",
+    "sites": [
+      "Belmac Panvel"
+    ],
+    "req_visits_per_site": {
+      "Belmac Panvel": 3
+    },
+    "visits_by_date": {
+      "2026-10-16": [
+        {
+          "site_name": "Belmac Panvel",
+          "visit_id": "1e6fa02a-7271-4a9c-a3cd-11d8eecce4db",
+          "date": "2026-10-16",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-16. Target due: 2026-10-16."
+        }
+      ],
+      "2026-10-31": [
+        {
+          "site_name": "Belmac Panvel",
+          "visit_id": "3ce15a1e-df99-4fcf-bfc8-99181d72f981",
+          "date": "2026-10-31",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-31. Target due: 2026-10-31."
+        }
+      ],
+      "2026-10-01": [
+        {
+          "site_name": "Belmac Panvel",
+          "visit_id": "ada22f15-5599-4678-afe9-6bc644883354",
+          "date": "2026-10-01",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-01. Target due: 2026-10-01."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "Suvarna pushpa chs",
+    "sites": [
+      "Suvarna pushpa chs"
+    ],
+    "req_visits_per_site": {
+      "Suvarna pushpa chs": 3
+    },
+    "visits_by_date": {
+      "2026-10-16": [
+        {
+          "site_name": "Suvarna pushpa chs",
+          "visit_id": "346b4ff8-e046-4bac-8b04-901127e526c3",
+          "date": "2026-10-16",
+          "team_id": "bed9e56b-d0a6-4575-8209-08e71ed5a19d",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 4 (Kalyan & North) on 2026-10-16. Target due: 2026-10-16."
+        }
+      ],
+      "2026-10-01": [
+        {
+          "site_name": "Suvarna pushpa chs",
+          "visit_id": "a3cfea41-ae2f-4863-9554-1440c84bd595",
+          "date": "2026-10-01",
+          "team_id": "bed9e56b-d0a6-4575-8209-08e71ed5a19d",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 4 (Kalyan & North) on 2026-10-01. Target due: 2026-10-01."
+        }
+      ],
+      "2026-10-31": [
+        {
+          "site_name": "Suvarna pushpa chs",
+          "visit_id": "ccf7dc9f-471b-497d-932d-46f333a87bd8",
+          "date": "2026-10-31",
+          "team_id": "bed9e56b-d0a6-4575-8209-08e71ed5a19d",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 4 (Kalyan & North) on 2026-10-31. Target due: 2026-10-31."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "143.96kw manavsthal tower malad",
+    "sites": [
+      "143.96kw manavsthal tower malad"
+    ],
+    "req_visits_per_site": {
+      "143.96kw manavsthal tower malad": 2
+    },
+    "visits_by_date": {
+      "2026-10-16": [
+        {
+          "site_name": "143.96kw manavsthal tower malad",
+          "visit_id": "6d056e70-a63e-4eed-8dfe-5bd65fe3d226",
+          "date": "2026-10-16",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 90,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-16. Target due: 2026-10-16."
+        }
+      ],
+      "2026-10-26": [
+        {
+          "site_name": "143.96kw manavsthal tower malad",
+          "visit_id": "012ff563-05b4-4966-855c-f3dddadd653e",
+          "date": "2026-10-26",
+          "team_id": "4c49c2bd-385c-4395-b661-81bb9035a530",
+          "cleaning_mins": 90,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 3 (Vashi & Central) on 2026-10-26. Target due: 2026-10-26."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "ANOOPAM MISSION SOLAR",
+    "sites": [
+      "ANOOPAM MISSION SOLAR"
+    ],
+    "req_visits_per_site": {
+      "ANOOPAM MISSION SOLAR": 3
+    },
+    "visits_by_date": {
+      "2026-10-16": [
+        {
+          "site_name": "ANOOPAM MISSION SOLAR",
+          "visit_id": "3b8dd995-f009-4b64-b9b7-3bafea1b3e56",
+          "date": "2026-10-16",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-16. Target due: 2026-10-16."
+        }
+      ],
+      "2026-10-31": [
+        {
+          "site_name": "ANOOPAM MISSION SOLAR",
+          "visit_id": "2e36b73d-78d5-447c-bb0d-b59affd103ce",
+          "date": "2026-10-31",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-31. Target due: 2026-10-31."
+        }
+      ],
+      "2026-10-01": [
+        {
+          "site_name": "ANOOPAM MISSION SOLAR",
+          "visit_id": "53108c6a-f68e-41c9-bae7-9ea3916e6167",
+          "date": "2026-10-01",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-01. Target due: 2026-10-01."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "Regalia chs solar",
+    "sites": [
+      "Regalia chs solar"
+    ],
+    "req_visits_per_site": {
+      "Regalia chs solar": 3
+    },
+    "visits_by_date": {
+      "2026-10-01": [
+        {
+          "site_name": "Regalia chs solar",
+          "visit_id": "cf37c946-1e68-443d-9810-6fdb2835f5ae",
+          "date": "2026-10-01",
+          "team_id": "bed9e56b-d0a6-4575-8209-08e71ed5a19d",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 4 (Kalyan & North) on 2026-10-01. Target due: 2026-10-01."
+        }
+      ],
+      "2026-10-16": [
+        {
+          "site_name": "Regalia chs solar",
+          "visit_id": "3b41b3d5-c5bf-496a-bf9c-05792ff64d87",
+          "date": "2026-10-16",
+          "team_id": "bed9e56b-d0a6-4575-8209-08e71ed5a19d",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 4 (Kalyan & North) on 2026-10-16. Target due: 2026-10-16."
+        }
+      ],
+      "2026-10-31": [
+        {
+          "site_name": "Regalia chs solar",
+          "visit_id": "131e0cbb-b215-42d5-9373-bd29b46d36bc",
+          "date": "2026-10-31",
+          "team_id": "bed9e56b-d0a6-4575-8209-08e71ed5a19d",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 4 (Kalyan & North) on 2026-10-31. Target due: 2026-10-31."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "Casa Florea",
+    "sites": [
+      "Casa Florea"
+    ],
+    "req_visits_per_site": {
+      "Casa Florea": 4
+    },
+    "visits_by_date": {
+      "2026-10-12": [
+        {
+          "site_name": "Casa Florea",
+          "visit_id": "aea94135-b17c-4397-af2f-8d460d5ff9b3",
+          "date": "2026-10-12",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-12. Target due: 2026-10-11. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-21": [
+        {
+          "site_name": "Casa Florea",
+          "visit_id": "3607dcd7-5b86-45f8-b647-19c4ea752a45",
+          "date": "2026-10-21",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-21. Target due: 2026-10-21."
+        }
+      ],
+      "2026-10-31": [
+        {
+          "site_name": "Casa Florea",
+          "visit_id": "b11074fa-950b-4cca-b9e2-e4cb6d9c4197",
+          "date": "2026-10-31",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-31. Target due: 2026-10-31."
+        }
+      ],
+      "2026-10-01": [
+        {
+          "site_name": "Casa Florea",
+          "visit_id": "234449ac-caff-4ea6-9e06-34faed3f6867",
+          "date": "2026-10-01",
+          "team_id": "800f6c7c-cd5d-499d-bf3a-923c592cdd79",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 2 (Panvel & West) on 2026-10-01. Target due: 2026-10-01."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "Maxima CHS Solar plant",
+    "sites": [
+      "Maxima CHS Solar plant"
+    ],
+    "req_visits_per_site": {
+      "Maxima CHS Solar plant": 4
+    },
+    "visits_by_date": {
+      "2026-10-12": [
+        {
+          "site_name": "Maxima CHS Solar plant",
+          "visit_id": "af7daca6-f972-4932-b3d7-46ff94aa1d41",
+          "date": "2026-10-12",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-12. Target due: 2026-10-11. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-21": [
+        {
+          "site_name": "Maxima CHS Solar plant",
+          "visit_id": "74ebd9c7-b837-4c82-b65c-1035d854f673",
+          "date": "2026-10-21",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-21. Target due: 2026-10-21."
+        }
+      ],
+      "2026-10-31": [
+        {
+          "site_name": "Maxima CHS Solar plant",
+          "visit_id": "83686c80-f12c-487a-a976-49ee9044dc54",
+          "date": "2026-10-31",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-31. Target due: 2026-10-31."
+        }
+      ],
+      "2026-10-01": [
+        {
+          "site_name": "Maxima CHS Solar plant",
+          "visit_id": "723c0ccd-a288-4c9d-aa59-d4db9bde372e",
+          "date": "2026-10-01",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-01. Target due: 2026-10-01."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "Venecia CHS 80kW",
+    "sites": [
+      "Venecia CHS 80kW"
+    ],
+    "req_visits_per_site": {
+      "Venecia CHS 80kW": 3
+    },
+    "visits_by_date": {
+      "2026-10-16": [
+        {
+          "site_name": "Venecia CHS 80kW",
+          "visit_id": "d974c59c-6fc6-43d9-b018-138279096aa8",
+          "date": "2026-10-16",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-16. Target due: 2026-10-16."
+        }
+      ],
+      "2026-10-02": [
+        {
+          "site_name": "Venecia CHS 80kW",
+          "visit_id": "b15df57f-182a-4e37-b80d-27e26cec8baa",
+          "date": "2026-10-02",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-02. Target due: 2026-10-01. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-30": [
+        {
+          "site_name": "Venecia CHS 80kW",
+          "visit_id": "48ffc708-67f4-4b45-a566-e8322a19a85f",
+          "date": "2026-10-30",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-30. Target due: 2026-10-31. Shifted date to batch same-location work."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "STP",
+    "sites": [
+      "STP"
+    ],
+    "req_visits_per_site": {
+      "STP": 4
+    },
+    "visits_by_date": {
+      "2026-10-02": [
+        {
+          "site_name": "STP",
+          "visit_id": "35b90d93-de2e-46bf-b0d7-110deed11d08",
+          "date": "2026-10-02",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-02. Target due: 2026-10-01. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-10": [
+        {
+          "site_name": "STP",
+          "visit_id": "331d4569-f876-434a-912e-dd7a2efa8c82",
+          "date": "2026-10-10",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-10. Target due: 2026-10-11. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-22": [
+        {
+          "site_name": "STP",
+          "visit_id": "2f74f713-d159-442f-92f2-40e1040278fb",
+          "date": "2026-10-22",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-22. Target due: 2026-10-21. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-30": [
+        {
+          "site_name": "STP",
+          "visit_id": "0a2598dd-1d3d-47c8-9a5e-ca53b72ccd8b",
+          "date": "2026-10-30",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-30. Target due: 2026-10-31. Shifted date to batch same-location work."
+        }
+      ]
+    }
+  },
+  {
+    "cluster_name": "Patwardhan hospital",
+    "sites": [
+      "Patwardhan hospital"
+    ],
+    "req_visits_per_site": {
+      "Patwardhan hospital": 4
+    },
+    "visits_by_date": {
+      "2026-10-10": [
+        {
+          "site_name": "Patwardhan hospital",
+          "visit_id": "11320531-1f71-4374-85c4-5a4ee1ca06d5",
+          "date": "2026-10-10",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-10. Target due: 2026-10-11. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-22": [
+        {
+          "site_name": "Patwardhan hospital",
+          "visit_id": "bc7e0a08-8ba7-400a-8979-7804f5c5750a",
+          "date": "2026-10-22",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-22. Target due: 2026-10-21. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-30": [
+        {
+          "site_name": "Patwardhan hospital",
+          "visit_id": "1ff8a9a9-254c-4f8a-84ff-6d0e6a5f93b9",
+          "date": "2026-10-30",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-30. Target due: 2026-10-31. Shifted date to batch same-location work."
+        }
+      ],
+      "2026-10-02": [
+        {
+          "site_name": "Patwardhan hospital",
+          "visit_id": "5986ea79-22fc-4a58-aaa9-b43880c256a8",
+          "date": "2026-10-02",
+          "team_id": "c52e2a53-c3eb-4598-abd3-87a6cd34de2c",
+          "cleaning_mins": 120,
+          "travel_mins": 30,
+          "planner_rationale": "Batched for Team 1 (Thane & East) on 2026-10-02. Target due: 2026-10-01. Shifted date to batch same-location work."
+        }
+      ]
+    }
+  }
+]

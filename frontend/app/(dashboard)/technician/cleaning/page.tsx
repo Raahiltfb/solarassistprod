@@ -31,6 +31,8 @@ import { toast } from "sonner";
 import { Camera, Image as ImageIcon, AlertTriangle, ArrowLeft } from "lucide-react";
 
 import type { Site } from "@/lib/types";
+import { isValidStateTransition } from "@/lib/cleaning-domain";
+import { enqueueOfflineAction } from "@/lib/offline-sync";
 
 function CleaningFormContent() {
   const sb = createClient();
@@ -82,33 +84,48 @@ function CleaningFormContent() {
 
   async function uploadPhoto(
     file: File,
-    kind:
-      | "safety"
-      | "before"
-      | "after"
-      | "damagePhoto"
+    kind: "safety" | "before" | "after" | "damagePhoto"
   ) {
-    const path = `cleaning/${crypto.randomUUID()}-${kind}-${file.name}`;
-
-    const { error } = await sb.storage
-      .from("solar-uploads")
-      .upload(path, file, { upsert: true });
-
-    if (error) {
-      toast.error(error.message);
+    if (!navigator.onLine) {
+      // Read file as base64 for offline storage
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64Url = reader.result as string;
+        setForm((f) => ({ ...f, [kind]: base64Url }));
+        toast.info(`${kind} photo saved locally (Offline Mode)`);
+      };
+      reader.readAsDataURL(file);
       return;
     }
 
-    const { data } = sb.storage
-      .from("solar-uploads")
-      .getPublicUrl(path);
+    try {
+      const path = `cleaning/${crypto.randomUUID()}-${kind}-${file.name}`;
+      const { error } = await sb.storage
+        .from("solar-uploads")
+        .upload(path, file, { upsert: true });
 
-    setForm((f) => ({
-      ...f,
-      [kind]: data.publicUrl,
-    }));
+      if (error) {
+        // Fallback to base64 if network fails
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setForm((f) => ({ ...f, [kind]: reader.result as string }));
+          toast.warning(`${kind} photo saved locally`);
+        };
+        reader.readAsDataURL(file);
+        return;
+      }
 
-    toast.success(`${kind} photo uploaded`);
+      const { data } = sb.storage.from("solar-uploads").getPublicUrl(path);
+      setForm((f) => ({ ...f, [kind]: data.publicUrl }));
+      toast.success(`${kind} photo uploaded`);
+    } catch (err: any) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setForm((f) => ({ ...f, [kind]: reader.result as string }));
+        toast.info(`${kind} photo saved locally`);
+      };
+      reader.readAsDataURL(file);
+    }
   }
 
   async function submit() {
@@ -129,28 +146,38 @@ function CleaningFormContent() {
     }
 
     setSubmitting(true);
+    const completedAtIso = new Date().toISOString();
+
+    if (!navigator.onLine) {
+      const { data: { user } } = await sb.auth.getUser().catch(() => ({ data: { user: null } }));
+      enqueueOfflineAction("cleaning_submission", {
+        ...form,
+        work_order_id: queryWoId || null,
+        performed_by: user?.id || null,
+        completedAt: completedAtIso,
+      });
+      toast.warning("Cleaning report saved offline! Will auto-sync when online.");
+      setOpen(false);
+      setSubmitting(false);
+      if (queryWoId) {
+        router.push(`/technician/route`);
+      }
+      return;
+    }
 
     try {
       const {
         data: { user },
       } = await sb.auth.getUser();
 
-      const site = sites.find(
-        (s) => s.id === form.site_id
-      );
-
+      const site = sites.find((s) => s.id === form.site_id);
       const nextDue = site
-        ? new Date(
-            Date.now() +
-              site.cleaning_cycle_days * 86400_000
-          )
+        ? new Date(Date.now() + site.cleaning_cycle_days * 86400_000)
             .toISOString()
             .slice(0, 10)
         : null;
 
-      const completedAtIso = new Date().toISOString();
-
-      const { error } = await sb
+      const { data: logData, error } = await sb
         .from("cleaning_logs")
         .insert({
           site_id: form.site_id,
@@ -165,25 +192,58 @@ function CleaningFormContent() {
           damage_observed: form.damageObserved,
           damage_type: form.damageObserved ? form.damageType : null,
           damage_photo_url: form.damageObserved ? form.damagePhoto : null,
-        });
+        })
+        .select()
+        .single();
 
-      if (error) {
-        toast.error(error.message);
+      if (error || !logData) {
+        enqueueOfflineAction("cleaning_submission", {
+          ...form,
+          work_order_id: queryWoId || null,
+          performed_by: user?.id || null,
+          completedAt: completedAtIso,
+        });
+        toast.warning("Saved report to offline queue due to network delay.");
+        setOpen(false);
+        setSubmitting(false);
+        if (queryWoId) router.push(`/technician/route`);
         return;
       }
 
       await sb
         .from("sites")
         .update({
-          last_cleaned_on: new Date()
-            .toISOString()
-            .slice(0, 10),
+          last_cleaned_on: new Date().toISOString().slice(0, 10),
         })
         .eq("id", form.site_id);
 
+      // Sync canonical cleaning_visits record to completed
+      const { data: activeVisit } = await sb
+        .from("cleaning_visits")
+        .select("*")
+        .eq("site_id", form.site_id)
+        .in("status", ["published", "en_route", "in_progress", "planned", "approved"])
+        .order("target_due_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (activeVisit) {
+        if (isValidStateTransition(activeVisit.status, "completed")) {
+          await sb
+            .from("cleaning_visits")
+            .update({
+              status: "completed",
+              execution_log_id: logData.id,
+              completed_at: completedAtIso,
+              updated_at: completedAtIso,
+            })
+            .eq("id", activeVisit.id);
+        }
+      }
+
       // If originated from a Work Order, mark the work order completed
       if (queryWoId) {
-        const { error: woErr } = await sb
+        await sb
           .from("work_orders")
           .update({
             status: "completed",
@@ -192,17 +252,12 @@ function CleaningFormContent() {
           })
           .eq("id", queryWoId);
 
-        if (woErr) {
-          console.error("Failed to update service request status:", woErr);
-        } else {
-          toast.success("Service Request completed!");
-        }
+        toast.success("Task completed!");
       }
 
       toast.success("Cleaning logged successfully");
 
       setOpen(false);
-
       setForm({
         site_id: "",
         remarks: "",
@@ -217,7 +272,7 @@ function CleaningFormContent() {
       loadSites();
 
       if (queryWoId) {
-        router.push(`/service-requests/${queryWoId}`);
+        router.push(`/technician/route`);
       }
     } finally {
       setSubmitting(false);

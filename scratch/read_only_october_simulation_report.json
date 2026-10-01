@@ -1,0 +1,428 @@
+[
+  {
+    "location": "143.96kw manavsthal Cluster",
+    "sites": [
+      "143.96kw manavsthal tower malad"
+    ],
+    "reqVisits": 2,
+    "team": "Team 3 (Vashi & Central)",
+    "dates": [
+      "2026-10-16",
+      "2026-10-26"
+    ],
+    "sitesPerDate": "2026-10-16: 1 site(s); 2026-10-26: 1 site(s)",
+    "cleanMins": 180,
+    "travelMins": 60,
+    "totalMins": 240
+  },
+  {
+    "location": "Alcove Cluster",
+    "sites": [
+      "Alcove society A wing",
+      "Alcove society B Wing",
+      "Alcove society C Wing",
+      "Alcove Society Club House",
+      "Alcove society D Wing",
+      "Alcove Society E wing",
+      "Alcove Society F Wing",
+      "Alcove Society G Wing"
+    ],
+    "reqVisits": 24,
+    "team": "Team 3 (Vashi & Central)",
+    "dates": [
+      "2026-10-01",
+      "2026-10-02",
+      "2026-10-03",
+      "2026-10-15",
+      "2026-10-16",
+      "2026-10-17",
+      "2026-10-29",
+      "2026-10-30",
+      "2026-10-31"
+    ],
+    "sitesPerDate": "2026-10-01: 3 site(s); 2026-10-02: 3 site(s); 2026-10-03: 2 site(s); 2026-10-15: 3 site(s); 2026-10-16: 2 site(s); 2026-10-17: 3 site(s); 2026-10-29: 2 site(s); 2026-10-30: 3 site(s); 2026-10-31: 3 site(s)",
+    "cleanMins": 2880,
+    "travelMins": 90,
+    "totalMins": 2970
+  },
+  {
+    "location": "ANOOPAM MISSION SOLAR Cluster",
+    "sites": [
+      "ANOOPAM MISSION SOLAR"
+    ],
+    "reqVisits": 3,
+    "team": "Team 2 (Panvel & West)",
+    "dates": [
+      "2026-10-01",
+      "2026-10-16",
+      "2026-10-31"
+    ],
+    "sitesPerDate": "2026-10-01: 1 site(s); 2026-10-16: 1 site(s); 2026-10-31: 1 site(s)",
+    "cleanMins": 360,
+    "travelMins": 90,
+    "totalMins": 450
+  },
+  {
+    "location": "Belmac Panvel Cluster",
+    "sites": [
+      "Belmac Panvel"
+    ],
+    "reqVisits": 3,
+    "team": "Team 2 (Panvel & West)",
+    "dates": [
+      "2026-10-01",
+      "2026-10-16",
+      "2026-10-31"
+    ],
+    "sitesPerDate": "2026-10-01: 1 site(s); 2026-10-16: 1 site(s); 2026-10-31: 1 site(s)",
+    "cleanMins": 360,
+    "travelMins": 90,
+    "totalMins": 450
+  },
+  {
+    "location": "Bwssb WTP Bangalore Cluster",
+    "sites": [
+      "Bwssb WTP Bangalore"
+    ],
+    "reqVisits": 3,
+    "team": "Team 2 (Panvel & West)",
+    "dates": [
+      "2026-10-02",
+      "2026-10-17",
+      "2026-10-30"
+    ],
+    "sitesPerDate": "2026-10-02: 1 site(s); 2026-10-17: 1 site(s); 2026-10-30: 1 site(s)",
+    "cleanMins": 360,
+    "travelMins": 90,
+    "totalMins": 450
+  },
+  {
+    "location": "Casa Florea Cluster",
+    "sites": [
+      "Casa Florea"
+    ],
+    "reqVisits": 4,
+    "team": "Team 2 (Panvel & West)",
+    "dates": [
+      "2026-10-01",
+      "2026-10-12",
+      "2026-10-21",
+      "2026-10-31"
+    ],
+    "sitesPerDate": "2026-10-01: 1 site(s); 2026-10-12: 1 site(s); 2026-10-21: 1 site(s); 2026-10-31: 1 site(s)",
+    "cleanMins": 480,
+    "travelMins": 120,
+    "totalMins": 600
+  },
+  {
+    "location": "Cilantro Cluster",
+    "sites": [
+      "Cilantro"
+    ],
+    "reqVisits": 4,
+    "team": "Team 2 (Panvel & West)",
+    "dates": [
+      "2026-10-03",
+      "2026-10-12",
+      "2026-10-21",
+      "2026-10-29"
+    ],
+    "sitesPerDate": "2026-10-03: 1 site(s); 2026-10-12: 1 site(s); 2026-10-21: 1 site(s); 2026-10-29: 1 site(s)",
+    "cleanMins": 480,
+    "travelMins": 120,
+    "totalMins": 600
+  },
+  {
+    "location": "Crestia Solar Cluster",
+    "sites": [
+      "Crestia Solar"
+    ],
+    "reqVisits": 3,
+    "team": "Team 2 (Panvel & West)",
+    "dates": [
+      "2026-10-03",
+      "2026-10-16",
+      "2026-10-29"
+    ],
+    "sitesPerDate": "2026-10-03: 1 site(s); 2026-10-16: 1 site(s); 2026-10-29: 1 site(s)",
+    "cleanMins": 360,
+    "travelMins": 90,
+    "totalMins": 450
+  },
+  {
+    "location": "Dosti Jade Cluster",
+    "sites": [
+      "Dosti Jade Wing A",
+      "Dosti Jade Wing B"
+    ],
+    "reqVisits": 8,
+    "team": "Team 2 (Panvel & West)",
+    "dates": [
+      "2026-10-03",
+      "2026-10-05",
+      "2026-10-10",
+      "2026-10-12",
+      "2026-10-21",
+      "2026-10-22",
+      "2026-10-28",
+      "2026-10-29"
+    ],
+    "sitesPerDate": "2026-10-03: 1 site(s); 2026-10-05: 1 site(s); 2026-10-10: 1 site(s); 2026-10-12: 1 site(s); 2026-10-21: 1 site(s); 2026-10-22: 1 site(s); 2026-10-28: 1 site(s); 2026-10-29: 1 site(s)",
+    "cleanMins": 960,
+    "travelMins": 80,
+    "totalMins": 1040
+  },
+  {
+    "location": "Garcinia Cluster",
+    "sites": [
+      "Garcinia 11.7",
+      "Garcinia 37.4"
+    ],
+    "reqVisits": 8,
+    "team": "Team 1 (Thane & East)",
+    "dates": [
+      "2026-10-01",
+      "2026-10-12",
+      "2026-10-21",
+      "2026-10-31"
+    ],
+    "sitesPerDate": "2026-10-01: 2 site(s); 2026-10-12: 2 site(s); 2026-10-21: 2 site(s); 2026-10-31: 2 site(s)",
+    "cleanMins": 960,
+    "travelMins": 40,
+    "totalMins": 1000
+  },
+  {
+    "location": "Ivy by courtyard Cluster",
+    "sites": [
+      "Ivy by courtyard"
+    ],
+    "reqVisits": 3,
+    "team": "Team 3 (Vashi & Central)",
+    "dates": [
+      "2026-10-05",
+      "2026-10-14",
+      "2026-10-29"
+    ],
+    "sitesPerDate": "2026-10-05: 1 site(s); 2026-10-14: 1 site(s); 2026-10-29: 1 site(s)",
+    "cleanMins": 270,
+    "travelMins": 90,
+    "totalMins": 360
+  },
+  {
+    "location": "Madhukosh Cluster",
+    "sites": [
+      "Madhukosh society A1",
+      "Madhukosh society A2"
+    ],
+    "reqVisits": 6,
+    "team": "Team 3 (Vashi & Central)",
+    "dates": [
+      "2026-10-03",
+      "2026-10-05",
+      "2026-10-14",
+      "2026-10-28"
+    ],
+    "sitesPerDate": "2026-10-03: 1 site(s); 2026-10-05: 1 site(s); 2026-10-14: 2 site(s); 2026-10-28: 2 site(s)",
+    "cleanMins": 720,
+    "travelMins": 40,
+    "totalMins": 760
+  },
+  {
+    "location": "Maitri Anand Cluster",
+    "sites": [
+      "Maitri Anand 14.5kwh"
+    ],
+    "reqVisits": 3,
+    "team": "Team 2 (Panvel & West)",
+    "dates": [
+      "2026-10-05",
+      "2026-10-15",
+      "2026-10-28"
+    ],
+    "sitesPerDate": "2026-10-05: 1 site(s); 2026-10-15: 1 site(s); 2026-10-28: 1 site(s)",
+    "cleanMins": 360,
+    "travelMins": 90,
+    "totalMins": 450
+  },
+  {
+    "location": "Maxima CHS Solar plant Cluster",
+    "sites": [
+      "Maxima CHS Solar plant"
+    ],
+    "reqVisits": 4,
+    "team": "Team 1 (Thane & East)",
+    "dates": [
+      "2026-10-01",
+      "2026-10-12",
+      "2026-10-21",
+      "2026-10-31"
+    ],
+    "sitesPerDate": "2026-10-01: 1 site(s); 2026-10-12: 1 site(s); 2026-10-21: 1 site(s); 2026-10-31: 1 site(s)",
+    "cleanMins": 480,
+    "travelMins": 120,
+    "totalMins": 600
+  },
+  {
+    "location": "MK Thakur Cluster",
+    "sites": [
+      "MK Thakur Wing ABCD",
+      "MK Thakur Wing EFGH",
+      "Mk Thakur Wing IJK"
+    ],
+    "reqVisits": 12,
+    "team": "Team 2 (Panvel & West)",
+    "dates": [
+      "2026-10-05",
+      "2026-10-06",
+      "2026-10-10",
+      "2026-10-13",
+      "2026-10-20",
+      "2026-10-22",
+      "2026-10-27",
+      "2026-10-28"
+    ],
+    "sitesPerDate": "2026-10-05: 1 site(s); 2026-10-06: 2 site(s); 2026-10-10: 2 site(s); 2026-10-13: 1 site(s); 2026-10-20: 1 site(s); 2026-10-22: 2 site(s); 2026-10-27: 2 site(s); 2026-10-28: 1 site(s)",
+    "cleanMins": 1440,
+    "travelMins": 80,
+    "totalMins": 1520
+  },
+  {
+    "location": "Patwardhan hospital Cluster",
+    "sites": [
+      "Patwardhan hospital"
+    ],
+    "reqVisits": 4,
+    "team": "Team 1 (Thane & East)",
+    "dates": [
+      "2026-10-02",
+      "2026-10-10",
+      "2026-10-22",
+      "2026-10-30"
+    ],
+    "sitesPerDate": "2026-10-02: 1 site(s); 2026-10-10: 1 site(s); 2026-10-22: 1 site(s); 2026-10-30: 1 site(s)",
+    "cleanMins": 480,
+    "travelMins": 120,
+    "totalMins": 600
+  },
+  {
+    "location": "Regalia chs solar Cluster",
+    "sites": [
+      "Regalia chs solar"
+    ],
+    "reqVisits": 3,
+    "team": "Team 4 (Kalyan & North)",
+    "dates": [
+      "2026-10-01",
+      "2026-10-16",
+      "2026-10-31"
+    ],
+    "sitesPerDate": "2026-10-01: 1 site(s); 2026-10-16: 1 site(s); 2026-10-31: 1 site(s)",
+    "cleanMins": 360,
+    "travelMins": 90,
+    "totalMins": 450
+  },
+  {
+    "location": "Sophistica Solar Cluster",
+    "sites": [
+      "Sophistica Solar"
+    ],
+    "reqVisits": 4,
+    "team": "Team 3 (Vashi & Central)",
+    "dates": [
+      "2026-10-05",
+      "2026-10-12",
+      "2026-10-21",
+      "2026-10-28"
+    ],
+    "sitesPerDate": "2026-10-05: 1 site(s); 2026-10-12: 1 site(s); 2026-10-21: 1 site(s); 2026-10-28: 1 site(s)",
+    "cleanMins": 480,
+    "travelMins": 120,
+    "totalMins": 600
+  },
+  {
+    "location": "STP Cluster",
+    "sites": [
+      "STP"
+    ],
+    "reqVisits": 4,
+    "team": "Team 1 (Thane & East)",
+    "dates": [
+      "2026-10-02",
+      "2026-10-10",
+      "2026-10-22",
+      "2026-10-30"
+    ],
+    "sitesPerDate": "2026-10-02: 1 site(s); 2026-10-10: 1 site(s); 2026-10-22: 1 site(s); 2026-10-30: 1 site(s)",
+    "cleanMins": 480,
+    "travelMins": 120,
+    "totalMins": 600
+  },
+  {
+    "location": "Suvarna pushpa chs Cluster",
+    "sites": [
+      "Suvarna pushpa chs"
+    ],
+    "reqVisits": 3,
+    "team": "Team 4 (Kalyan & North)",
+    "dates": [
+      "2026-10-01",
+      "2026-10-16",
+      "2026-10-31"
+    ],
+    "sitesPerDate": "2026-10-01: 1 site(s); 2026-10-16: 1 site(s); 2026-10-31: 1 site(s)",
+    "cleanMins": 360,
+    "travelMins": 90,
+    "totalMins": 450
+  },
+  {
+    "location": "Suyash Heights Solar Cluster",
+    "sites": [
+      "Suyash Heights Solar"
+    ],
+    "reqVisits": 3,
+    "team": "Team 3 (Vashi & Central)",
+    "dates": [
+      "2026-10-06",
+      "2026-10-19",
+      "2026-10-27"
+    ],
+    "sitesPerDate": "2026-10-06: 1 site(s); 2026-10-19: 1 site(s); 2026-10-27: 1 site(s)",
+    "cleanMins": 360,
+    "travelMins": 90,
+    "totalMins": 450
+  },
+  {
+    "location": "Venecia CHS Cluster",
+    "sites": [
+      "Venecia CHS 80kW"
+    ],
+    "reqVisits": 3,
+    "team": "Team 1 (Thane & East)",
+    "dates": [
+      "2026-10-02",
+      "2026-10-16",
+      "2026-10-30"
+    ],
+    "sitesPerDate": "2026-10-02: 1 site(s); 2026-10-16: 1 site(s); 2026-10-30: 1 site(s)",
+    "cleanMins": 360,
+    "travelMins": 90,
+    "totalMins": 450
+  },
+  {
+    "location": "Vijay Vatika Solar Cluster",
+    "sites": [
+      "Vijay Vatika Solar"
+    ],
+    "reqVisits": 3,
+    "team": "Team 4 (Kalyan & North)",
+    "dates": [
+      "2026-10-01",
+      "2026-10-16",
+      "2026-10-31"
+    ],
+    "sitesPerDate": "2026-10-01: 1 site(s); 2026-10-16: 1 site(s); 2026-10-31: 1 site(s)",
+    "cleanMins": 360,
+    "travelMins": 90,
+    "totalMins": 450
+  }
+]

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isValidStateTransition } from "@/lib/cleaning-domain";
 
 export async function POST(req: Request) {
   try {
@@ -150,11 +151,46 @@ export async function POST(req: Request) {
             },
             { onConflict: "route_id,sequence_order" }
           );
+
+          // Update matching cleaning_visits with route_id and sequence
+          await sb
+            .from("cleaning_visits")
+            .update({
+              route_id: routeRow.id,
+              route_sequence_order: assign.sequence_order,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("site_id", assign.site_id)
+            .eq("scheduled_date", assign.scheduled_date);
         }
       }
     }
 
-    // 4. Update Plan Header Status to Published
+    // 4. Update Canonical cleaning_visits Status to Published
+    const cyclePeriod = `${plan.year}-${String(plan.month).padStart(2, "0")}`;
+    const { data: visitsToPublish } = await sb
+      .from("cleaning_visits")
+      .select("*")
+      .eq("plan_id", plan_id)
+      .eq("cycle_period", cyclePeriod);
+
+    if (visitsToPublish && visitsToPublish.length > 0) {
+      for (const v of visitsToPublish) {
+        if (v.status === "planned" || v.status === "approved" || v.status === "required") {
+          if (isValidStateTransition(v.status, "published")) {
+            await sb
+              .from("cleaning_visits")
+              .update({
+                status: "published",
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", v.id);
+          }
+        }
+      }
+    }
+
+    // 5. Update Plan Header Status to Published
     await sb
       .from("cleaning_plans")
       .update({

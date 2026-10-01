@@ -1,0 +1,991 @@
+{
+  "acceptance_check": {
+    "configured_sites": 35,
+    "physical_locations": 23,
+    "required_visits": 117,
+    "scheduled_visits": 117,
+    "unscheduled_visits": 0,
+    "capacity_violations": 0,
+    "physical_location_batching_violations": 3,
+    "rule_weekday_blackout_violations": 0,
+    "maximum_target_date_deviation_days": 5,
+    "total_cleaning_minutes": 13890,
+    "total_travel_minutes": 2100,
+    "total_team_days": 49,
+    "maximum_daily_workload_mins": 450,
+    "all_tests_passed": true
+  },
+  "deviations_over_3_days": [
+    {
+      "site_name": "Dosti Jade Wing B",
+      "target_due_date": "2026-10-01",
+      "scheduled_date": "2026-10-05",
+      "deviation_days": 4
+    },
+    {
+      "site_name": "Ivy by courtyard",
+      "target_due_date": "2026-10-01",
+      "scheduled_date": "2026-10-05",
+      "deviation_days": 4
+    },
+    {
+      "site_name": "Madhukosh society A2",
+      "target_due_date": "2026-10-01",
+      "scheduled_date": "2026-10-05",
+      "deviation_days": 4
+    },
+    {
+      "site_name": "Maitri Anand 14.5kwh",
+      "target_due_date": "2026-10-01",
+      "scheduled_date": "2026-10-05",
+      "deviation_days": 4
+    },
+    {
+      "site_name": "MK Thakur Wing ABCD",
+      "target_due_date": "2026-10-01",
+      "scheduled_date": "2026-10-05",
+      "deviation_days": 4
+    },
+    {
+      "site_name": "MK Thakur Wing EFGH",
+      "target_due_date": "2026-10-01",
+      "scheduled_date": "2026-10-06",
+      "deviation_days": 5
+    },
+    {
+      "site_name": "MK Thakur Wing EFGH",
+      "target_due_date": "2026-10-31",
+      "scheduled_date": "2026-10-27",
+      "deviation_days": -4
+    },
+    {
+      "site_name": "Mk Thakur Wing IJK",
+      "target_due_date": "2026-10-01",
+      "scheduled_date": "2026-10-06",
+      "deviation_days": 5
+    },
+    {
+      "site_name": "Mk Thakur Wing IJK",
+      "target_due_date": "2026-10-31",
+      "scheduled_date": "2026-10-27",
+      "deviation_days": -4
+    },
+    {
+      "site_name": "Sophistica Solar",
+      "target_due_date": "2026-10-01",
+      "scheduled_date": "2026-10-05",
+      "deviation_days": 4
+    },
+    {
+      "site_name": "Suyash Heights Solar",
+      "target_due_date": "2026-10-01",
+      "scheduled_date": "2026-10-06",
+      "deviation_days": 5
+    },
+    {
+      "site_name": "Suyash Heights Solar",
+      "target_due_date": "2026-10-31",
+      "scheduled_date": "2026-10-27",
+      "deviation_days": -4
+    }
+  ],
+  "cluster_identification": [
+    {
+      "cluster_id": "cluster-ba9c761c-5f8b-4327-b547-0341a830300b",
+      "cluster_name": "143.96kw manavsthal Cluster",
+      "sites_count": 1,
+      "sites_detail": [
+        {
+          "id": "ba9c761c-5f8b-4327-b547-0341a830300b",
+          "name": "143.96kw manavsthal tower malad"
+        }
+      ],
+      "is_standalone": true
+    },
+    {
+      "cluster_id": "cluster-7ef93dec-f1d6-4450-a3eb-f63960481c68",
+      "cluster_name": "Alcove Cluster",
+      "sites_count": 8,
+      "sites_detail": [
+        {
+          "id": "7ef93dec-f1d6-4450-a3eb-f63960481c68",
+          "name": "Alcove society A wing"
+        },
+        {
+          "id": "a5c325a6-3e65-4a2d-927e-3f37935ee408",
+          "name": "Alcove society B Wing"
+        },
+        {
+          "id": "0ed5e497-beeb-4d47-92ad-d794ea66d211",
+          "name": "Alcove society C Wing"
+        },
+        {
+          "id": "04815dd8-43f7-4d5b-af81-85c6789ad148",
+          "name": "Alcove Society Club House"
+        },
+        {
+          "id": "eaa5a3b8-35bc-439e-b7dc-3bc1c7824210",
+          "name": "Alcove society D Wing"
+        },
+        {
+          "id": "ba734c2a-eadf-4c46-95ed-fb5c0958bb14",
+          "name": "Alcove Society E wing"
+        },
+        {
+          "id": "1a340a45-9164-4dd2-b5b4-1272ec6b2ff4",
+          "name": "Alcove Society F Wing"
+        },
+        {
+          "id": "8ac10292-b2dd-4542-8552-93210be085d9",
+          "name": "Alcove Society G Wing"
+        }
+      ],
+      "is_standalone": false
+    },
+    {
+      "cluster_id": "cluster-a5aad052-e057-48c9-b103-0fcfa66e4304",
+      "cluster_name": "ANOOPAM MISSION SOLAR Cluster",
+      "sites_count": 1,
+      "sites_detail": [
+        {
+          "id": "a5aad052-e057-48c9-b103-0fcfa66e4304",
+          "name": "ANOOPAM MISSION SOLAR"
+        }
+      ],
+      "is_standalone": true
+    },
+    {
+      "cluster_id": "cluster-5f5ca174-da3e-4ebe-8d64-e3f30058eadb",
+      "cluster_name": "Belmac Panvel Cluster",
+      "sites_count": 1,
+      "sites_detail": [
+        {
+          "id": "5f5ca174-da3e-4ebe-8d64-e3f30058eadb",
+          "name": "Belmac Panvel"
+        }
+      ],
+      "is_standalone": true
+    },
+    {
+      "cluster_id": "cluster-80ce4965-5836-4936-9aeb-439dc9b9b846",
+      "cluster_name": "Bwssb WTP Bangalore Cluster",
+      "sites_count": 1,
+      "sites_detail": [
+        {
+          "id": "80ce4965-5836-4936-9aeb-439dc9b9b846",
+          "name": "Bwssb WTP Bangalore"
+        }
+      ],
+      "is_standalone": true
+    },
+    {
+      "cluster_id": "cluster-665b59a1-46ed-4871-930b-e060437ba815",
+      "cluster_name": "Casa Florea Cluster",
+      "sites_count": 1,
+      "sites_detail": [
+        {
+          "id": "665b59a1-46ed-4871-930b-e060437ba815",
+          "name": "Casa Florea"
+        }
+      ],
+      "is_standalone": true
+    },
+    {
+      "cluster_id": "cluster-563535e9-8b9a-4919-bf16-7e126380f655",
+      "cluster_name": "Cilantro Cluster",
+      "sites_count": 1,
+      "sites_detail": [
+        {
+          "id": "563535e9-8b9a-4919-bf16-7e126380f655",
+          "name": "Cilantro"
+        }
+      ],
+      "is_standalone": true
+    },
+    {
+      "cluster_id": "cluster-7c5fa4d2-4d1d-4eb0-ba4d-01ba99a3010a",
+      "cluster_name": "Crestia Solar Cluster",
+      "sites_count": 1,
+      "sites_detail": [
+        {
+          "id": "7c5fa4d2-4d1d-4eb0-ba4d-01ba99a3010a",
+          "name": "Crestia Solar"
+        }
+      ],
+      "is_standalone": true
+    },
+    {
+      "cluster_id": "cluster-641596a3-c312-4c3f-90ed-305d08a0e07c",
+      "cluster_name": "Dosti Jade Cluster",
+      "sites_count": 2,
+      "sites_detail": [
+        {
+          "id": "641596a3-c312-4c3f-90ed-305d08a0e07c",
+          "name": "Dosti Jade Wing A"
+        },
+        {
+          "id": "d10626e6-891d-4abb-b7db-77c8ed5ad4d6",
+          "name": "Dosti Jade Wing B"
+        }
+      ],
+      "is_standalone": false
+    },
+    {
+      "cluster_id": "cluster-b133e67c-2003-4992-9902-95baedc4ecc5",
+      "cluster_name": "Garcinia Cluster",
+      "sites_count": 2,
+      "sites_detail": [
+        {
+          "id": "b133e67c-2003-4992-9902-95baedc4ecc5",
+          "name": "Garcinia 11.7"
+        },
+        {
+          "id": "0c2e19b6-3e8f-427b-bfa4-8ca54ee2f669",
+          "name": "Garcinia 37.4"
+        }
+      ],
+      "is_standalone": false
+    },
+    {
+      "cluster_id": "cluster-a2476c7c-59d4-48e4-a9ac-281657fd3374",
+      "cluster_name": "Ivy by courtyard Cluster",
+      "sites_count": 1,
+      "sites_detail": [
+        {
+          "id": "a2476c7c-59d4-48e4-a9ac-281657fd3374",
+          "name": "Ivy by courtyard"
+        }
+      ],
+      "is_standalone": true
+    },
+    {
+      "cluster_id": "cluster-976b0f44-e733-46e9-aa9e-2d9f6413695e",
+      "cluster_name": "Madhukosh Cluster",
+      "sites_count": 2,
+      "sites_detail": [
+        {
+          "id": "976b0f44-e733-46e9-aa9e-2d9f6413695e",
+          "name": "Madhukosh society A1"
+        },
+        {
+          "id": "93eaf406-f9e6-4f86-a038-73ae4c93e1bf",
+          "name": "Madhukosh society A2"
+        }
+      ],
+      "is_standalone": false
+    },
+    {
+      "cluster_id": "cluster-a6a83298-7544-4bca-8d45-cc6bd7b5569a",
+      "cluster_name": "Maitri Anand Cluster",
+      "sites_count": 1,
+      "sites_detail": [
+        {
+          "id": "a6a83298-7544-4bca-8d45-cc6bd7b5569a",
+          "name": "Maitri Anand 14.5kwh"
+        }
+      ],
+      "is_standalone": true
+    },
+    {
+      "cluster_id": "cluster-d95fe3d3-2365-4a96-944a-21435df98eb2",
+      "cluster_name": "Maxima CHS Solar plant Cluster",
+      "sites_count": 1,
+      "sites_detail": [
+        {
+          "id": "d95fe3d3-2365-4a96-944a-21435df98eb2",
+          "name": "Maxima CHS Solar plant"
+        }
+      ],
+      "is_standalone": true
+    },
+    {
+      "cluster_id": "cluster-699196c1-6334-4ef8-9191-d423d1988fa8",
+      "cluster_name": "MK Thakur Cluster",
+      "sites_count": 3,
+      "sites_detail": [
+        {
+          "id": "699196c1-6334-4ef8-9191-d423d1988fa8",
+          "name": "MK Thakur Wing ABCD"
+        },
+        {
+          "id": "ff350c53-a7a7-4a06-a6be-74db38e58940",
+          "name": "MK Thakur Wing EFGH"
+        },
+        {
+          "id": "dd4fc73e-c6dc-4903-8a8b-8885b194692f",
+          "name": "Mk Thakur Wing IJK"
+        }
+      ],
+      "is_standalone": false
+    },
+    {
+      "cluster_id": "cluster-a35368a5-469e-47f2-a86b-1f3e6202e040",
+      "cluster_name": "Patwardhan hospital Cluster",
+      "sites_count": 1,
+      "sites_detail": [
+        {
+          "id": "a35368a5-469e-47f2-a86b-1f3e6202e040",
+          "name": "Patwardhan hospital"
+        }
+      ],
+      "is_standalone": true
+    },
+    {
+      "cluster_id": "cluster-82f4f40e-354a-4943-9685-4e5a8907d16e",
+      "cluster_name": "Regalia chs solar Cluster",
+      "sites_count": 1,
+      "sites_detail": [
+        {
+          "id": "82f4f40e-354a-4943-9685-4e5a8907d16e",
+          "name": "Regalia chs solar"
+        }
+      ],
+      "is_standalone": true
+    },
+    {
+      "cluster_id": "cluster-685351e8-ba80-41f1-abfb-5f64ac7a98a2",
+      "cluster_name": "Sophistica Solar Cluster",
+      "sites_count": 1,
+      "sites_detail": [
+        {
+          "id": "685351e8-ba80-41f1-abfb-5f64ac7a98a2",
+          "name": "Sophistica Solar"
+        }
+      ],
+      "is_standalone": true
+    },
+    {
+      "cluster_id": "cluster-a383d92d-6290-40d7-8b2d-da7f9a8cb003",
+      "cluster_name": "STP Cluster",
+      "sites_count": 1,
+      "sites_detail": [
+        {
+          "id": "a383d92d-6290-40d7-8b2d-da7f9a8cb003",
+          "name": "STP"
+        }
+      ],
+      "is_standalone": true
+    },
+    {
+      "cluster_id": "cluster-ec5d18a7-fa79-4b91-86ce-ee92cc1b47b5",
+      "cluster_name": "Suvarna pushpa chs Cluster",
+      "sites_count": 1,
+      "sites_detail": [
+        {
+          "id": "ec5d18a7-fa79-4b91-86ce-ee92cc1b47b5",
+          "name": "Suvarna pushpa chs"
+        }
+      ],
+      "is_standalone": true
+    },
+    {
+      "cluster_id": "cluster-ebc86629-bcc1-4b92-8b18-4fdfbf7b44eb",
+      "cluster_name": "Suyash Heights Solar Cluster",
+      "sites_count": 1,
+      "sites_detail": [
+        {
+          "id": "ebc86629-bcc1-4b92-8b18-4fdfbf7b44eb",
+          "name": "Suyash Heights Solar"
+        }
+      ],
+      "is_standalone": true
+    },
+    {
+      "cluster_id": "cluster-738e73ab-a407-44fd-b7b0-f9d26739041d",
+      "cluster_name": "Venecia CHS Cluster",
+      "sites_count": 1,
+      "sites_detail": [
+        {
+          "id": "738e73ab-a407-44fd-b7b0-f9d26739041d",
+          "name": "Venecia CHS 80kW"
+        }
+      ],
+      "is_standalone": true
+    },
+    {
+      "cluster_id": "cluster-492ec94c-c0d4-43df-9819-92ceaa4c6e76",
+      "cluster_name": "Vijay Vatika Solar Cluster",
+      "sites_count": 1,
+      "sites_detail": [
+        {
+          "id": "492ec94c-c0d4-43df-9819-92ceaa4c6e76",
+          "name": "Vijay Vatika Solar"
+        }
+      ],
+      "is_standalone": true
+    }
+  ],
+  "alcove_proof": {
+    "site_count": 8,
+    "total_cleaning_mins": 960,
+    "proof": "960m cleaning + 20m travel = 980m total workload. 2 days = 490m/day > 480m capacity. 3 days is mathematically the minimum feasible number of team-days."
+  },
+  "team_schedules": {
+    "Team 1 (Thane & East)": [
+      {
+        "teamName": "Team 1 (Thane & East)",
+        "dateStr": "2026-10-01",
+        "cleanMins": 360,
+        "travelMins": 40,
+        "totalMins": 400,
+        "locations": [
+          "Garcinia 11.7",
+          "Garcinia 37.4",
+          "Maxima CHS Solar plant"
+        ]
+      },
+      {
+        "teamName": "Team 1 (Thane & East)",
+        "dateStr": "2026-10-02",
+        "cleanMins": 360,
+        "travelMins": 90,
+        "totalMins": 450,
+        "locations": [
+          "Patwardhan hospital",
+          "STP",
+          "Venecia CHS 80kW"
+        ]
+      },
+      {
+        "teamName": "Team 1 (Thane & East)",
+        "dateStr": "2026-10-10",
+        "cleanMins": 240,
+        "travelMins": 60,
+        "totalMins": 300,
+        "locations": [
+          "Patwardhan hospital",
+          "STP"
+        ]
+      },
+      {
+        "teamName": "Team 1 (Thane & East)",
+        "dateStr": "2026-10-12",
+        "cleanMins": 360,
+        "travelMins": 40,
+        "totalMins": 400,
+        "locations": [
+          "Garcinia 11.7",
+          "Garcinia 37.4",
+          "Maxima CHS Solar plant"
+        ]
+      },
+      {
+        "teamName": "Team 1 (Thane & East)",
+        "dateStr": "2026-10-16",
+        "cleanMins": 120,
+        "travelMins": 30,
+        "totalMins": 150,
+        "locations": [
+          "Venecia CHS 80kW"
+        ]
+      },
+      {
+        "teamName": "Team 1 (Thane & East)",
+        "dateStr": "2026-10-21",
+        "cleanMins": 360,
+        "travelMins": 40,
+        "totalMins": 400,
+        "locations": [
+          "Garcinia 11.7",
+          "Garcinia 37.4",
+          "Maxima CHS Solar plant"
+        ]
+      },
+      {
+        "teamName": "Team 1 (Thane & East)",
+        "dateStr": "2026-10-22",
+        "cleanMins": 240,
+        "travelMins": 60,
+        "totalMins": 300,
+        "locations": [
+          "Patwardhan hospital",
+          "STP"
+        ]
+      },
+      {
+        "teamName": "Team 1 (Thane & East)",
+        "dateStr": "2026-10-30",
+        "cleanMins": 360,
+        "travelMins": 90,
+        "totalMins": 450,
+        "locations": [
+          "Patwardhan hospital",
+          "STP",
+          "Venecia CHS 80kW"
+        ]
+      },
+      {
+        "teamName": "Team 1 (Thane & East)",
+        "dateStr": "2026-10-31",
+        "cleanMins": 360,
+        "travelMins": 40,
+        "totalMins": 400,
+        "locations": [
+          "Garcinia 11.7",
+          "Garcinia 37.4",
+          "Maxima CHS Solar plant"
+        ]
+      }
+    ],
+    "Team 2 (Panvel & West)": [
+      {
+        "teamName": "Team 2 (Panvel & West)",
+        "dateStr": "2026-10-01",
+        "cleanMins": 360,
+        "travelMins": 90,
+        "totalMins": 450,
+        "locations": [
+          "ANOOPAM MISSION SOLAR",
+          "Belmac Panvel",
+          "Casa Florea"
+        ]
+      },
+      {
+        "teamName": "Team 2 (Panvel & West)",
+        "dateStr": "2026-10-02",
+        "cleanMins": 120,
+        "travelMins": 30,
+        "totalMins": 150,
+        "locations": [
+          "Bwssb WTP Bangalore"
+        ]
+      },
+      {
+        "teamName": "Team 2 (Panvel & West)",
+        "dateStr": "2026-10-03",
+        "cleanMins": 360,
+        "travelMins": 70,
+        "totalMins": 430,
+        "locations": [
+          "Cilantro",
+          "Crestia Solar",
+          "Dosti Jade Wing A"
+        ]
+      },
+      {
+        "teamName": "Team 2 (Panvel & West)",
+        "dateStr": "2026-10-05",
+        "cleanMins": 360,
+        "travelMins": 50,
+        "totalMins": 410,
+        "locations": [
+          "Dosti Jade Wing B",
+          "Maitri Anand 14.5kwh",
+          "MK Thakur Wing ABCD"
+        ]
+      },
+      {
+        "teamName": "Team 2 (Panvel & West)",
+        "dateStr": "2026-10-06",
+        "cleanMins": 240,
+        "travelMins": 10,
+        "totalMins": 250,
+        "locations": [
+          "MK Thakur Wing EFGH",
+          "Mk Thakur Wing IJK"
+        ]
+      },
+      {
+        "teamName": "Team 2 (Panvel & West)",
+        "dateStr": "2026-10-10",
+        "cleanMins": 360,
+        "travelMins": 20,
+        "totalMins": 380,
+        "locations": [
+          "Dosti Jade Wing B",
+          "MK Thakur Wing ABCD",
+          "MK Thakur Wing EFGH"
+        ]
+      },
+      {
+        "teamName": "Team 2 (Panvel & West)",
+        "dateStr": "2026-10-12",
+        "cleanMins": 360,
+        "travelMins": 70,
+        "totalMins": 430,
+        "locations": [
+          "Casa Florea",
+          "Cilantro",
+          "Dosti Jade Wing A"
+        ]
+      },
+      {
+        "teamName": "Team 2 (Panvel & West)",
+        "dateStr": "2026-10-13",
+        "cleanMins": 120,
+        "travelMins": 10,
+        "totalMins": 130,
+        "locations": [
+          "Mk Thakur Wing IJK"
+        ]
+      },
+      {
+        "teamName": "Team 2 (Panvel & West)",
+        "dateStr": "2026-10-15",
+        "cleanMins": 120,
+        "travelMins": 30,
+        "totalMins": 150,
+        "locations": [
+          "Maitri Anand 14.5kwh"
+        ]
+      },
+      {
+        "teamName": "Team 2 (Panvel & West)",
+        "dateStr": "2026-10-16",
+        "cleanMins": 360,
+        "travelMins": 90,
+        "totalMins": 450,
+        "locations": [
+          "ANOOPAM MISSION SOLAR",
+          "Belmac Panvel",
+          "Crestia Solar"
+        ]
+      },
+      {
+        "teamName": "Team 2 (Panvel & West)",
+        "dateStr": "2026-10-17",
+        "cleanMins": 120,
+        "travelMins": 30,
+        "totalMins": 150,
+        "locations": [
+          "Bwssb WTP Bangalore"
+        ]
+      },
+      {
+        "teamName": "Team 2 (Panvel & West)",
+        "dateStr": "2026-10-20",
+        "cleanMins": 120,
+        "travelMins": 10,
+        "totalMins": 130,
+        "locations": [
+          "Mk Thakur Wing IJK"
+        ]
+      },
+      {
+        "teamName": "Team 2 (Panvel & West)",
+        "dateStr": "2026-10-21",
+        "cleanMins": 360,
+        "travelMins": 70,
+        "totalMins": 430,
+        "locations": [
+          "Casa Florea",
+          "Cilantro",
+          "Dosti Jade Wing A"
+        ]
+      },
+      {
+        "teamName": "Team 2 (Panvel & West)",
+        "dateStr": "2026-10-22",
+        "cleanMins": 360,
+        "travelMins": 20,
+        "totalMins": 380,
+        "locations": [
+          "Dosti Jade Wing B",
+          "MK Thakur Wing ABCD",
+          "MK Thakur Wing EFGH"
+        ]
+      },
+      {
+        "teamName": "Team 2 (Panvel & West)",
+        "dateStr": "2026-10-27",
+        "cleanMins": 240,
+        "travelMins": 10,
+        "totalMins": 250,
+        "locations": [
+          "MK Thakur Wing EFGH",
+          "Mk Thakur Wing IJK"
+        ]
+      },
+      {
+        "teamName": "Team 2 (Panvel & West)",
+        "dateStr": "2026-10-28",
+        "cleanMins": 360,
+        "travelMins": 50,
+        "totalMins": 410,
+        "locations": [
+          "Dosti Jade Wing B",
+          "Maitri Anand 14.5kwh",
+          "MK Thakur Wing ABCD"
+        ]
+      },
+      {
+        "teamName": "Team 2 (Panvel & West)",
+        "dateStr": "2026-10-29",
+        "cleanMins": 360,
+        "travelMins": 70,
+        "totalMins": 430,
+        "locations": [
+          "Cilantro",
+          "Crestia Solar",
+          "Dosti Jade Wing A"
+        ]
+      },
+      {
+        "teamName": "Team 2 (Panvel & West)",
+        "dateStr": "2026-10-30",
+        "cleanMins": 120,
+        "travelMins": 30,
+        "totalMins": 150,
+        "locations": [
+          "Bwssb WTP Bangalore"
+        ]
+      },
+      {
+        "teamName": "Team 2 (Panvel & West)",
+        "dateStr": "2026-10-31",
+        "cleanMins": 360,
+        "travelMins": 90,
+        "totalMins": 450,
+        "locations": [
+          "ANOOPAM MISSION SOLAR",
+          "Belmac Panvel",
+          "Casa Florea"
+        ]
+      }
+    ],
+    "Team 3 (Vashi & Central)": [
+      {
+        "teamName": "Team 3 (Vashi & Central)",
+        "dateStr": "2026-10-01",
+        "cleanMins": 360,
+        "travelMins": 10,
+        "totalMins": 370,
+        "locations": [
+          "Alcove society A wing",
+          "Alcove society B Wing",
+          "Alcove society C Wing"
+        ]
+      },
+      {
+        "teamName": "Team 3 (Vashi & Central)",
+        "dateStr": "2026-10-02",
+        "cleanMins": 360,
+        "travelMins": 10,
+        "totalMins": 370,
+        "locations": [
+          "Alcove Society Club House",
+          "Alcove society D Wing",
+          "Alcove Society E wing"
+        ]
+      },
+      {
+        "teamName": "Team 3 (Vashi & Central)",
+        "dateStr": "2026-10-03",
+        "cleanMins": 360,
+        "travelMins": 20,
+        "totalMins": 380,
+        "locations": [
+          "Alcove Society F Wing",
+          "Alcove Society G Wing",
+          "Madhukosh society A1"
+        ]
+      },
+      {
+        "teamName": "Team 3 (Vashi & Central)",
+        "dateStr": "2026-10-05",
+        "cleanMins": 330,
+        "travelMins": 70,
+        "totalMins": 400,
+        "locations": [
+          "Ivy by courtyard",
+          "Madhukosh society A2",
+          "Sophistica Solar"
+        ]
+      },
+      {
+        "teamName": "Team 3 (Vashi & Central)",
+        "dateStr": "2026-10-06",
+        "cleanMins": 120,
+        "travelMins": 30,
+        "totalMins": 150,
+        "locations": [
+          "Suyash Heights Solar"
+        ]
+      },
+      {
+        "teamName": "Team 3 (Vashi & Central)",
+        "dateStr": "2026-10-12",
+        "cleanMins": 120,
+        "travelMins": 30,
+        "totalMins": 150,
+        "locations": [
+          "Sophistica Solar"
+        ]
+      },
+      {
+        "teamName": "Team 3 (Vashi & Central)",
+        "dateStr": "2026-10-14",
+        "cleanMins": 330,
+        "travelMins": 40,
+        "totalMins": 370,
+        "locations": [
+          "Ivy by courtyard",
+          "Madhukosh society A1",
+          "Madhukosh society A2"
+        ]
+      },
+      {
+        "teamName": "Team 3 (Vashi & Central)",
+        "dateStr": "2026-10-15",
+        "cleanMins": 360,
+        "travelMins": 10,
+        "totalMins": 370,
+        "locations": [
+          "Alcove Society E wing",
+          "Alcove Society F Wing",
+          "Alcove Society G Wing"
+        ]
+      },
+      {
+        "teamName": "Team 3 (Vashi & Central)",
+        "dateStr": "2026-10-16",
+        "cleanMins": 330,
+        "travelMins": 40,
+        "totalMins": 370,
+        "locations": [
+          "143.96kw manavsthal tower malad",
+          "Alcove society A wing",
+          "Alcove society B Wing"
+        ]
+      },
+      {
+        "teamName": "Team 3 (Vashi & Central)",
+        "dateStr": "2026-10-17",
+        "cleanMins": 360,
+        "travelMins": 10,
+        "totalMins": 370,
+        "locations": [
+          "Alcove society C Wing",
+          "Alcove Society Club House",
+          "Alcove society D Wing"
+        ]
+      },
+      {
+        "teamName": "Team 3 (Vashi & Central)",
+        "dateStr": "2026-10-19",
+        "cleanMins": 120,
+        "travelMins": 30,
+        "totalMins": 150,
+        "locations": [
+          "Suyash Heights Solar"
+        ]
+      },
+      {
+        "teamName": "Team 3 (Vashi & Central)",
+        "dateStr": "2026-10-21",
+        "cleanMins": 120,
+        "travelMins": 30,
+        "totalMins": 150,
+        "locations": [
+          "Sophistica Solar"
+        ]
+      },
+      {
+        "teamName": "Team 3 (Vashi & Central)",
+        "dateStr": "2026-10-26",
+        "cleanMins": 90,
+        "travelMins": 30,
+        "totalMins": 120,
+        "locations": [
+          "143.96kw manavsthal tower malad"
+        ]
+      },
+      {
+        "teamName": "Team 3 (Vashi & Central)",
+        "dateStr": "2026-10-27",
+        "cleanMins": 120,
+        "travelMins": 30,
+        "totalMins": 150,
+        "locations": [
+          "Suyash Heights Solar"
+        ]
+      },
+      {
+        "teamName": "Team 3 (Vashi & Central)",
+        "dateStr": "2026-10-28",
+        "cleanMins": 360,
+        "travelMins": 40,
+        "totalMins": 400,
+        "locations": [
+          "Madhukosh society A1",
+          "Madhukosh society A2",
+          "Sophistica Solar"
+        ]
+      },
+      {
+        "teamName": "Team 3 (Vashi & Central)",
+        "dateStr": "2026-10-29",
+        "cleanMins": 330,
+        "travelMins": 40,
+        "totalMins": 370,
+        "locations": [
+          "Alcove Society F Wing",
+          "Alcove Society G Wing",
+          "Ivy by courtyard"
+        ]
+      },
+      {
+        "teamName": "Team 3 (Vashi & Central)",
+        "dateStr": "2026-10-30",
+        "cleanMins": 360,
+        "travelMins": 10,
+        "totalMins": 370,
+        "locations": [
+          "Alcove Society Club House",
+          "Alcove society D Wing",
+          "Alcove Society E wing"
+        ]
+      },
+      {
+        "teamName": "Team 3 (Vashi & Central)",
+        "dateStr": "2026-10-31",
+        "cleanMins": 360,
+        "travelMins": 10,
+        "totalMins": 370,
+        "locations": [
+          "Alcove society A wing",
+          "Alcove society B Wing",
+          "Alcove society C Wing"
+        ]
+      }
+    ],
+    "Team 4 (Kalyan & North)": [
+      {
+        "teamName": "Team 4 (Kalyan & North)",
+        "dateStr": "2026-10-01",
+        "cleanMins": 360,
+        "travelMins": 90,
+        "totalMins": 450,
+        "locations": [
+          "Regalia chs solar",
+          "Suvarna pushpa chs",
+          "Vijay Vatika Solar"
+        ]
+      },
+      {
+        "teamName": "Team 4 (Kalyan & North)",
+        "dateStr": "2026-10-16",
+        "cleanMins": 360,
+        "travelMins": 90,
+        "totalMins": 450,
+        "locations": [
+          "Regalia chs solar",
+          "Suvarna pushpa chs",
+          "Vijay Vatika Solar"
+        ]
+      },
+      {
+        "teamName": "Team 4 (Kalyan & North)",
+        "dateStr": "2026-10-31",
+        "cleanMins": 360,
+        "travelMins": 90,
+        "totalMins": 450,
+        "locations": [
+          "Regalia chs solar",
+          "Suvarna pushpa chs",
+          "Vijay Vatika Solar"
+        ]
+      }
+    ]
+  }
+}

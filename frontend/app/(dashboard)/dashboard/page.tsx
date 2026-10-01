@@ -200,6 +200,8 @@ export default async function DashboardPage() {
   // SOLARASSIST OPERATIONS COMMAND CENTER (Admin / EPC / Coordinator)
   // =========================================================
   const todayStr = new Date().toISOString().split("T")[0];
+  const currentDate = new Date();
+  const currentCyclePeriod = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}`;
 
   const [
     sitesRes,
@@ -211,6 +213,7 @@ export default async function DashboardPage() {
     alertsRes,
     cleaningLogsRes,
     syncRunsRes,
+    canonicalVisitsRes,
   ] = await Promise.all([
     sb
       .from("sites")
@@ -237,6 +240,7 @@ export default async function DashboardPage() {
     sb.from("alerts").select("*, sites(name)").order("triggered_at", { ascending: false }).limit(50),
     sb.from("cleaning_logs").select("*, sites(name)").order("performed_at", { ascending: false }).limit(10),
     sb.from("sync_runs").select("*").order("started_at", { ascending: false }).limit(1),
+    sb.from("cleaning_visits").select("*, sites(name)").eq("cycle_period", currentCyclePeriod),
   ]);
 
   const sites = sitesRes.data ?? [];
@@ -248,6 +252,7 @@ export default async function DashboardPage() {
   const alerts = alertsRes.data ?? [];
   const cleaningLogs = cleaningLogsRes.data ?? [];
   const latestSyncRun = (syncRunsRes.data && syncRunsRes.data.length > 0) ? syncRunsRes.data[0] : null;
+  const canonicalVisits = canonicalVisitsRes.data ?? [];
 
   // Fetch telemetry snapshots per inverter
   const inverterIds = inverters.map((i) => i.id);
@@ -437,37 +442,47 @@ export default async function DashboardPage() {
       />
 
       {/* 4. Concise Operational Cleaning Summary Card */}
-      <Card className="border shadow-sm bg-gradient-to-r from-card via-card to-amber-500/5">
-        <CardContent className="p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                <SprayCan className="h-6 w-6" />
-              </div>
-              <div className="space-y-0.5">
-                <div className="text-lg font-bold text-foreground">
-                  {cleaningsDueThisWeek + overdueCleanings} Cleanings Scheduled This Week
-                  {overdueCleanings > 0 && (
-                    <span className="text-destructive font-semibold ml-2">
-                      · {overdueCleanings} Overdue Cycle(s)
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Inspect site soiling levels and dispatch daily panel washing teams.
-                </p>
-              </div>
-            </div>
+      {(() => {
+        const canonicalUnscheduled = canonicalVisits.filter((v) => v.status === "unscheduled").length;
+        const canonicalPlanned = canonicalVisits.filter((v) => v.status === "planned" || v.status === "approved").length;
+        const canonicalPublished = canonicalVisits.filter((v) => v.status === "published").length;
+        const canonicalInProgress = canonicalVisits.filter((v) => v.status === "en_route" || v.status === "in_progress").length;
+        const canonicalCompleted = canonicalVisits.filter((v) => v.status === "completed" || v.status === "acknowledged").length;
 
-            <Button asChild variant="default" size="sm" className="text-xs h-9 gap-1.5">
-              <Link href="/cleaning">
-                <span>Manage Cleaning Schedule</span>
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        return (
+          <Card className="border shadow-sm bg-gradient-to-r from-card via-card to-amber-500/5">
+            <CardContent className="p-6">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                    <SprayCan className="h-6 w-6" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="text-lg font-bold text-foreground">
+                      Monthly Cleaning Cycle ({currentCyclePeriod}): {canonicalCompleted} Completed · {canonicalPublished + canonicalInProgress} Published/Active · {canonicalPlanned} Planned
+                      {canonicalUnscheduled > 0 && (
+                        <span className="text-destructive font-semibold ml-2">
+                          · {canonicalUnscheduled} Unscheduled Bottleneck(s)
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Canonical fleet-wide cleaning schedule, capacity bottlenecks, and execution state.
+                    </p>
+                  </div>
+                </div>
+
+                <Button asChild variant="default" size="sm" className="text-xs h-9 gap-1.5">
+                  <Link href="/cleaning">
+                    <span>Manage Cleaning Schedule</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* 6. Recent Operational Activity Feed & Site Grid Matrix */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

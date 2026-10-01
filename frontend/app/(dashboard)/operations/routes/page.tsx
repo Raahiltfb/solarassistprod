@@ -101,6 +101,7 @@ function RoutePlannerContent() {
   const [currentTech, setCurrentTech] = useState<Profile | null>(null);
   const [dailyRoute, setDailyRoute] = useState<DailyRoute | null>(null);
   const [stops, setStops] = useState<any[]>([]);
+  const [canonicalVisits, setCanonicalVisits] = useState<any[]>([]);
   const [unassignedWorkOrders, setUnassignedWorkOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [optimizing, setOptimizing] = useState(false);
@@ -118,6 +119,7 @@ function RoutePlannerContent() {
     } else {
       setDailyRoute(null);
       setStops([]);
+      setCanonicalVisits([]);
     }
   }, [selectedTechId, selectedDate]);
 
@@ -142,15 +144,22 @@ function RoutePlannerContent() {
     const activeTech = technicians.find((t) => t.id === selectedTechId) || null;
     setCurrentTech(activeTech);
 
-    // Fetch existing route
-    const { data: routeData } = await sb
-      .from("daily_routes")
-      .select("*")
-      .eq("technician_id", selectedTechId)
-      .eq("date", selectedDate)
-      .maybeSingle();
+    // Fetch existing route & canonical visits for this date
+    const [{ data: routeData }, { data: cvData }] = await Promise.all([
+      sb
+        .from("daily_routes")
+        .select("*")
+        .eq("technician_id", selectedTechId)
+        .eq("date", selectedDate)
+        .maybeSingle(),
+      sb
+        .from("cleaning_visits")
+        .select("*, sites(*)")
+        .eq("scheduled_date", selectedDate),
+    ]);
 
     setDailyRoute(routeData as DailyRoute | null);
+    setCanonicalVisits(cvData ?? []);
 
     if (routeData) {
       // Fetch stops
@@ -263,6 +272,13 @@ function RoutePlannerContent() {
       .eq("id", dailyRoute.id);
 
     if (error) return toast.error(error.message);
+
+    // Sync canonical cleaning_visits status to published
+    await sb
+      .from("cleaning_visits")
+      .update({ status: "published", updated_at: new Date().toISOString() })
+      .eq("scheduled_date", selectedDate)
+      .in("status", ["planned", "approved", "required"]);
 
     toast.success("Route published! Technicians can now view today's route sequence.");
     loadRouteData();

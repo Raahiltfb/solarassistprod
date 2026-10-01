@@ -1,0 +1,537 @@
+[
+  {
+    "id": "7ef93dec-f1d6-4450-a3eb-f63960481c68",
+    "name": "Alcove society A wing",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:26:51.049434+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "1812082261130008"
+    ],
+    "oct_visits_count": 6,
+    "rule": null
+  },
+  {
+    "id": "7c5fa4d2-4d1d-4eb0-ba4d-01ba99a3010a",
+    "name": "Crestia Solar",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:26:51.075125+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "1812082251090037"
+    ],
+    "oct_visits_count": 6,
+    "rule": null
+  },
+  {
+    "id": "685351e8-ba80-41f1-abfb-5f64ac7a98a2",
+    "name": "Sophistica Solar",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:26:51.039461+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "1811000251180051"
+    ],
+    "oct_visits_count": 8,
+    "rule": null
+  },
+  {
+    "id": "a2476c7c-59d4-48e4-a9ac-281657fd3374",
+    "name": "Ivy by courtyard",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-29T12:30:11.073631+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "1018FE025B240063"
+    ],
+    "oct_visits_count": 6,
+    "rule": null
+  },
+  {
+    "id": "eaa5a3b8-35bc-439e-b7dc-3bc1c7824210",
+    "name": "Alcove society D Wing",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:26:50.891769+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "1808190261280057"
+    ],
+    "oct_visits_count": 6,
+    "rule": null
+  },
+  {
+    "id": "04815dd8-43f7-4d5b-af81-85c6789ad148",
+    "name": "Alcove Society Club House",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:26:50.867083+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "1811020246170023"
+    ],
+    "oct_visits_count": 6,
+    "rule": null
+  },
+  {
+    "id": "ebc86629-bcc1-4b92-8b18-4fdfbf7b44eb",
+    "name": "Suyash Heights Solar",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:27:14.172613+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "18050B0255190095"
+    ],
+    "oct_visits_count": 6,
+    "rule": null
+  },
+  {
+    "id": "492ec94c-c0d4-43df-9819-92ceaa4c6e76",
+    "name": "Vijay Vatika Solar",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:26:51.099724+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "180819025A310008"
+    ],
+    "oct_visits_count": 6,
+    "rule": null
+  },
+  {
+    "id": "a6a83298-7544-4bca-8d45-cc6bd7b5569a",
+    "name": "Maitri Anand 14.5kwh",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:26:51.002492+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "110460185160036"
+    ],
+    "oct_visits_count": 6,
+    "rule": null
+  },
+  {
+    "id": "80ce4965-5836-4936-9aeb-439dc9b9b846",
+    "name": "Bwssb WTP Bangalore",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:26:51.055318+00:00",
+    "inverter_count": 5,
+    "serials": [
+      "1805090258020011",
+      "18050B0257210061",
+      "1805060255050244",
+      "1805090258020005",
+      "1805090258020049"
+    ],
+    "oct_visits_count": 6,
+    "rule": null
+  },
+  {
+    "id": "ff350c53-a7a7-4a06-a6be-74db38e58940",
+    "name": "MK Thakur Wing EFGH",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:27:14.365369+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "1811010257250101"
+    ],
+    "oct_visits_count": 8,
+    "rule": null
+  },
+  {
+    "id": "563535e9-8b9a-4919-bf16-7e126380f655",
+    "name": "Cilantro",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:31:55.779719+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "110D02246140042"
+    ],
+    "oct_visits_count": 8,
+    "rule": null
+  },
+  {
+    "id": "b133e67c-2003-4992-9902-95baedc4ecc5",
+    "name": "Garcinia 11.7",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:31:56.590609+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "1805060246080104"
+    ],
+    "oct_visits_count": 8,
+    "rule": null
+  },
+  {
+    "id": "0c2e19b6-3e8f-427b-bfa4-8ca54ee2f669",
+    "name": "Garcinia 37.4",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:31:58.420362+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "110D12246150086"
+    ],
+    "oct_visits_count": 8,
+    "rule": null
+  },
+  {
+    "id": "5f5ca174-da3e-4ebe-8d64-e3f30058eadb",
+    "name": "Belmac Panvel",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:31:59.71252+00:00",
+    "inverter_count": 2,
+    "serials": [
+      "1808060261230047",
+      "1805040252240159"
+    ],
+    "oct_visits_count": 6,
+    "rule": null
+  },
+  {
+    "id": "ec5d18a7-fa79-4b91-86ce-ee92cc1b47b5",
+    "name": "Suvarna pushpa chs",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:27:14.9059+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "18050A0247310025"
+    ],
+    "oct_visits_count": 6,
+    "rule": null
+  },
+  {
+    "id": "ba9c761c-5f8b-4327-b547-0341a830300b",
+    "name": "143.96kw manavsthal tower malad",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:27:38.059386+00:00",
+    "inverter_count": 2,
+    "serials": [
+      "1812011257110009",
+      "181209225A310002"
+    ],
+    "oct_visits_count": 5,
+    "rule": null
+  },
+  {
+    "id": "1a340a45-9164-4dd2-b5b4-1272ec6b2ff4",
+    "name": "Alcove Society F Wing",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:26:50.993247+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "1811000251180018"
+    ],
+    "oct_visits_count": 6,
+    "rule": null
+  },
+  {
+    "id": "699196c1-6334-4ef8-9191-d423d1988fa8",
+    "name": "MK Thakur Wing ABCD",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:31:40.128703+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "1811010257250019"
+    ],
+    "oct_visits_count": 8,
+    "rule": null
+  },
+  {
+    "id": "a5aad052-e057-48c9-b103-0fcfa66e4304",
+    "name": "ANOOPAM MISSION SOLAR",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:32:01.39084+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "181100025A290037"
+    ],
+    "oct_visits_count": 6,
+    "rule": null
+  },
+  {
+    "id": "82f4f40e-354a-4943-9685-4e5a8907d16e",
+    "name": "Regalia chs solar",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:32:02.028659+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "11069022B040022"
+    ],
+    "oct_visits_count": 6,
+    "rule": null
+  },
+  {
+    "id": "665b59a1-46ed-4871-930b-e060437ba815",
+    "name": "Casa Florea",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:26:51.078956+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "181512025A080055"
+    ],
+    "oct_visits_count": 8,
+    "rule": null
+  },
+  {
+    "id": "d95fe3d3-2365-4a96-944a-21435df98eb2",
+    "name": "Maxima CHS Solar plant",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:26:51.025779+00:00",
+    "inverter_count": 2,
+    "serials": [
+      "110690218100045",
+      "110690218030009"
+    ],
+    "oct_visits_count": 8,
+    "rule": null
+  },
+  {
+    "id": "d10626e6-891d-4abb-b7db-77c8ed5ad4d6",
+    "name": "Dosti Jade Wing B",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:31:46.286163+00:00",
+    "inverter_count": 2,
+    "serials": [
+      "1811020247050004",
+      "1811020246110014"
+    ],
+    "oct_visits_count": 8,
+    "rule": null
+  },
+  {
+    "id": "ba734c2a-eadf-4c46-95ed-fb5c0958bb14",
+    "name": "Alcove Society E wing",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:26:51.067604+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "1811010257250089"
+    ],
+    "oct_visits_count": 6,
+    "rule": null
+  },
+  {
+    "id": "976b0f44-e733-46e9-aa9e-2d9f6413695e",
+    "name": "Madhukosh society A1",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:26:50.884094+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "1811040253130208"
+    ],
+    "oct_visits_count": 6,
+    "rule": null
+  },
+  {
+    "id": "641596a3-c312-4c3f-90ed-305d08a0e07c",
+    "name": "Dosti Jade Wing A",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:31:53.276079+00:00",
+    "inverter_count": 2,
+    "serials": [
+      "181102024C270005",
+      "181102024C270008"
+    ],
+    "oct_visits_count": 8,
+    "rule": null
+  },
+  {
+    "id": "93eaf406-f9e6-4f86-a038-73ae4c93e1bf",
+    "name": "Madhukosh society A2",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:26:51.032605+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "1811040253130197"
+    ],
+    "oct_visits_count": 6,
+    "rule": null
+  },
+  {
+    "id": "dd4fc73e-c6dc-4903-8a8b-8885b194692f",
+    "name": "Mk Thakur Wing IJK",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:26:50.866778+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "1811020256030021"
+    ],
+    "oct_visits_count": 8,
+    "rule": null
+  },
+  {
+    "id": "738e73ab-a407-44fd-b7b0-f9d26739041d",
+    "name": "Venecia CHS 80kW",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:31:54.95125+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "1018FE0251180016"
+    ],
+    "oct_visits_count": 6,
+    "rule": null
+  },
+  {
+    "id": "a383d92d-6290-40d7-8b2d-da7f9a8cb003",
+    "name": "STP",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:31:55.320069+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "1811040243260133"
+    ],
+    "oct_visits_count": 8,
+    "rule": null
+  },
+  {
+    "id": "a35368a5-469e-47f2-a86b-1f3e6202e040",
+    "name": "Patwardhan hospital",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:26:51.068075+00:00",
+    "inverter_count": 2,
+    "serials": [
+      "1811010251090049",
+      "1805060255280179"
+    ],
+    "oct_visits_count": 8,
+    "rule": null
+  },
+  {
+    "id": "a5c325a6-3e65-4a2d-927e-3f37935ee408",
+    "name": "Alcove society B Wing",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:26:51.027978+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "180809025C240016"
+    ],
+    "oct_visits_count": 6,
+    "rule": null
+  },
+  {
+    "id": "8ac10292-b2dd-4542-8552-93210be085d9",
+    "name": "Alcove Society G Wing",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:26:51.031383+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "1811000252160062"
+    ],
+    "oct_visits_count": 6,
+    "rule": null
+  },
+  {
+    "id": "0ed5e497-beeb-4d47-92ad-d794ea66d211",
+    "name": "Alcove society C Wing",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "address": null,
+    "city": null,
+    "capacity_kw": null,
+    "created_at": "2026-09-11T11:26:51.055914+00:00",
+    "inverter_count": 1,
+    "serials": [
+      "1808190261280016"
+    ],
+    "oct_visits_count": 6,
+    "rule": null
+  }
+]

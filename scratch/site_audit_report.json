@@ -1,0 +1,432 @@
+[
+  {
+    "site_id": "7ef93dec-f1d6-4450-a3eb-f63960481c68",
+    "site_name": "Alcove society A wing",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "1812082261130008"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (1812082261130008)."
+  },
+  {
+    "site_id": "7c5fa4d2-4d1d-4eb0-ba4d-01ba99a3010a",
+    "site_name": "Crestia Solar",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "1812082251090037"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (1812082251090037)."
+  },
+  {
+    "site_id": "685351e8-ba80-41f1-abfb-5f64ac7a98a2",
+    "site_name": "Sophistica Solar",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "1811000251180051"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (1811000251180051)."
+  },
+  {
+    "site_id": "a2476c7c-59d4-48e4-a9ac-281657fd3374",
+    "site_name": "Ivy by courtyard",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "1018FE025B240063"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (1018FE025B240063)."
+  },
+  {
+    "site_id": "eaa5a3b8-35bc-439e-b7dc-3bc1c7824210",
+    "site_name": "Alcove society D Wing",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "1808190261280057"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (1808190261280057)."
+  },
+  {
+    "site_id": "04815dd8-43f7-4d5b-af81-85c6789ad148",
+    "site_name": "Alcove Society Club House",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "1811020246170023"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (1811020246170023)."
+  },
+  {
+    "site_id": "ebc86629-bcc1-4b92-8b18-4fdfbf7b44eb",
+    "site_name": "Suyash Heights Solar",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "18050B0255190095"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (18050B0255190095)."
+  },
+  {
+    "site_id": "492ec94c-c0d4-43df-9819-92ceaa4c6e76",
+    "site_name": "Vijay Vatika Solar",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "180819025A310008"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (180819025A310008)."
+  },
+  {
+    "site_id": "a6a83298-7544-4bca-8d45-cc6bd7b5569a",
+    "site_name": "Maitri Anand 14.5kwh",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "110460185160036"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (110460185160036)."
+  },
+  {
+    "site_id": "80ce4965-5836-4936-9aeb-439dc9b9b846",
+    "site_name": "Bwssb WTP Bangalore",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 5,
+    "solis_serials": [
+      "1805090258020011",
+      "18050B0257210061",
+      "1805060255050244",
+      "1805090258020005",
+      "1805090258020049"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 5 linked inverter(s) and canonical serial number(s) (1805090258020011, 18050B0257210061, 1805060255050244, 1805090258020005, 1805090258020049)."
+  },
+  {
+    "site_id": "ff350c53-a7a7-4a06-a6be-74db38e58940",
+    "site_name": "MK Thakur Wing EFGH",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "1811010257250101"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (1811010257250101)."
+  },
+  {
+    "site_id": "563535e9-8b9a-4919-bf16-7e126380f655",
+    "site_name": "Cilantro",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "110D02246140042"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (110D02246140042)."
+  },
+  {
+    "site_id": "b133e67c-2003-4992-9902-95baedc4ecc5",
+    "site_name": "Garcinia 11.7",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "1805060246080104"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (1805060246080104)."
+  },
+  {
+    "site_id": "0c2e19b6-3e8f-427b-bfa4-8ca54ee2f669",
+    "site_name": "Garcinia 37.4",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "110D12246150086"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (110D12246150086)."
+  },
+  {
+    "site_id": "5f5ca174-da3e-4ebe-8d64-e3f30058eadb",
+    "site_name": "Belmac Panvel",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 2,
+    "solis_serials": [
+      "1808060261230047",
+      "1805040252240159"
+    ],
+    "has_real_telemetry": true,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 2 linked inverter(s) and canonical serial number(s) (1808060261230047, 1805040252240159)."
+  },
+  {
+    "site_id": "ec5d18a7-fa79-4b91-86ce-ee92cc1b47b5",
+    "site_name": "Suvarna pushpa chs",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "18050A0247310025"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (18050A0247310025)."
+  },
+  {
+    "site_id": "ba9c761c-5f8b-4327-b547-0341a830300b",
+    "site_name": "143.96kw manavsthal tower malad",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 2,
+    "solis_serials": [
+      "1812011257110009",
+      "181209225A310002"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 2 linked inverter(s) and canonical serial number(s) (1812011257110009, 181209225A310002)."
+  },
+  {
+    "site_id": "1a340a45-9164-4dd2-b5b4-1272ec6b2ff4",
+    "site_name": "Alcove Society F Wing",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "1811000251180018"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (1811000251180018)."
+  },
+  {
+    "site_id": "699196c1-6334-4ef8-9191-d423d1988fa8",
+    "site_name": "MK Thakur Wing ABCD",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "1811010257250019"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (1811010257250019)."
+  },
+  {
+    "site_id": "a5aad052-e057-48c9-b103-0fcfa66e4304",
+    "site_name": "ANOOPAM MISSION SOLAR",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "181100025A290037"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (181100025A290037)."
+  },
+  {
+    "site_id": "82f4f40e-354a-4943-9685-4e5a8907d16e",
+    "site_name": "Regalia chs solar",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "11069022B040022"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (11069022B040022)."
+  },
+  {
+    "site_id": "665b59a1-46ed-4871-930b-e060437ba815",
+    "site_name": "Casa Florea",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "181512025A080055"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (181512025A080055)."
+  },
+  {
+    "site_id": "d95fe3d3-2365-4a96-944a-21435df98eb2",
+    "site_name": "Maxima CHS Solar plant",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 2,
+    "solis_serials": [
+      "110690218100045",
+      "110690218030009"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 2 linked inverter(s) and canonical serial number(s) (110690218100045, 110690218030009)."
+  },
+  {
+    "site_id": "d10626e6-891d-4abb-b7db-77c8ed5ad4d6",
+    "site_name": "Dosti Jade Wing B",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 2,
+    "solis_serials": [
+      "1811020247050004",
+      "1811020246110014"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 2 linked inverter(s) and canonical serial number(s) (1811020247050004, 1811020246110014)."
+  },
+  {
+    "site_id": "ba734c2a-eadf-4c46-95ed-fb5c0958bb14",
+    "site_name": "Alcove Society E wing",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "1811010257250089"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (1811010257250089)."
+  },
+  {
+    "site_id": "976b0f44-e733-46e9-aa9e-2d9f6413695e",
+    "site_name": "Madhukosh society A1",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "1811040253130208"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (1811040253130208)."
+  },
+  {
+    "site_id": "641596a3-c312-4c3f-90ed-305d08a0e07c",
+    "site_name": "Dosti Jade Wing A",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 2,
+    "solis_serials": [
+      "181102024C270005",
+      "181102024C270008"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 2 linked inverter(s) and canonical serial number(s) (181102024C270005, 181102024C270008)."
+  },
+  {
+    "site_id": "93eaf406-f9e6-4f86-a038-73ae4c93e1bf",
+    "site_name": "Madhukosh society A2",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "1811040253130197"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (1811040253130197)."
+  },
+  {
+    "site_id": "dd4fc73e-c6dc-4903-8a8b-8885b194692f",
+    "site_name": "Mk Thakur Wing IJK",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "1811020256030021"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (1811020256030021)."
+  },
+  {
+    "site_id": "738e73ab-a407-44fd-b7b0-f9d26739041d",
+    "site_name": "Venecia CHS 80kW",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "1018FE0251180016"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (1018FE0251180016)."
+  },
+  {
+    "site_id": "a383d92d-6290-40d7-8b2d-da7f9a8cb003",
+    "site_name": "STP",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "1811040243260133"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (1811040243260133)."
+  },
+  {
+    "site_id": "a35368a5-469e-47f2-a86b-1f3e6202e040",
+    "site_name": "Patwardhan hospital",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 2,
+    "solis_serials": [
+      "1811010251090049",
+      "1805060255280179"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 2 linked inverter(s) and canonical serial number(s) (1811010251090049, 1805060255280179)."
+  },
+  {
+    "site_id": "a5c325a6-3e65-4a2d-927e-3f37935ee408",
+    "site_name": "Alcove society B Wing",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "180809025C240016"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (180809025C240016)."
+  },
+  {
+    "site_id": "8ac10292-b2dd-4542-8552-93210be085d9",
+    "site_name": "Alcove Society G Wing",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "1811000252160062"
+    ],
+    "has_real_telemetry": true,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (1811000252160062)."
+  },
+  {
+    "site_id": "0ed5e497-beeb-4d47-92ad-d794ea66d211",
+    "site_name": "Alcove society C Wing",
+    "org_id": "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+    "inverter_count": 1,
+    "solis_serials": [
+      "1808190261280016"
+    ],
+    "has_real_telemetry": false,
+    "is_synthetic": false,
+    "reason": "Real Solis fleet site with 1 linked inverter(s) and canonical serial number(s) (1808190261280016)."
+  }
+]

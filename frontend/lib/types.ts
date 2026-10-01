@@ -342,3 +342,7 @@ export interface CleaningPlanAssignment {
   technician_teams?: TechnicianTeam | null;
 }
 
+export type { CleaningVisitStatus, CleaningVisit, UnscheduledReason } from "./cleaning-domain";
+
+
+

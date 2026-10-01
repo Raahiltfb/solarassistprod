@@ -23,12 +23,13 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ id:
   if (!site) notFound();
 
   // Parallel data fetching for site detail aggregates & related collections
-  const [invRes, alertsRes, cleaningRes, ticketsRes, ruleRes] = await Promise.all([
+  const [invRes, alertsRes, cleaningRes, ticketsRes, ruleRes, canonicalVisitsRes] = await Promise.all([
     sb.from("inverters").select("*").eq("site_id", id).order("oem_device_id"),
     sb.from("alerts").select("*").eq("site_id", id).order("triggered_at", { ascending: false }),
     sb.from("cleaning_logs").select("*").eq("site_id", id).order("performed_at", { ascending: false }).limit(20),
     sb.from("tickets").select("*").eq("site_id", id).order("created_at", { ascending: false }),
     sb.from("site_cleaning_rules").select("*").eq("site_id", id).maybeSingle(),
+    sb.from("cleaning_visits").select("*, technician_teams(name)").eq("site_id", id).order("target_due_date", { ascending: false }).limit(20),
   ]);
 
   const inverters = invRes.data ?? [];
@@ -36,6 +37,7 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ id:
   const cleaning = cleaningRes.data ?? [];
   const tickets = ticketsRes.data ?? [];
   const rule = ruleRes.data ?? null;
+  const canonicalVisits = canonicalVisitsRes.data ?? [];
 
   const inverterIds = inverters.map((i) => i.id);
 
@@ -298,36 +300,108 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ id:
           </CardContent></Card>
         </TabsContent>
 
-        <TabsContent value="cleaning">
+        <TabsContent value="cleaning" className="space-y-6">
+          {/* Canonical Cleaning Visit Schedule & State */}
           <Card>
             <CardHeader className="py-3 border-b flex flex-row items-center justify-between">
-              <CardTitle className="text-base font-semibold">Cleaning History & Policy</CardTitle>
+              <div>
+                <CardTitle className="text-base font-semibold">Canonical Cleaning Schedule & Visits</CardTitle>
+                <p className="text-xs text-muted-foreground">Lifecycle tracking for planned, published, and completed site visits.</p>
+              </div>
               <SiteCleaningConfigButton site={site} rule={rule} variant="outline" size="sm" />
             </CardHeader>
             <CardContent className="p-0">
-              <Table>
-              <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Remarks</TableHead><TableHead className="text-right">Evidence Records</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {cleaning.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell>{formatDate(c.performed_at)}</TableCell>
-                    <TableCell className="text-sm">{c.remarks ?? "—"}</TableCell>
-                    <TableCell className="text-right">
-                      <CleaningEvidenceLinks
-                        safetyPhotoUrl={c.safety_photo_url}
-                        beforePhotoUrl={c.before_photo_url}
-                        afterPhotoUrl={c.after_photo_url}
-                        damagePhotoUrl={c.damage_photo_url}
-                        damageObserved={c.damage_observed}
-                        className="justify-end"
-                      />
-                    </TableCell>
+              <Table className="text-xs">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Target Due</TableHead>
+                    <TableHead>Scheduled Date</TableHead>
+                    <TableHead>Assigned Team</TableHead>
+                    <TableHead>Visit Status</TableHead>
+                    <TableHead>Planner Rationale</TableHead>
                   </TableRow>
-                ))}
-                {cleaning.length === 0 && <TableRow><TableCell colSpan={3} className="text-center py-6 text-muted-foreground">No cleaning logs yet.</TableCell></TableRow>}
-              </TableBody>
-            </Table>
-          </CardContent></Card>
+                </TableHeader>
+                <TableBody>
+                  {canonicalVisits.map((cv: any) => (
+                    <TableRow key={cv.id}>
+                      <TableCell className="font-mono font-medium">{cv.target_due_date}</TableCell>
+                      <TableCell className="font-mono">{cv.scheduled_date || "—"}</TableCell>
+                      <TableCell>{cv.technician_teams?.name || "Unassigned"}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            cv.status === "completed"
+                              ? "success"
+                              : cv.status === "published" || cv.status === "en_route" || cv.status === "in_progress"
+                              ? "default"
+                              : cv.status === "unscheduled"
+                              ? "destructive"
+                              : "secondary"
+                          }
+                          className="capitalize text-[10px]"
+                        >
+                          {cv.status.replace("_", " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground max-w-xs truncate" title={cv.planner_rationale || ""}>
+                        {cv.planner_rationale || cv.constraint_notes || "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {canonicalVisits.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                        No canonical cleaning visits recorded for this site yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Historical Cleaning Execution Logs */}
+          <Card>
+            <CardHeader className="py-3 border-b">
+              <CardTitle className="text-base font-semibold">Historical Execution Logs & Evidence</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table className="text-xs">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Performed At</TableHead>
+                    <TableHead>Remarks</TableHead>
+                    <TableHead className="text-right">Evidence Records</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cleaning.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell>{formatDate(c.performed_at)}</TableCell>
+                      <TableCell className="text-sm">{c.remarks ?? "—"}</TableCell>
+                      <TableCell className="text-right">
+                        <CleaningEvidenceLinks
+                          safetyPhotoUrl={c.safety_photo_url}
+                          beforePhotoUrl={c.before_photo_url}
+                          afterPhotoUrl={c.after_photo_url}
+                          damagePhotoUrl={c.damage_photo_url}
+                          damageObserved={c.damage_observed}
+                          className="justify-end"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {cleaning.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
+                        No execution logs recorded yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="tickets">

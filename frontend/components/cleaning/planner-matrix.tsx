@@ -54,12 +54,11 @@ export function PlannerMatrix({
 
   const monthName = new Date(year, month - 1, 1).toLocaleString("en-IN", { month: "long" });
 
-  // Map assignments by key `${team_id}:${day}`
+  // Map assignments by key `${team_id}:${dateStr}`
   const assignmentGrid = new Map<string, CleaningPlanAssignment[]>();
   assignments.forEach((a) => {
     const dateStr = a.scheduled_date.split("T")[0];
-    const day = parseInt(dateStr.split("-")[2], 10);
-    const key = `${a.team_id}:${day}`;
+    const key = `${a.team_id}:${dateStr}`;
     const list = assignmentGrid.get(key) || [];
     list.push(a);
     assignmentGrid.set(key, list);

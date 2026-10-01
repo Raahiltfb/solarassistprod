@@ -28,6 +28,7 @@ export default function CleaningPage() {
   const [rules, setRules] = useState<SiteCleaningRule[]>([]);
   const [technicians, setTechnicians] = useState<Profile[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
+  const [canonicalVisits, setCanonicalVisits] = useState<any[]>([]);
   const [openLogDialog, setOpenLogDialog] = useState(false);
   const [openScheduleDialog, setOpenScheduleDialog] = useState(false);
   const [openWorkOrderDialog, setOpenWorkOrderDialog] = useState(false);
@@ -58,12 +59,16 @@ export default function CleaningPage() {
   const sb = createClient();
 
   async function load() {
-    const [lRes, sRes, tRes, teamsRes, rRes] = await Promise.all([
+    const now = new Date();
+    const cyclePeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+    const [lRes, sRes, tRes, teamsRes, rRes, cvRes] = await Promise.all([
       sb.from("cleaning_logs").select("*, sites(name, cleaning_cycle_days, last_cleaned_on)").order("performed_at", { ascending: false }),
       sb.from("sites").select("*").order("name"),
       sb.from("profiles").select("*").eq("role", "technician").order("full_name"),
       sb.from("technician_teams").select("*").eq("is_active", true).order("name"),
       sb.from("site_cleaning_rules").select("*"),
+      sb.from("cleaning_visits").select("*, sites(name, last_cleaned_on, cleaning_cycle_days), technician_teams(name)").eq("cycle_period", cyclePeriod).order("target_due_date", { ascending: true }),
     ]);
 
     setLogs((lRes.data as any) ?? []);
@@ -71,6 +76,7 @@ export default function CleaningPage() {
     setTechnicians((tRes.data as Profile[]) ?? []);
     setTeams((teamsRes.data as any) ?? []);
     setRules((rRes.data as SiteCleaningRule[]) ?? []);
+    setCanonicalVisits(cvRes.data ?? []);
   }
 
   useEffect(() => {
@@ -346,15 +352,121 @@ export default function CleaningPage() {
       </div>
 
       {/* Main Tabs */}
-      <Tabs defaultValue="schedules" className="space-y-6">
+      <Tabs defaultValue="canonical" className="space-y-6">
         <TabsList className="bg-muted p-1">
+          <TabsTrigger value="canonical" className="text-xs font-semibold px-4">
+            Canonical Active Cycle Visits ({canonicalVisits.length})
+          </TabsTrigger>
           <TabsTrigger value="schedules" className="text-xs font-semibold px-4">
-            Cleaning Schedules & Service Requests
+            Site Policy Configurations ({sites.length})
           </TabsTrigger>
           <TabsTrigger value="history" className="text-xs font-semibold px-4">
-            Cleaning Log History ({logs.length})
+            Execution Log History ({logs.length})
           </TabsTrigger>
         </TabsList>
+
+        {/* Tab 0: Canonical Active Cycle Visits */}
+        <TabsContent value="canonical" className="space-y-6">
+          <Card className="border shadow-sm">
+            <CardHeader className="p-6 pb-4">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="text-lg font-bold">Canonical Active Cycle Visits</CardTitle>
+                  <CardDescription className="text-sm mt-1">
+                    Single source of truth visit records for the active monthly cycle.
+                  </CardDescription>
+                </div>
+                <Button asChild variant="default" size="sm" className="text-xs gap-1.5">
+                  <Link href="/cleaning/planner">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>Open Monthly Planner</span>
+                  </Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table className="text-xs">
+                <TableHeader className="bg-muted/50 uppercase tracking-wider font-semibold">
+                  <TableRow>
+                    <TableHead className="py-3 px-6">Site</TableHead>
+                    <TableHead className="py-3 px-4">Last Cleaned</TableHead>
+                    <TableHead className="py-3 px-4">Cycle Length</TableHead>
+                    <TableHead className="py-3 px-4">Days Overdue</TableHead>
+                    <TableHead className="py-3 px-4">Target Due</TableHead>
+                    <TableHead className="py-3 px-4">Scheduled Date</TableHead>
+                    <TableHead className="py-3 px-4">Assigned Team</TableHead>
+                    <TableHead className="py-3 px-4">Status</TableHead>
+                    <TableHead className="py-3 px-6">Planner Rationale</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {canonicalVisits.map((cv: any) => {
+                    const lastCleanedStr = cv.sites?.last_cleaned_on;
+                    const cycleDays = cv.sites?.cleaning_cycle_days || 10;
+                    let daysOverdue = 0;
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+
+                    if (cv.status !== "completed") {
+                      const targetMs = cv.target_due_date ? new Date(cv.target_due_date).getTime() : 0;
+                      if (targetMs && today.getTime() > targetMs) {
+                        daysOverdue = Math.floor((today.getTime() - targetMs) / 86400_000);
+                      }
+                    }
+
+                    return (
+                      <TableRow key={cv.id} className="hover:bg-muted/30">
+                        <TableCell className="py-3.5 px-6 font-semibold">{cv.sites?.name || cv.site_id}</TableCell>
+                        <TableCell className="py-3.5 px-4 font-mono">
+                          {lastCleanedStr ? formatDate(lastCleanedStr) : <span className="text-muted-foreground italic">Never</span>}
+                        </TableCell>
+                        <TableCell className="py-3.5 px-4 font-mono">{cycleDays} days</TableCell>
+                        <TableCell className="py-3.5 px-4 font-mono">
+                          {daysOverdue > 0 ? (
+                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0.5 font-medium">
+                              {daysOverdue}d overdue
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground font-mono">0d</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-3.5 px-4 font-mono">{cv.target_due_date}</TableCell>
+                        <TableCell className="py-3.5 px-4 font-mono">{cv.scheduled_date || "—"}</TableCell>
+                        <TableCell className="py-3.5 px-4">{cv.technician_teams?.name || "Unassigned"}</TableCell>
+                        <TableCell className="py-3.5 px-4">
+                          <Badge
+                            variant={
+                              cv.status === "completed"
+                                ? "success"
+                                : cv.status === "published" || cv.status === "en_route" || cv.status === "in_progress"
+                                ? "default"
+                                : cv.status === "unscheduled"
+                                ? "destructive"
+                                : "secondary"
+                            }
+                            className="capitalize text-[10px]"
+                          >
+                            {cv.status.replace("_", " ")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-3.5 px-6 text-muted-foreground max-w-xs truncate" title={cv.planner_rationale || ""}>
+                          {cv.planner_rationale || cv.constraint_notes || "—"}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {canonicalVisits.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-10 text-muted-foreground">
+                        No active cycle visits found. Open Monthly Planner to generate schedule.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Tab 1: Schedules & Service Requests */}
         <TabsContent value="schedules" className="space-y-6">
