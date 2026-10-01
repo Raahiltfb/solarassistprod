@@ -20,7 +20,7 @@ export async function GET(
       .maybeSingle();
 
     if (error || !woData) {
-      return NextResponse.json({ error: "Work Order Not Found", id }, { status: 404 });
+      return NextResponse.json({ error: "Service Request Not Found", id }, { status: 404 });
     }
 
     let assignedTechProfile = null;

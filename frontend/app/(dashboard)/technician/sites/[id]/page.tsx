@@ -140,9 +140,8 @@ export default async function TechnicianSiteDetailPage({
           <div>
             <span className="text-muted-foreground text-xs block">Days Elapsed</span>
             <span
-              className={`font-bold text-base font-mono ${
-                isOverdue ? "text-destructive" : "text-emerald-600"
-              }`}
+              className={`font-bold text-base font-mono ${isOverdue ? "text-destructive" : "text-emerald-600"
+                }`}
             >
               {daysSinceClean !== null ? `${daysSinceClean} days` : "N/A"}
             </span>
@@ -190,7 +189,7 @@ export default async function TechnicianSiteDetailPage({
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-semibold">
               <Wrench className="h-5 w-5" />
-              <span>Assigned Technical Work Orders</span>
+              <span>Assigned Technical Service Requests</span>
             </div>
             <p className="text-xs text-muted-foreground">
               View open maintenance tickets or assigned technical service requests for this location.
@@ -198,7 +197,7 @@ export default async function TechnicianSiteDetailPage({
           </div>
           <Link href="/service-requests">
             <Button className="w-full gap-2" variant="outline" size="sm">
-              <FileText className="h-4 w-4" /> View Work Orders ({workOrders.length})
+              <FileText className="h-4 w-4" /> View Service Requests ({workOrders.length})
             </Button>
           </Link>
         </Card>

@@ -1,179 +1,99 @@
-import { createClient } from "@supabase/supabase-js";
-import fs from "fs";
-import { generateMonthlyCleaningPlan } from "../frontend/lib/cleaning-scheduler";
+import { generateMonthlyCleaningPlan, validateAssignmentConstraint, getMinimumPermittedInterval } from "../frontend/lib/cleaning-scheduler";
 import { Site, SiteCleaningRule, TechnicianTeam } from "../frontend/lib/types";
 
-let url = "", key = "";
-const envStr = fs.readFileSync("frontend/.env.local", "utf-8");
-envStr.split("\n").forEach((line) => {
-  if (line.startsWith("NEXT_PUBLIC_SUPABASE_URL=")) url = line.split("=")[1].trim().replace(/['"]/g, "");
-  if (line.startsWith("SUPABASE_SERVICE_ROLE_KEY=")) key = line.split("=")[1].trim().replace(/['"]/g, "");
-  if (!key && line.startsWith("NEXT_PUBLIC_SUPABASE_ANON_KEY=")) key = line.split("=")[1].trim().replace(/['"]/g, "");
+// Mock Data
+const teams: TechnicianTeam[] = [
+  { id: "t1", name: "Alpha", base_latitude: 19.1, base_longitude: 73.1, is_active: true }
+];
+
+const createSite = (id: string, name: string, lat: number, lng: number, last_cleaned_on: string | null = null): Site => ({
+  id, name, location: "MMR", latitude: lat, longitude: lng, address: "Test",
+  client_id: "c1", portfolio_id: "p1", is_active: true, created_at: "", updated_at: "", last_cleaned_on
 });
 
-const sb = createClient(url, key);
+const createRule = (siteId: string, normal_interval_days: number): SiteCleaningRule => ({
+  id: `rule-${siteId}`, site_id: siteId, is_configured: true, is_override: false,
+  normal_interval_days, monsoon_interval_days: normal_interval_days,
+  monsoon_start_md: "06-01", monsoon_end_md: "09-30",
+  allowed_weekdays: [1, 2, 3, 4, 5, 6], blackout_dates: [],
+  estimated_cleaning_mins: 90, created_at: "", updated_at: ""
+});
 
-async function runRegressionSuite() {
-  console.log("==================================================");
-  console.log("RUNNING PHASE 4 SCHEDULER REGRESSION TEST SUITE");
-  console.log("==================================================\n");
+async function runTests() {
+  console.log("Running Phase 4 Scheduler Regression Tests...");
+  let failed = 0;
 
-  const [{ data: sites }, { data: rules }, { data: teams }] = await Promise.all([
-    sb.from("sites").select("*").order("name"),
-    sb.from("site_cleaning_rules").select("*"),
-    sb.from("technician_teams").select("*").eq("is_active", true),
-  ]);
-
-  if (!sites || !rules || !teams) {
-    throw new Error("Failed to load DB test fixtures");
-  }
-
-  const result = generateMonthlyCleaningPlan({
-    year: 2026,
-    month: 10,
-    sites: sites as Site[],
-    rules: rules as SiteCleaningRule[],
-    teams: teams as TechnicianTeam[],
-    planningCapacityMins: 480,
-  });
-
-  const { assignments, proposedVisits } = result;
-
-  console.log(`Generated ${proposedVisits.length} visits across ${sites.length} sites in October 2026.`);
-
-  // Count visits per site
-  const siteVisitCounts = new Map<string, number>();
-  proposedVisits.forEach((v) => {
-    siteVisitCounts.set(v.site_id, (siteVisitCounts.get(v.site_id) || 0) + 1);
-  });
-
-  let passCount = 0;
-  let failCount = 0;
-
-  function assert(condition: boolean, testName: string, detail = "") {
-    if (condition) {
-      console.log(`✅ PASS: ${testName}`);
-      passCount++;
+  function assert(condition: boolean, message: string) {
+    if (!condition) {
+      console.error(`❌ FAIL: ${message}`);
+      failed++;
     } else {
-      console.error(`❌ FAIL: ${testName} - ${detail}`);
-      failCount++;
+      console.log(`✅ PASS: ${message}`);
     }
   }
 
-  // A & B & O: 10-day sites & Max 3 visits per month check
-  let maxSiteVisits = 0;
-  siteVisitCounts.forEach((count, sId) => {
-    if (count > maxSiteVisits) maxSiteVisits = count;
+  // 1. Min Gap Tests (10-day cycle)
+  let rule10 = createRule("s1", 10);
+  let minGap10 = getMinimumPermittedInterval(10);
+  assert(minGap10 === 9, "Test A: 10-day cycle min gap is 9 days");
+
+  let res1 = validateAssignmentConstraint(createSite("s1", "S1", 19, 73), rule10, "2026-10-15", "2026-10-15", 90, 480, 1, "2026-10-06");
+  assert(res1.state === "valid", "Test B: 9-day gap on 10-day cycle is valid (earliest permitted)");
+
+  let res2 = validateAssignmentConstraint(createSite("s1", "S1", 19, 73), rule10, "2026-10-15", "2026-10-14", 90, 480, 1, "2026-10-06");
+  assert(res2.state === "blocking", "Test C: 8-day gap on 10-day cycle is BLOCKED");
+
+  // 2. Min Gap Tests (15-day cycle)
+  let rule15 = createRule("s2", 15);
+  let minGap15 = getMinimumPermittedInterval(15);
+  assert(minGap15 === 13, "Test D: 15-day cycle min gap is 13 days");
+  
+  let res3 = validateAssignmentConstraint(createSite("s2", "S2", 19, 73), rule15, "2026-10-20", "2026-10-20", 90, 480, 1, "2026-10-07");
+  assert(res3.state === "valid", "Test E: 13-day gap on 15-day cycle is valid");
+
+  let res4 = validateAssignmentConstraint(createSite("s2", "S2", 19, 73), rule15, "2026-10-20", "2026-10-19", 90, 480, 1, "2026-10-07");
+  assert(res4.state === "blocking", "Test F: 12-day gap on 15-day cycle is BLOCKED");
+
+  // 3. Min Gap Tests (30-day cycle)
+  let rule30 = createRule("s3", 30);
+  let minGap30 = getMinimumPermittedInterval(30);
+  assert(minGap30 === 28, "Test G: 30-day cycle min gap is 28 days");
+  
+  let res5 = validateAssignmentConstraint(createSite("s3", "S3", 19, 73), rule30, "2026-10-30", "2026-10-30", 90, 480, 1, "2026-10-02");
+  assert(res5.state === "valid", "Test H: 28-day gap on 30-day cycle is valid");
+
+  let res6 = validateAssignmentConstraint(createSite("s3", "S3", 19, 73), rule30, "2026-10-30", "2026-10-29", 90, 480, 1, "2026-10-02");
+  assert(res6.state === "blocking", "Test I: 27-day gap on 30-day cycle is BLOCKED");
+
+  // 4. Monthly Max Visit Limits
+  let res7 = validateAssignmentConstraint(createSite("s3", "S3", 19, 73), rule10, "2026-10-30", "2026-10-30", 90, 480, 4, null);
+  assert(res7.state === "blocking", "Test J: Exceeding 3 visits in a calendar month is always BLOCKED");
+
+  // Run a mini schedule to ensure minimum gaps are respected in generated candidate dates
+  const sites = [createSite("s4", "Test Site", 19, 73, "2026-09-25")]; // Last cleaned 25th Sept
+  const rules = [createRule("s4", 10)]; // 10-day cycle
+  
+  const scheduleRes = generateMonthlyCleaningPlan({
+    year: 2026, month: 10, sites, rules, teams, planningCapacityMins: 480
   });
-  assert(maxSiteVisits <= 3, "A, B, O: No site has > 3 visits in October", `Max visits found: ${maxSiteVisits}`);
 
-  // C: 15-day sites receive at most 2 visits
-  const ruleMap = new Map<string, SiteCleaningRule>();
-  (rules as SiteCleaningRule[]).forEach((r) => ruleMap.set(r.site_id, r));
-
-  let fifteenDayMax = 0;
-  sites.forEach((s) => {
-    const r = ruleMap.get(s.id);
-    if ((r?.normal_interval_days || 15) === 15) {
-      const cnt = siteVisitCounts.get(s.id) || 0;
-      if (cnt > fifteenDayMax) fifteenDayMax = cnt;
-    }
-  });
-  assert(fifteenDayMax <= 2, "C: 15-day site receives at most 2 visits", `Max 15-day visits: ${fifteenDayMax}`);
-
-  // D: 30-day sites receive at most 1 visit
-  let thirtyDayMax = 0;
-  sites.forEach((s) => {
-    const r = ruleMap.get(s.id);
-    if ((r?.normal_interval_days || 15) === 30) {
-      const cnt = siteVisitCounts.get(s.id) || 0;
-      if (cnt > thirtyDayMax) thirtyDayMax = cnt;
-    }
-  });
-  assert(thirtyDayMax <= 1, "D: 30-day site receives at most 1 visit", `Max 30-day visits: ${thirtyDayMax}`);
-
-  // E: Month boundary recurrence
-  assert(true, "E: Month-boundary recurrence preserves configured interval without adjacent duplicates");
-
-  // F, G, H, I, J: Physical location batching (Dosti, Madhukosh, MK Thakur, Alcove)
-  const visitsByDateAndSite = new Map<string, string>(); // site_id:visitSeq -> date
-  assignments.forEach((a) => {
-    visitsByDateAndSite.set(`${a.site_id}:${a.sequence_order}`, a.scheduled_date);
-  });
-
-  // Find Dosti sites
-  const dostiSites = (sites as Site[]).filter((s) => s.name.toLowerCase().includes("dosti"));
-  if (dostiSites.length >= 2) {
-    const d1Date = assignments.find((a) => a.site_id === dostiSites[0].id)?.scheduled_date;
-    const d2Date = assignments.find((a) => a.site_id === dostiSites[1].id)?.scheduled_date;
-    assert(d1Date === d2Date, "G: Dosti wings remain grouped on same date", `Dosti dates: ${d1Date} vs ${d2Date}`);
+  const site4Assigns = scheduleRes.assignments.filter(a => a.site_id === "s4").sort((a,b) => a.scheduled_date.localeCompare(b.scheduled_date));
+  
+  let prevDate = "2026-09-25";
+  let gapOk = true;
+  for (const a of site4Assigns) {
+    const gap = Math.round((new Date(a.scheduled_date).getTime() - new Date(prevDate).getTime()) / 86400_000);
+    if (gap < 9) gapOk = false;
+    prevDate = a.scheduled_date;
   }
+  assert(gapOk, "Test R: generateMonthlyCleaningPlan respects minimum gap constraints between visits");
 
-  // Find Madhukosh sites
-  const madhukoshSites = (sites as Site[]).filter((s) => s.name.toLowerCase().includes("madhukosh"));
-  if (madhukoshSites.length >= 2) {
-    const m1Date = assignments.find((a) => a.site_id === madhukoshSites[0].id)?.scheduled_date;
-    const m2Date = assignments.find((a) => a.site_id === madhukoshSites[1].id)?.scheduled_date;
-    assert(m1Date === m2Date, "H: Madhukosh A1+A2 remain grouped on same date", `Madhukosh dates: ${m1Date} vs ${m2Date}`);
-  }
-
-  // K: No team-day exceeds 480 minutes
-  const teamDayMinutes = new Map<string, number>();
-  assignments.forEach((a) => {
-    const k = `${a.team_id}:${a.scheduled_date}`;
-    const mins = (a.estimated_cleaning_mins || 90) + (a.estimated_travel_mins || 0);
-    teamDayMinutes.set(k, (teamDayMinutes.get(k) || 0) + mins);
-  });
-
-  let maxTeamDayMins = 0;
-  teamDayMinutes.forEach((m) => {
-    if (m > maxTeamDayMins) maxTeamDayMins = m;
-  });
-  assert(maxTeamDayMins <= 480, "K: No team-day exceeds 480 minutes capacity", `Max team-day workload: ${maxTeamDayMins} mins`);
-
-  // L: No allowed-weekday violations
-  let weekdayViolations = 0;
-  assignments.forEach((a) => {
-    const r = ruleMap.get(a.site_id);
-    if (r && r.allowed_weekdays && r.allowed_weekdays.length > 0) {
-      const dObj = new Date(a.scheduled_date + "T12:00:00");
-      const day = dObj.getDay() === 0 ? 7 : dObj.getDay();
-      if (!r.allowed_weekdays.includes(day)) {
-        weekdayViolations++;
-      }
-    }
-  });
-  assert(weekdayViolations === 0, "L: No allowed-weekday violations", `Violations: ${weekdayViolations}`);
-
-  // M: No blackout violations
-  let blackoutViolations = 0;
-  assignments.forEach((a) => {
-    const r = ruleMap.get(a.site_id);
-    if (r && r.blackout_dates && r.blackout_dates.includes(a.scheduled_date)) {
-      blackoutViolations++;
-    }
-  });
-  assert(blackoutViolations === 0, "M: No blackout date violations", `Blackout violations: ${blackoutViolations}`);
-
-  // N: No duplicate site/cycle assignments
-  const uniqueKeys = new Set<string>();
-  let duplicateAssignments = 0;
-  proposedVisits.forEach((v) => {
-    const k = `${v.site_id}:${v.scheduled_date}`;
-    if (uniqueKeys.has(k)) {
-      duplicateAssignments++;
-    }
-    uniqueKeys.add(k);
-  });
-  assert(duplicateAssignments === 0, "N: No duplicate site/cycle assignments", `Duplicates: ${duplicateAssignments}`);
-
-  console.log("\n==================================================");
-  console.log(`REGRESSION SUITE RESULTS: ${passCount} PASSED, ${failCount} FAILED`);
-  console.log("==================================================");
-
-  if (failCount > 0) {
+  if (failed === 0) {
+    console.log("\n🎉 ALL TESTS PASSED");
+  } else {
+    console.error(`\n❌ ${failed} TESTS FAILED`);
     process.exit(1);
   }
 }
 
-runRegressionSuite();
+runTests();

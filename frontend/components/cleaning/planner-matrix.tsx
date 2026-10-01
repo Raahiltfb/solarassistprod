@@ -27,7 +27,7 @@ import {
   Ban,
 } from "lucide-react";
 import { Site, TechnicianTeam, CleaningPlanAssignment, SiteCleaningRule } from "@/lib/types";
-import { validateAssignmentConstraint, getIsoWeekday } from "@/lib/cleaning-scheduler";
+import { validateAssignmentConstraint, getIsoWeekday, validateDragDropCellPlacement } from "@/lib/cleaning-scheduler";
 
 interface PlannerMatrixProps {
   year: number;
@@ -142,47 +142,15 @@ export function PlannerMatrix({
   // Pre-Drop Validation Helper for Drag & Drop
   function validateDragTarget(targetTeamId: string, targetDateStr: string): { isValid: boolean; reason: string } {
     if (!draggedAssignment) return { isValid: true, reason: "" };
-
-    const site = siteMap.get(draggedAssignment.site_id) || draggedAssignment.sites;
-    const rule = ruleMap.get(draggedAssignment.site_id);
-
-    const dObj = new Date(targetDateStr + "T12:00:00");
-    const isoWk = getIsoWeekday(dObj);
-
-    // Rule 1: Allowed Weekdays Check
-    if (rule?.allowed_weekdays && rule.allowed_weekdays.length > 0) {
-      if (!rule.allowed_weekdays.includes(isoWk)) {
-        const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-        return { isValid: false, reason: `Blocked: ${dayNames[isoWk - 1]} not allowed for this site` };
-      }
-    }
-
-    // Rule 2: Blackout Dates Check
-    if (rule?.blackout_dates && rule.blackout_dates.includes(targetDateStr)) {
-      return { isValid: false, reason: `Blocked: ${targetDateStr} is a configured site blackout date` };
-    }
-
-    // Rule 3: Team Capacity Check (480 min capacity limit)
-    const existingAssigns = assignmentGrid.get(`${targetTeamId}:${targetDateStr}`) || [];
-    let currentWorkloadMins = existingAssigns
-      .filter((a) => a.id !== draggedAssignment.id)
-      .reduce((sum, a) => sum + (a.estimated_cleaning_mins || 90) + (a.estimated_travel_mins || 0), 0);
-
-    const newVisitMins = (draggedAssignment.estimated_cleaning_mins || 90) + (draggedAssignment.estimated_travel_mins || 15);
-    if (currentWorkloadMins + newVisitMins > planningCapacityMins + 60) {
-      const projectedMins = currentWorkloadMins + newVisitMins;
-      return { isValid: false, reason: `Blocked: team workload (${projectedMins}m) exceeds ${planningCapacityMins}m capacity limit` };
-    }
-
-    // Rule 4: Hard Monthly Visit Limit Check (Max 3 visits per month)
-    const siteMonthVisits = assignments.filter(
-      (a) => a.site_id === draggedAssignment.site_id && a.id !== draggedAssignment.id
-    ).length;
-    if (siteMonthVisits >= 3) {
-      return { isValid: false, reason: "Blocked: site would exceed 3 monthly visits limit" };
-    }
-
-    return { isValid: true, reason: "Valid placement target" };
+    return validateDragDropCellPlacement(
+      draggedAssignment,
+      targetTeamId,
+      targetDateStr,
+      assignments,
+      sites,
+      rules,
+      planningCapacityMins
+    );
   }
 
   // Drag & Drop Handlers
@@ -297,8 +265,8 @@ export function PlannerMatrix({
       </div>
 
       {/* Main Interactive Matrix Calendar - High End Full-Screen Planning Board */}
-      <Card className="border shadow-md overflow-hidden">
-        <CardHeader className="p-4 pb-3 border-b bg-card">
+      <Card className="border shadow-md overflow-hidden h-[80vh] flex flex-col">
+        <CardHeader className="p-4 pb-3 border-b bg-card shrink-0">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <CardTitle className="text-base font-bold flex items-center gap-2">
@@ -316,12 +284,12 @@ export function PlannerMatrix({
           </div>
         </CardHeader>
 
-        <CardContent className="p-0">
-          <div className="w-full overflow-x-auto max-h-[75vh] overflow-y-auto">
+        <CardContent className="p-0 flex-1 overflow-hidden flex flex-col">
+          <div className="w-full flex-1 overflow-auto max-h-full">
             <table className="w-full border-collapse text-xs select-none">
-              <thead className="sticky top-0 z-30 bg-card border-b shadow-sm text-muted-foreground font-semibold">
+              <thead className="sticky top-0 z-30 bg-card/95 backdrop-blur border-b shadow-[0_2px_5px_rgba(0,0,0,0.05)] text-muted-foreground font-semibold">
                 <tr>
-                  <th className="sticky left-0 z-40 bg-card py-3 px-4 text-left w-56 border-r border-b text-xs font-bold shadow-sm">
+                  <th className="sticky left-0 z-40 bg-card/95 backdrop-blur p-4 min-w-[200px] border-r border-b shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-left uppercase tracking-wider text-[11px]">
                     Team / Date
                   </th>
                   {daysArray.map((day) => {
@@ -347,7 +315,7 @@ export function PlannerMatrix({
                 {teams.map((team) => (
                   <tr key={team.id} className="hover:bg-muted/10 transition-colors">
                     {/* Sticky Team Header Column */}
-                    <td className="sticky left-0 z-20 bg-card py-3 px-4 font-semibold border-r border-b space-y-1 shadow-sm">
+                    <td className="sticky left-0 z-10 bg-card py-3 px-4 font-semibold border-r border-b space-y-1 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                       <div className="flex items-center gap-2">
                         <div
                           className="h-3 w-3 rounded-full shrink-0"
@@ -384,6 +352,7 @@ export function PlannerMatrix({
                       return (
                         <td
                           key={day}
+                          title={isBlockedTarget ? validation.reason : undefined}
                           onDragOver={(e) => handleDragOver(e, team.id, dateStr)}
                           onDrop={(e) => handleDrop(e, team.id, dateStr)}
                           onClick={() => {
@@ -393,7 +362,7 @@ export function PlannerMatrix({
                               handleOpenManual(team.id, day);
                             }
                           }}
-                          className={`p-2 border-r border-b text-center align-top cursor-pointer transition-all min-w-[170px] ${
+                          className={`relative p-2 border-r border-b text-center align-top cursor-pointer transition-all min-w-[200px] ${
                             isHovered && isValidTarget
                               ? "bg-emerald-500/20 border-emerald-500 ring-2 ring-emerald-500/50"
                               : isHovered && isBlockedTarget
@@ -401,17 +370,23 @@ export function PlannerMatrix({
                               : draggedAssignment && isValidTarget
                               ? "bg-emerald-500/5 border-dashed border-emerald-500/40"
                               : draggedAssignment && isBlockedTarget
-                              ? "bg-red-500/5 opacity-50 cursor-not-allowed"
+                              ? "bg-red-500/10 text-red-600 cursor-not-allowed"
                               : isOverloaded
                               ? "bg-amber-500/10"
                               : "hover:bg-muted/20"
                           }`}
                         >
-                          <div className="min-h-[100px] h-full flex flex-col items-center justify-start gap-2">
+                          {/* Visual X Background for Blocked Drops */}
+                          {draggedAssignment && isBlockedTarget && (
+                            <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none overflow-hidden">
+                              <span className="text-8xl font-black text-red-600 select-none">X</span>
+                            </div>
+                          )}
+                          <div className="min-h-[120px] h-full flex flex-col items-center justify-start gap-2 relative z-10">
                             {/* Drag status indicator */}
                             {isHovered && isBlockedTarget && (
-                              <div className="w-full p-1 bg-red-600 text-white font-semibold text-[10px] rounded flex items-center justify-center gap-1 shadow-sm animate-pulse">
-                                <Ban className="h-3 w-3" />
+                              <div className="w-full p-1 bg-red-600 text-white font-semibold text-[10px] rounded flex items-center justify-center gap-1 shadow-sm">
+                                <Ban className="h-3 w-3 shrink-0" />
                                 <span className="truncate">{validation.reason}</span>
                               </div>
                             )}

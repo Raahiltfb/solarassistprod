@@ -127,7 +127,7 @@ export function AutomationSandboxModal({ sites = [], onDataChanged }: SandboxMod
   };
 
   const handleClearDemoData = async () => {
-    if (!confirm("Are you sure you want to delete all simulated demo test alerts, tickets, and work orders? Operational data will not be touched.")) {
+    if (!confirm("Are you sure you want to delete all simulated demo test alerts, tickets, and service requests? Operational data will not be touched.")) {
       return;
     }
 
@@ -211,11 +211,10 @@ export function AutomationSandboxModal({ sites = [], onDataChanged }: SandboxMod
                   <div
                     key={sc.id}
                     onClick={() => setSelectedScenario(sc.id)}
-                    className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
-                      isSelected
+                    className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${isSelected
                         ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm"
                         : "border-border/60 bg-card hover:border-primary/50"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between gap-2 mb-1">
                       <span className="font-semibold text-xs text-foreground">{sc.title}</span>
@@ -377,8 +376,8 @@ export function AutomationSandboxModal({ sites = [], onDataChanged }: SandboxMod
                         {result.automation_result?.decision_class === "HUMAN_REVIEW"
                           ? "Physical dispatch deferred — ticket queued for admin manual review."
                           : result.automation_result?.decision_class === "NOTIFY"
-                          ? "External grid failure — no physical field technician visit required."
-                          : "Senior engineering escalation queued."}
+                            ? "External grid failure — no physical field technician visit required."
+                            : "Senior engineering escalation queued."}
                       </p>
                     </div>
                   </div>

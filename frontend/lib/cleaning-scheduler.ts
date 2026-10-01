@@ -1,4 +1,4 @@
-import { Site, SiteCleaningRule, TechnicianTeam, ConstraintSeverity, DEFAULT_SYSTEM_CLEANING_POLICY } from "./types";
+import { Site, SiteCleaningRule, TechnicianTeam, ConstraintSeverity, DEFAULT_SYSTEM_CLEANING_POLICY, CleaningPlanAssignment } from "./types";
 import { CleaningVisitStatus, UnscheduledReason } from "./cleaning-domain";
 
 /**
@@ -240,6 +240,13 @@ export interface MacroScheduleResult {
   auditReport: PreScheduleAuditReport;
 }
 
+export function getMinimumPermittedInterval(intervalDays: number): number {
+  if (intervalDays <= 10) return 9;
+  if (intervalDays <= 15) return 13;
+  if (intervalDays <= 30) return 28;
+  return Math.max(1, intervalDays - 2);
+}
+
 /**
  * Validates constraints for a specific site assignment on a target team/date
  */
@@ -250,7 +257,8 @@ export function validateAssignmentConstraint(
   scheduledDateStr: string,
   teamDayWorkloadMins: number,
   planningCapacityMins = 480,
-  siteMonthVisitsCount = 1
+  siteMonthVisitsCount = 1,
+  priorCleaningDateStr?: string | null
 ): { state: ConstraintSeverity; notes: string | null } {
   if (!rule || !rule.is_configured) {
     return {
@@ -265,6 +273,21 @@ export function validateAssignmentConstraint(
       state: "blocking",
       notes: "BLOCKING: Site would exceed the hard maximum limit of 3 cleaning visits for this calendar month.",
     };
+  }
+
+  // 0.5. Hard Minimum Cleaning Interval Check
+  if (priorCleaningDateStr && rule && rule.is_configured) {
+    const minGap = getMinimumPermittedInterval(rule.normal_interval_days || 15);
+    const scheduledMs = parseDateStr(scheduledDateStr).getTime();
+    const priorMs = parseDateStr(priorCleaningDateStr).getTime();
+    const gapDays = Math.round((scheduledMs - priorMs) / 86400_000);
+    
+    if (gapDays < minGap && scheduledDateStr > priorCleaningDateStr) {
+      return {
+        state: "blocking",
+        notes: `BLOCKING: Minimum cleaning interval is ${minGap} days (attempted gap is ${gapDays} days from prior visit).`,
+      };
+    }
   }
 
   const schDate = parseDateStr(scheduledDateStr);
@@ -334,6 +357,17 @@ export function generateMonthlyCleaningPlan({
   previousTeamAssignments,
   workforceAllowedWeekdays = [1, 2, 3, 4, 5, 6],
 }: MacroScheduleRequest): MacroScheduleResult {
+  // LEVEL 0: Helper for prior cleaning date
+  function getPriorCleaningDateStr(siteId: string, siteLastCleanedOn?: string | null): string | null {
+    const siteAssigns = assignments.filter((a) => a.site_id === siteId);
+    if (siteAssigns.length > 0) {
+      // Return the most recently scheduled visit for this site in the current plan
+      siteAssigns.sort((a, b) => b.scheduled_date.localeCompare(a.scheduled_date));
+      return siteAssigns[0].scheduled_date;
+    }
+    return siteLastCleanedOn || null;
+  }
+
   const cyclePeriod = `${year}-${String(month).padStart(2, "0")}`;
   const ruleMap = new Map<string, SiteCleaningRule>();
   rules.forEach((r) => ruleMap.set(r.site_id, r));
@@ -658,13 +692,16 @@ export function generateMonthlyCleaningPlan({
               existingSitesOnDay.push(vItem.site);
               teamDaySitesMap.set(dayKey, existingSitesOnDay);
 
+              const priorCleaningDateStr = getPriorCleaningDateStr(vItem.site.id, vItem.site.last_cleaned_on);
               const constraintValidation = validateAssignmentConstraint(
                 vItem.site,
                 vItem.rule,
                 vItem.targetDateStr,
                 candidateStr,
                 newWorkload,
-                planningCapacityMins
+                planningCapacityMins,
+                1,
+                priorCleaningDateStr
               );
 
               let rationale = `Location Cycle batched for ${team.name} on single date ${candidateStr}. Target due: ${vItem.targetDateStr}.`;
@@ -760,13 +797,16 @@ export function generateMonthlyCleaningPlan({
               existingSitesOnDay.push(vItem.site);
               teamDaySitesMap.set(dayKey, existingSitesOnDay);
 
+              const priorCleaningDateStr = getPriorCleaningDateStr(vItem.site.id, vItem.site.last_cleaned_on);
               const constraintValidation = validateAssignmentConstraint(
                 vItem.site,
                 vItem.rule,
                 vItem.targetDateStr,
                 candidateStr,
                 currentWorkload,
-                planningCapacityMins
+                planningCapacityMins,
+                1,
+                priorCleaningDateStr
               );
 
               let rationale = `Multi-day Location Cycle split for ${team.name} on ${candidateStr}.`;
@@ -843,13 +883,16 @@ export function generateMonthlyCleaningPlan({
               existingSitesOnDay.push(vItem.site);
               teamDaySitesMap.set(dayKey, existingSitesOnDay);
 
+              const priorCleaningDateStr = getPriorCleaningDateStr(vItem.site.id, vItem.site.last_cleaned_on);
               const constraintValidation = validateAssignmentConstraint(
                 vItem.site,
                 vItem.rule,
                 vItem.targetDateStr,
                 candidateStr,
                 currentWorkload,
-                planningCapacityMins
+                planningCapacityMins,
+                1,
+                priorCleaningDateStr
               );
 
               let rationale = `Extended calendar placement for ${team.name} on ${candidateStr}.`;
@@ -965,13 +1008,16 @@ export function generateMonthlyCleaningPlan({
             existingSitesOnDay.push(site);
             teamDaySitesMap.set(dayKey, existingSitesOnDay);
 
+            const priorCleaningDateStr = getPriorCleaningDateStr(site.id, site.last_cleaned_on);
             const constraintValidation = validateAssignmentConstraint(
               site,
               rule,
               pv.target_due_date,
               dStr,
               newWorkload,
-              planningCapacityMins
+              planningCapacityMins,
+              1,
+              priorCleaningDateStr
             );
 
             const rationale = `Repair Pass: Scheduled for ${team.name} on ${dStr}.`;
@@ -1020,4 +1066,81 @@ export function generateMonthlyCleaningPlan({
     clusters,
     auditReport,
   };
+}
+
+
+export function validateDragDropCellPlacement(
+  draggedAssignment: CleaningPlanAssignment,
+  targetTeamId: string,
+  targetDateStr: string,
+  allAssignments: CleaningPlanAssignment[],
+  sites: Site[],
+  rules: SiteCleaningRule[],
+  planningCapacityMins = 480
+): { isValid: boolean; reason: string } {
+  const site = sites.find(s => s.id === draggedAssignment.site_id);
+  if (!site) return { isValid: false, reason: "Site not found" };
+  const rule = rules.find(r => r.site_id === site.id);
+
+  // Get prior cleaning date for minimum gap
+  const siteAssigns = allAssignments
+    .filter(a => a.site_id === site.id && a.id !== draggedAssignment.id)
+    .sort((a, b) => b.scheduled_date.localeCompare(a.scheduled_date));
+  const priorCleaningDateStr = siteAssigns.length > 0 ? siteAssigns[0].scheduled_date : site.last_cleaned_on;
+
+  // Monthly count
+  const siteMonthVisitsCount = siteAssigns.length + 1; // +1 for the dragged one
+
+  // Team workload
+  const existingAssignsOnTargetDay = allAssignments.filter(
+    a => a.team_id === targetTeamId && a.scheduled_date.startsWith(targetDateStr) && a.id !== draggedAssignment.id
+  );
+  let currentWorkloadMins = existingAssignsOnTargetDay.reduce(
+    (sum, a) => sum + (a.estimated_cleaning_mins || 90) + (a.estimated_travel_mins || 0), 0
+  );
+  const newVisitMins = (draggedAssignment.estimated_cleaning_mins || 90) + (draggedAssignment.estimated_travel_mins || 15);
+  currentWorkloadMins += newVisitMins;
+
+  // Check physical location cluster grouping invariant!
+  const clusters = buildGeographicClusters(sites);
+  const cluster = clusters.find(c => c.sites.some(s => s.id === site.id));
+  if (cluster && cluster.sites.length > 1) {
+    // Are there any other sites in this cluster already scheduled in this month?
+    // If they are scheduled on a DIFFERENT date or DIFFERENT team, it's a violation, UNLESS workload capacity forced a split.
+    // For drag/drop manual, we enforce strictly: if other wings are on a specific day/team, you MUST drop it there, or you must move ALL of them.
+    // Wait, let's just check if other wings are scheduled on a different day/team.
+    const otherWingAssigns = allAssignments.filter(
+      a => a.id !== draggedAssignment.id && cluster.sites.some(cs => cs.id === a.site_id && cs.id !== site.id)
+    );
+    if (otherWingAssigns.length > 0) {
+      // Find the specific visit cycle we belong to (approximate by target_date)
+      const sameCycleOtherWings = otherWingAssigns.filter(a => a.target_date === draggedAssignment.target_date);
+      for (const other of sameCycleOtherWings) {
+        const otherDateStr = other.scheduled_date.split("T")[0];
+        if (otherDateStr !== targetDateStr || other.team_id !== targetTeamId) {
+          return {
+            isValid: false,
+            reason: `Blocked: ${site.name} and ${cluster.sites.find(s=>s.id===other.site_id)?.name} are required to remain in the same service cycle (Team: ${other.team_id}, Date: ${otherDateStr}).`
+          };
+        }
+      }
+    }
+  }
+
+  const constraint = validateAssignmentConstraint(
+    site,
+    rule,
+    draggedAssignment.target_date,
+    targetDateStr,
+    currentWorkloadMins,
+    planningCapacityMins,
+    siteMonthVisitsCount,
+    priorCleaningDateStr
+  );
+
+  if (constraint.state === "blocking") {
+    return { isValid: false, reason: constraint.notes || "Blocked by scheduler constraints" };
+  }
+
+  return { isValid: true, reason: constraint.notes || "Valid placement target" };
 }

@@ -185,7 +185,7 @@ export default function CleaningPage() {
       team_id: woForm.team_id || null,
       created_by: user?.id || null,
       title: `Panel Cleaning: ${selectedSite.name}`,
-      description: woForm.notes || `Scheduled solar panel module cleaning work order.`,
+      description: woForm.notes || `Scheduled solar panel module cleaning service request.`,
       type: "cleaning",
       status: "scheduled",
       scheduled_date: woForm.scheduled_date,
@@ -263,7 +263,7 @@ export default function CleaningPage() {
             Cleaning Management
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Option A manual scheduling, Option B suggested cycle calculations, work order dispatches, and compliance logs.
+            Option A manual scheduling, Option B suggested cycle calculations, service request dispatches, and compliance logs.
           </p>
         </div>
 
@@ -291,64 +291,64 @@ export default function CleaningPage() {
               </Button>
             </DialogTrigger>
             <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Log Completed Cleaning</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>Site</Label>
-                <Select value={logForm.site_id} onValueChange={(v) => setLogForm({ ...logForm, site_id: v })}>
-                  <SelectTrigger data-testid="cleaning-site">
-                    <SelectValue placeholder="Select site" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sites.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Remarks</Label>
-                <Textarea
-                  value={logForm.remarks}
-                  onChange={(e) => setLogForm({ ...logForm, remarks: e.target.value })}
-                  placeholder="Notes on module cleanliness, water pressure, or structural damage..."
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+              <DialogHeader>
+                <DialogTitle>Log Completed Cleaning</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
                 <div className="space-y-1.5">
-                  <Label>Before Photo</Label>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => e.target.files?.[0] && uploadPhoto(e.target.files[0], "before")}
-                  />
-                  {logForm.before && <span className="text-xs text-emerald-600 font-medium">uploaded ✓</span>}
+                  <Label>Site</Label>
+                  <Select value={logForm.site_id} onValueChange={(v) => setLogForm({ ...logForm, site_id: v })}>
+                    <SelectTrigger data-testid="cleaning-site">
+                      <SelectValue placeholder="Select site" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sites.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+
                 <div className="space-y-1.5">
-                  <Label>After Photo</Label>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => e.target.files?.[0] && uploadPhoto(e.target.files[0], "after")}
+                  <Label>Remarks</Label>
+                  <Textarea
+                    value={logForm.remarks}
+                    onChange={(e) => setLogForm({ ...logForm, remarks: e.target.value })}
+                    placeholder="Notes on module cleanliness, water pressure, or structural damage..."
                   />
-                  {logForm.after && <span className="text-xs text-emerald-600 font-medium">uploaded ✓</span>}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Before Photo</Label>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => e.target.files?.[0] && uploadPhoto(e.target.files[0], "before")}
+                    />
+                    {logForm.before && <span className="text-xs text-emerald-600 font-medium">uploaded ✓</span>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>After Photo</Label>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => e.target.files?.[0] && uploadPhoto(e.target.files[0], "after")}
+                    />
+                    {logForm.after && <span className="text-xs text-emerald-600 font-medium">uploaded ✓</span>}
+                  </div>
                 </div>
               </div>
-            </div>
-            <DialogFooter>
-              <Button onClick={submitLog} data-testid="cleaning-submit">
-                <Camera className="h-4 w-4 mr-1.5" /> Submit Log
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+              <DialogFooter>
+                <Button onClick={submitLog} data-testid="cleaning-submit">
+                  <Camera className="h-4 w-4 mr-1.5" /> Submit Log
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Main Tabs */}
@@ -439,10 +439,10 @@ export default function CleaningPage() {
                               cv.status === "completed"
                                 ? "success"
                                 : cv.status === "published" || cv.status === "en_route" || cv.status === "in_progress"
-                                ? "default"
-                                : cv.status === "unscheduled"
-                                ? "destructive"
-                                : "secondary"
+                                  ? "default"
+                                  : cv.status === "unscheduled"
+                                    ? "destructive"
+                                    : "secondary"
                             }
                             className="capitalize text-[10px]"
                           >
@@ -537,8 +537,8 @@ export default function CleaningPage() {
                             {rule && rule.allowed_weekdays ? (
                               <div className="font-medium text-muted-foreground">
                                 {rule.allowed_weekdays.length === 7 ? "Any day" :
-                                 rule.allowed_weekdays.length === 5 && rule.allowed_weekdays.every((d: number, i: number) => d === i + 1) ? "Mon - Fri" :
-                                 `${rule.allowed_weekdays.length} days selected`}
+                                  rule.allowed_weekdays.length === 5 && rule.allowed_weekdays.every((d: number, i: number) => d === i + 1) ? "Mon - Fri" :
+                                    `${rule.allowed_weekdays.length} days selected`}
                               </div>
                             ) : (
                               <span className="text-muted-foreground italic">Not set</span>
@@ -589,7 +589,7 @@ export default function CleaningPage() {
                                   setWoForm({
                                     team_id: "",
                                     scheduled_date: site.next_cleaning_date || new Date().toISOString().split("T")[0],
-                                    notes: `Solar panel module cleaning work order for ${site.name}`,
+                                    notes: `Solar panel module cleaning service request for ${site.name}`,
                                   });
                                   setOpenWorkOrderDialog(true);
                                 }}

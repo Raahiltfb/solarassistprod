@@ -91,22 +91,22 @@ export function NeedsAttentionQueue({
     // OEM Polling / Sync Failure alert
     ...(latestSyncRun?.status === "failed"
       ? [
-          {
-            id: "sync-failure",
-            type: "sync_failure" as const,
-            siteName: "OEM API Daemon",
-            siteId: "system",
-            title: "OEM Telemetry Synchronization Failure",
-            subtitle: `Polling failed: ${latestSyncRun.error_message || "API connection timeout"}`,
-            actionExplanation: "TELEMETRY POLLING FAILURE — OEM API connection timeout. Automatic daemon retry active.",
-            severity: "critical" as const,
-            timestamp: latestSyncRun.completed_at || new Date().toISOString(),
-            actionUrl: "/alerts",
-            actionLabel: "Inspect Sync Logs",
-            badgeText: "OEM Poll Failed",
-            badgeVariant: "destructive" as const,
-          },
-        ]
+        {
+          id: "sync-failure",
+          type: "sync_failure" as const,
+          siteName: "OEM API Daemon",
+          siteId: "system",
+          title: "OEM Telemetry Synchronization Failure",
+          subtitle: `Polling failed: ${latestSyncRun.error_message || "API connection timeout"}`,
+          actionExplanation: "TELEMETRY POLLING FAILURE — OEM API connection timeout. Automatic daemon retry active.",
+          severity: "critical" as const,
+          timestamp: latestSyncRun.completed_at || new Date().toISOString(),
+          actionUrl: "/alerts",
+          actionLabel: "Inspect Sync Logs",
+          badgeText: "OEM Poll Failed",
+          badgeVariant: "destructive" as const,
+        },
+      ]
       : []),
 
     // Offline & Partially Disconnected Sites/Inverters
@@ -293,33 +293,29 @@ export function NeedsAttentionQueue({
             <div className="flex items-center gap-1.5 bg-muted/60 p-1 rounded-lg text-xs font-medium">
               <button
                 onClick={() => setFilter("all")}
-                className={`px-3 py-1.5 rounded-md transition-colors ${
-                  filter === "all" ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"
-                }`}
+                className={`px-3 py-1.5 rounded-md transition-colors ${filter === "all" ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"
+                  }`}
               >
                 All ({incidents.length})
               </button>
               <button
                 onClick={() => setFilter("p1")}
-                className={`px-3 py-1.5 rounded-md transition-colors ${
-                  filter === "p1" ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"
-                }`}
+                className={`px-3 py-1.5 rounded-md transition-colors ${filter === "p1" ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"
+                  }`}
               >
                 Critical ({criticalCount})
               </button>
               <button
                 onClick={() => setFilter("unassigned")}
-                className={`px-3 py-1.5 rounded-md transition-colors ${
-                  filter === "unassigned" ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"
-                }`}
+                className={`px-3 py-1.5 rounded-md transition-colors ${filter === "unassigned" ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"
+                  }`}
               >
                 Unassigned ({unassignedWorkOrders.length})
               </button>
               <button
                 onClick={() => setFilter("offline")}
-                className={`px-3 py-1.5 rounded-md transition-colors ${
-                  filter === "offline" ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"
-                }`}
+                className={`px-3 py-1.5 rounded-md transition-colors ${filter === "offline" ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"
+                  }`}
               >
                 Offline ({offlineSites.length})
               </button>
@@ -336,7 +332,7 @@ export function NeedsAttentionQueue({
             </div>
             <h3 className="font-bold text-foreground">Zero Critical Operational Issues</h3>
             <p className="text-xs text-muted-foreground mt-1 max-w-md">
-              All fleet sites are communicating normally with no unhandled alerts, unassigned jobs, or overdue work orders.
+              All fleet sites are communicating normally with no unhandled alerts, unassigned jobs, or overdue service requests.
             </p>
           </div>
         ) : (
@@ -348,13 +344,12 @@ export function NeedsAttentionQueue({
               >
                 <div className="flex items-start gap-3.5">
                   <div
-                    className={`mt-0.5 h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${
-                      item.severity === "critical"
+                    className={`mt-0.5 h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${item.severity === "critical"
                         ? "bg-destructive/15 text-destructive"
                         : item.severity === "high"
-                        ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-                        : "bg-primary/10 text-primary"
-                    }`}
+                          ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                          : "bg-primary/10 text-primary"
+                      }`}
                   >
                     {item.type === "site_offline" ? (
                       <AlertCircle className="h-5 w-5" />

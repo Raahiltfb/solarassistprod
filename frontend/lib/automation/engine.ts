@@ -250,7 +250,7 @@ export async function processAlertAutomation(
         confidence_pct: decision.confidence_pct,
         reasoning: decision.reasoning,
         action: isNewTicket ? "created" : "reused",
-        reason: `Failed to create work order: ${woErr?.message}`,
+        reason: `Failed to create service request: ${woErr?.message}`,
       };
     }
 

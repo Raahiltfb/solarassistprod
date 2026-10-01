@@ -109,7 +109,7 @@ export function TodaysOperationsTracker({
             <UserCheck className="h-8 w-8 text-muted-foreground mb-2" />
             <h4 className="font-semibold text-sm text-foreground">No Routes Dispatched Today</h4>
             <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-              All 8 technician test accounts are available. Create work orders and dispatch daily optimized routes.
+              All 8 technician test accounts are available. Create service requests and dispatch daily optimized routes.
             </p>
             <Button asChild size="sm" variant="outline" className="mt-3 text-xs">
               <Link href="/operations/routes">Create Today's Routes</Link>
@@ -122,7 +122,7 @@ export function TodaysOperationsTracker({
               const baseLoc = route.profiles?.base_address || "Mumbai Metropolitan Region";
               const stops = route.route_stops || [];
               const totalStops = stops.length;
-              
+
               const completedStops = stops.filter(
                 (s) => s.work_orders?.status === "completed"
               ).length;
