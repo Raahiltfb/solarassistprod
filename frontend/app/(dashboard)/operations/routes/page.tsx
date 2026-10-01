@@ -430,11 +430,25 @@ function RoutePlannerContent() {
           </div>
 
           {dailyRoute && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Route Status:</span>
-              <Badge variant="outline" className="uppercase font-mono text-xs px-2.5 py-1">
-                {dailyRoute.status}
-              </Badge>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Route Status:</span>
+                <Badge variant="outline" className="uppercase font-mono text-xs px-2.5 py-1">
+                  {dailyRoute.status}
+                </Badge>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {totalDayMins <= 540 ? (
+                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs px-2.5 py-1 flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Shift Feasible ({Math.floor(totalDayMins / 60)}h {totalDayMins % 60}m)
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 text-xs px-2.5 py-1 flex items-center gap-1 font-semibold">
+                    <AlertCircle className="h-3.5 w-3.5 text-amber-600" /> Exceeds Shift Capacity ({Math.floor(totalDayMins / 60)}h {totalDayMins % 60}m)
+                  </Badge>
+                )}
+              </div>
             </div>
           )}
         </CardContent>

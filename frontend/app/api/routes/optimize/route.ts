@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { OSRMProvider, LocationPoint } from "@/lib/routing/provider";
+import { CompositeRoutingProvider, LocationPoint } from "@/lib/routing/provider";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
@@ -71,6 +73,16 @@ export async function POST(req: Request) {
     const hasTechBase =
       Boolean(techProfile?.base_latitude) && Boolean(techProfile?.base_longitude);
 
+    // Group work orders by physical location to preserve Phase 2 location batching
+    const locationGroupsMap = new Map<string, typeof workOrders>();
+    workOrders.forEach((wo) => {
+      const locKey = wo.sites?.location || `${wo.sites?.latitude},${wo.sites?.longitude}` || wo.site_id;
+      const existing = locationGroupsMap.get(locKey) || [];
+      existing.push(wo);
+      locationGroupsMap.set(locKey, existing);
+    });
+
+    // Create location points representing distinct physical locations
     const locations: LocationPoint[] = [];
 
     if (hasTechBase && techProfile?.base_latitude && techProfile?.base_longitude) {
@@ -78,21 +90,27 @@ export async function POST(req: Request) {
         id: "START_BASE",
         lat: techProfile.base_latitude,
         lng: techProfile.base_longitude,
+        locationGroup: "START_BASE",
       });
     }
 
-    workOrders.forEach((wo) => {
-      if (wo.sites?.latitude && wo.sites?.longitude) {
+    const groupKeys = Array.from(locationGroupsMap.keys());
+    groupKeys.forEach((key) => {
+      const groupWos = locationGroupsMap.get(key)!;
+      const sampleSite = groupWos[0]?.sites;
+      if (sampleSite?.latitude && sampleSite?.longitude) {
         locations.push({
-          id: wo.id,
-          lat: Number(wo.sites.latitude),
-          lng: Number(wo.sites.longitude),
+          id: key,
+          lat: Number(sampleSite.latitude),
+          lng: Number(sampleSite.longitude),
+          locationGroup: key,
         });
       }
     });
 
     let isRoadRouting = false;
-    let orderedWorkOrders = [...workOrders];
+    let providerName = "Default";
+    let orderedWorkOrders: typeof workOrders = [];
     let stopMetrics: Array<{
       travel_time_mins: number;
       distance_km: number;
@@ -100,22 +118,24 @@ export async function POST(req: Request) {
     }> = [];
     let totalTravelMins = 0;
     let totalDistanceKm = 0;
+    let totalWorkMins = 0;
 
-    // Run OSRM Optimization if Technician has Base Location AND sites have coordinates
-    if (hasTechBase && locations.length >= 2) {
-      const osrm = new OSRMProvider();
-      const matrixRes = await osrm.getMatrix(locations);
+    // Run Composite Routing (OSRM with automatic Haversine Road Factor fallback)
+    if (locations.length >= 2) {
+      const routingProvider = new CompositeRoutingProvider();
+      const matrixRes = await routingProvider.getMatrix(locations);
+      isRoadRouting = matrixRes.isRoadRouting;
+      providerName = matrixRes.providerName;
 
-      if (matrixRes.isRoadRouting && matrixRes.durationsMins.length > 0) {
-        isRoadRouting = true;
+      if (matrixRes.durationsMins.length > 0) {
         const n = locations.length;
         const visited = new Array(n).fill(false);
-        visited[0] = true; // Start at base
+        visited[0] = true; // Start at technician base
 
         const sequenceIndices: number[] = [0];
         let current = 0;
 
-        // Nearest Neighbor TSP solver
+        // Nearest Neighbor TSP solver over physical location nodes
         for (let step = 1; step < n; step++) {
           let nearest = -1;
           let minTime = Infinity;
@@ -137,48 +157,58 @@ export async function POST(req: Request) {
           }
         }
 
-        // Reorder work orders according to TSP sequence
+        // Expand TSP sequence back into work orders preserving physical location batching
         orderedWorkOrders = [];
+        const locHopMetrics: Array<{ travelMins: number; distKm: number }> = [];
+
         for (let k = 1; k < sequenceIndices.length; k++) {
-          const locIdx = sequenceIndices[k];
-          const woId = locations[locIdx].id;
-          const matchedWO = workOrders.find((w) => w.id === woId);
-          if (matchedWO) {
-            orderedWorkOrders.push(matchedWO);
-          }
+          const prevIdx = sequenceIndices[k - 1];
+          const currIdx = sequenceIndices[k];
+
+          const hopTimeMins = matrixRes.durationsMins[prevIdx][currIdx] || 0;
+          const hopDistKm = matrixRes.distancesKm[prevIdx][currIdx] || 0;
+
+          const groupKey = locations[currIdx].locationGroup!;
+          const groupWos = locationGroupsMap.get(groupKey) || [];
+
+          groupWos.forEach((wo, subIdx) => {
+            orderedWorkOrders.push(wo);
+            locHopMetrics.push({
+              travelMins: subIdx === 0 ? hopTimeMins : 0, // Travel time applies when moving between physical locations
+              distKm: subIdx === 0 ? hopDistKm : 0,
+            });
+          });
         }
 
-        // Calculate arrival times & hop metrics starting from start_time (e.g. 08:00)
+        // Calculate arrival ETAs starting from start_time (default 08:00)
         let currentMinsFromMidnight = parseTimeToMins(start_time);
 
         for (let i = 0; i < orderedWorkOrders.length; i++) {
-          const prevLocIdx = sequenceIndices[i];
-          const currLocIdx = sequenceIndices[i + 1];
+          const { travelMins, distKm } = locHopMetrics[i];
 
-          const hopTimeMins = matrixRes.durationsMins[prevLocIdx][currLocIdx] || 0;
-          const hopDistKm = matrixRes.distancesKm[prevLocIdx][currLocIdx] || 0;
-
-          currentMinsFromMidnight += hopTimeMins;
+          currentMinsFromMidnight += travelMins;
           const arrTimeStr = minsToTimeString(currentMinsFromMidnight);
 
           const wo = orderedWorkOrders[i];
           const workMins = wo.estimated_duration_mins || 60;
           currentMinsFromMidnight += workMins;
 
-          totalTravelMins += hopTimeMins;
-          totalDistanceKm += hopDistKm;
+          totalTravelMins += travelMins;
+          totalDistanceKm += distKm;
+          totalWorkMins += workMins;
 
           stopMetrics.push({
-            travel_time_mins: hopTimeMins,
-            distance_km: hopDistKm,
+            travel_time_mins: travelMins,
+            distance_km: distKm,
             estimated_arrival: arrTimeStr,
           });
         }
       }
     }
 
-    // Fallback metrics if OSRM failed or base location missing
-    if (!isRoadRouting) {
+    // Fallback if matrix result is empty
+    if (stopMetrics.length === 0) {
+      orderedWorkOrders = [...workOrders];
       stopMetrics = orderedWorkOrders.map(() => ({
         travel_time_mins: 0,
         distance_km: 0,
@@ -186,7 +216,15 @@ export async function POST(req: Request) {
       }));
     }
 
-    // 4. Upsert `daily_routes` record
+    // 4. Feasibility Validation (Shift capacity e.g. 540 mins / 9h max work + travel)
+    const totalShiftMins = totalTravelMins + totalWorkMins;
+    const MAX_SHIFT_MINS = 540;
+    const isFeasible = totalShiftMins <= MAX_SHIFT_MINS;
+    const feasibilityNotes = isFeasible
+      ? "Within standard working shift limits"
+      : `Exceeds max shift limit by ${totalShiftMins - MAX_SHIFT_MINS} minutes (Total: ${Math.round(totalShiftMins / 60)}h ${totalShiftMins % 60}m)`;
+
+    // 5. Upsert `daily_routes` record
     const routePayload = {
       org_id,
       technician_id,
@@ -211,7 +249,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 5. Replace `route_stops`
+    // 6. Replace `route_stops`
     await sb.from("route_stops").delete().eq("route_id", routeRow.id);
 
     const stopsPayload = orderedWorkOrders.map((wo, index) => ({
@@ -240,7 +278,12 @@ export async function POST(req: Request) {
       route: routeRow,
       stops: insertedStops,
       isRoadRouting,
+      providerName,
       hasTechBase,
+      isFeasible,
+      feasibilityNotes,
+      totalWorkMins,
+      totalShiftMins,
     });
   } catch (err: any) {
     return NextResponse.json(
