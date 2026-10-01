@@ -33,20 +33,15 @@ export async function middleware(request: NextRequest) {
   }
 
   if (role === "technician") {
-    const isTechnicianRoute =
-      pathname.startsWith(
-        "/technician"
-      );
-  
-    const isBlocked =
-      technicianBlockedRoutes.some((route) =>
-        pathname.startsWith(route)
-      );
-  
+    if (pathname === "/dashboard" || pathname === "/" || pathname === "/technician") {
+      return NextResponse.redirect(new URL("/technician/route", request.url));
+    }
+
+    const isTechnicianRoute = pathname.startsWith("/technician");
+    const isBlocked = technicianBlockedRoutes.some((route) => pathname.startsWith(route));
+
     if (isBlocked && !isTechnicianRoute) {
-      return NextResponse.redirect(
-        new URL("/dashboard", request.url)
-      );
+      return NextResponse.redirect(new URL("/technician/route", request.url));
     }
   }
 

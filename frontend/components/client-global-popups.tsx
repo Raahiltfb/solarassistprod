@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -10,6 +11,7 @@ import { formatDateTime } from "@/lib/utils";
 import { CleaningEvidenceLinks } from "@/components/cleaning-evidence-links";
 
 export function ClientGlobalPopups({ events }: { events: any[] }) {
+  const router = useRouter();
   const sb = createClient();
   const [pendingEvents, setPendingEvents] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -52,12 +54,7 @@ export function ClientGlobalPopups({ events }: { events: any[] }) {
       // Remove current acknowledged event from pending list immediately so popup disappears
       const nextPending = pendingEvents.filter((_, idx) => idx !== currentIndex);
       setPendingEvents(nextPending);
-
-      if (nextPending.length === 0) {
-        setTimeout(() => {
-          window.location.reload();
-        }, 200);
-      }
+      router.refresh();
     } catch (e: any) {
       console.error("Acknowledge error:", e);
       toast.error(e.message || "Failed to acknowledge");

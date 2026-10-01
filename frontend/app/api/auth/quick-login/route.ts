@@ -98,7 +98,7 @@ export async function POST(req: Request) {
     if (role === "client") {
       redirectUrl = "/client";
     } else if (role === "technician") {
-      redirectUrl = "/technician";
+      redirectUrl = "/technician/route";
     }
 
     return NextResponse.json({

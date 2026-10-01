@@ -1,18 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 
 interface Props {
   logId: string;
 }
 
 export function ClientAcknowledgeButton({ logId }: Props) {
+  const router = useRouter();
   const [acknowledging, setAcknowledging] = useState(false);
-  const sb = createClient();
 
   async function handleAcknowledgeCleaning() {
     setAcknowledging(true);
@@ -29,7 +29,7 @@ export function ClientAcknowledgeButton({ logId }: Props) {
       }
       
       toast.success("Cleaning acknowledged. Thank you!");
-      window.location.reload();
+      router.refresh();
     } catch (err: any) {
       toast.error(err.message || "Failed to acknowledge");
     } finally {

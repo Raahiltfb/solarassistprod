@@ -23,9 +23,8 @@ import {
   Wifi,
   WifiOff,
   RefreshCw,
-  Crosshair,
-  AlertTriangle,
   Play,
+  UserCheck,
 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import type {
@@ -266,56 +265,13 @@ function TechnicianRouteContent() {
     }
   }
 
-  // Action 2: Trigger GPS Check-In
-  function initiateGpsCheckIn(stop: any) {
-    setActiveCheckInStop(stop);
-    setGpsLoading(true);
-
-    if (!navigator.geolocation) {
-      toast.error("Geolocation is not supported by your browser");
-      setGpsLoading(false);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const userLat = pos.coords.latitude;
-        const userLng = pos.coords.longitude;
-        setUserLocation({ lat: userLat, lng: userLng });
-
-        const site = stop.work_orders?.sites;
-        if (site && site.latitude && site.longitude) {
-          const distKm = haversineDistanceKm(userLat, userLng, site.latitude, site.longitude);
-          setGpsDistanceKm(Math.round(distKm * 10) / 10);
-
-          if (distKm > 1.0) {
-            // Distance > 1km: prompt warning modal
-            setGpsWarningModal(true);
-            setGpsLoading(false);
-            return;
-          }
-        }
-        // Distance <= 1km: Proceed with check-in directly
-        executeCheckIn(stop, userLat, userLng, null);
-      },
-      (err) => {
-        console.warn("GPS Position acquisition error:", err.message);
-        toast.error("Could not obtain exact GPS coordinates. Using site default location.");
-        const fallbackLat = stop.work_orders?.sites?.latitude || 19.076;
-        const fallbackLng = stop.work_orders?.sites?.longitude || 72.877;
-        executeCheckIn(stop, fallbackLat, fallbackLng, "GPS location fallback");
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-  }
-
-  async function executeCheckIn(stop: any, lat: number, lng: number, notes: string | null) {
+  // Action 2: Check-In / Start Work
+  async function handleCheckIn(stop: any) {
     const wo = stop.work_orders;
     if (!wo) return;
 
     const checkInIso = new Date().toISOString();
 
-    // Update local UI immediately
     setStops((prevStops) =>
       prevStops.map((s) =>
         s.id === stop.id
@@ -325,30 +281,21 @@ function TechnicianRouteContent() {
                 ...s.work_orders,
                 status: "in_progress",
                 check_in_at: checkInIso,
-                check_in_lat: lat,
-                check_in_lng: lng,
               },
             }
           : s
       )
     );
 
-    setGpsWarningModal(false);
-    setGpsLoading(false);
-    setActiveCheckInStop(null);
-    setOverrideNotes("");
-
     if (!isOnline) {
-      enqueueOfflineAction("gps_check_in", {
+      enqueueOfflineAction("status_change", {
         work_order_id: wo.id,
         site_id: wo.site_id,
-        lat,
-        lng,
+        status: "in_progress",
         timestamp: checkInIso,
-        override_notes: notes,
       });
       setOfflineQueue(getOfflineQueue());
-      toast.warning("Checked in offline. GPS coordinates queued for sync!");
+      toast.warning("Checked in offline. Status update queued for sync!");
       return;
     }
 
@@ -358,8 +305,6 @@ function TechnicianRouteContent() {
         .update({
           status: "in_progress",
           check_in_at: checkInIso,
-          check_in_lat: lat,
-          check_in_lng: lng,
           updated_at: checkInIso,
         })
         .eq("id", wo.id);
@@ -378,16 +323,14 @@ function TechnicianRouteContent() {
 
       toast.success(`Checked in at ${wo.sites?.name || "site"}! Work in progress.`);
     } catch (err: any) {
-      enqueueOfflineAction("gps_check_in", {
+      enqueueOfflineAction("status_change", {
         work_order_id: wo.id,
         site_id: wo.site_id,
-        lat,
-        lng,
+        status: "in_progress",
         timestamp: checkInIso,
-        override_notes: notes,
       });
       setOfflineQueue(getOfflineQueue());
-      toast.info("GPS check-in saved to offline queue.");
+      toast.info("Check-in saved to offline queue.");
     }
   }
 
@@ -417,11 +360,10 @@ function TechnicianRouteContent() {
           <div className="flex items-center gap-2">
             <Badge
               variant="outline"
-              className={`text-xs px-2.5 py-1 flex items-center gap-1.5 ${
-                isOnline
+              className={`text-xs px-2.5 py-1 flex items-center gap-1.5 ${isOnline
                   ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300"
                   : "bg-amber-100 text-amber-800 border-amber-400 font-bold dark:bg-amber-950 dark:text-amber-300"
-              }`}
+                }`}
             >
               {isOnline ? (
                 <>
@@ -484,11 +426,11 @@ function TechnicianRouteContent() {
           <Navigation className="h-10 w-10 text-muted-foreground mx-auto" />
           <h2 className="text-base font-semibold">No Scheduled Tasks for Today</h2>
           <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-            You currently have no active work orders or assigned cleaning stops for today.
+            You currently have no active service requests or assigned cleaning stops for today.
           </p>
           <Link href="/service-requests" className="block pt-2">
             <Button variant="outline" size="sm">
-              View All Work Orders
+              View All Service Requests
             </Button>
           </Link>
         </Card>
@@ -504,30 +446,28 @@ function TechnicianRouteContent() {
             return (
               <Card
                 key={stop.id}
-                className={`transition shadow-sm overflow-hidden ${
-                  isInProgress
+                className={`transition shadow-sm overflow-hidden ${isInProgress
                     ? "border-amber-400 bg-amber-50/50 dark:bg-amber-950/20 ring-2 ring-amber-400"
                     : isEnRoute
-                    ? "border-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20 ring-1 ring-indigo-400"
-                    : isDone
-                    ? "bg-muted/40 opacity-90 border-emerald-500/30"
-                    : "hover:border-primary/50"
-                }`}
+                      ? "border-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20 ring-1 ring-indigo-400"
+                      : isDone
+                        ? "bg-muted/40 opacity-90 border-emerald-500/30"
+                        : "hover:border-primary/50"
+                  }`}
               >
                 <CardContent className="p-4 space-y-3">
                   {/* Top Bar: Sequence Number, Work Order Type, Status */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3">
                       <span
-                        className={`h-9 w-9 rounded-xl flex items-center justify-center font-mono font-bold text-sm shadow-sm ${
-                          isDone
+                        className={`h-9 w-9 rounded-xl flex items-center justify-center font-mono font-bold text-sm shadow-sm ${isDone
                             ? "bg-emerald-600 text-white"
                             : isInProgress
-                            ? "bg-amber-500 text-white animate-pulse"
-                            : isEnRoute
-                            ? "bg-indigo-600 text-white"
-                            : "bg-primary/10 text-primary border border-primary/20"
-                        }`}
+                              ? "bg-amber-500 text-white animate-pulse"
+                              : isEnRoute
+                                ? "bg-indigo-600 text-white"
+                                : "bg-primary/10 text-primary border border-primary/20"
+                          }`}
                       >
                         {stop.sequence_order || index + 1}
                       </span>
@@ -583,15 +523,14 @@ function TechnicianRouteContent() {
                       </Button>
                     )}
 
-                    {/* State 2: En Route -> GPS Check In */}
+                    {/* State 2: En Route -> Check In / Start Work */}
                     {isEnRoute && (
                       <Button
-                        onClick={() => initiateGpsCheckIn(stop)}
-                        disabled={gpsLoading && activeCheckInStop?.id === stop.id}
+                        onClick={() => handleCheckIn(stop)}
                         className="w-full gap-2 font-semibold h-10 bg-amber-600 hover:bg-amber-700 text-white shadow-sm"
                       >
-                        <Crosshair className="h-4 w-4 animate-spin-slow" />
-                        <span>{gpsLoading && activeCheckInStop?.id === stop.id ? "Locating GPS..." : "GPS Check In at Site"}</span>
+                        <UserCheck className="h-4 w-4" />
+                        <span>Check In / Start Work</span>
                       </Button>
                     )}
 
@@ -630,57 +569,6 @@ function TechnicianRouteContent() {
           })}
         </div>
       )}
-
-      {/* GPS Distance Warning Modal */}
-      <Dialog open={gpsWarningModal} onOpenChange={setGpsWarningModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-amber-600">
-              <AlertTriangle className="h-5 w-5" /> GPS Location Warning
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-3 py-2 text-sm">
-            <p className="text-foreground">
-              You are currently <strong>{gpsDistanceKm} km</strong> away from{" "}
-              <strong>{activeCheckInStop?.work_orders?.sites?.name || "the site"}</strong>.
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Standard check-in requires being within 1.0 km of the solar installation. If you are on site, please provide a brief reason to override.
-            </p>
-
-            <div className="space-y-1 pt-2">
-              <label className="text-xs font-semibold text-muted-foreground block">
-                Override Reason / Notes (Optional)
-              </label>
-              <Input
-                placeholder="e.g. Substation gate check-in / Bad GPS reception"
-                value={overrideNotes}
-                onChange={(e) => setOverrideNotes(e.target.value)}
-                className="h-9 text-xs"
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setGpsWarningModal(false)}>
-              Cancel
-            </Button>
-
-            <Button
-              size="sm"
-              className="bg-amber-600 hover:bg-amber-700 text-white gap-1"
-              onClick={() => {
-                if (activeCheckInStop && userLocation) {
-                  executeCheckIn(activeCheckInStop, userLocation.lat, userLocation.lng, overrideNotes || "Distance override");
-                }
-              }}
-            >
-              Confirm Check-In Anyway
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

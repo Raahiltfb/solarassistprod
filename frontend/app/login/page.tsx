@@ -125,7 +125,7 @@ export default function LoginPage() {
 
           <div className="space-y-6 max-w-md">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-              <Sparkles className="h-3.5 w-3.5" /> Passwordless One-Click Demo Mode Active
+
             </div>
 
             <h1 className="text-4xl xl:text-5xl font-display font-semibold leading-tight">
@@ -166,14 +166,14 @@ export default function LoginPage() {
       {/* Right Login & Persona Selection Panel */}
       <div className="relative flex items-center justify-center p-6 lg:p-12 overflow-y-auto">
         <div className="w-full max-w-xl space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-2xl lg:text-3xl font-display font-bold text-foreground">Sign In to SolarAssist</h2>
               <p className="text-xs text-muted-foreground mt-1">
                 Select a user persona below or enter an email for instant passwordless sign in.
               </p>
             </div>
-            <img src="/logo-full.png" alt="Solar Assist Logo" className="h-12 w-12 object-contain lg:hidden" />
+            <img src="/logo-full.png" alt="Solar Assist Logo" className="h-10 w-auto object-contain shrink-0" />
           </div>
 
           {/* Persona Click-to-Login Cards */}

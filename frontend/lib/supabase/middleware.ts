@@ -49,6 +49,12 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
     if (user && (pathname === "/login" || pathname === "/")) {
+      const role = request.cookies.get("user-role")?.value;
+      if (role === "client") {
+        return NextResponse.redirect(new URL("/client", request.url));
+      } else if (role === "technician") {
+        return NextResponse.redirect(new URL("/technician/route", request.url));
+      }
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   } catch (err) {
