@@ -335,7 +335,7 @@ export function PlannerMatrix({
                 {teams.map((team) => (
                   <tr key={team.id} className="hover:bg-muted/10 transition-colors">
                     {/* Sticky Team Header Column */}
-                    <td className="sticky left-0 z-10 bg-card py-3 px-4 font-semibold border-r border-b space-y-1 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                    <td className="sticky left-0 z-20 bg-card py-3 px-4 font-semibold border-r border-b space-y-1 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                       <div className="flex items-center gap-2">
                         <div
                           className="h-3 w-3 rounded-full shrink-0"
