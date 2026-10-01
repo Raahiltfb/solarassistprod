@@ -26,6 +26,10 @@
     "@radix-ui/react-tooltip": "^1.1.4",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.45.6",
+    "@types/node": "^22.9.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "autoprefixer": "^10.4.20",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -33,6 +37,7 @@
     "next": "15.5.26",
     "next-pwa": "^5.6.0",
     "next-themes": "^0.4.3",
+    "postcss": "^8.4.49",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.53.2",
@@ -40,20 +45,15 @@
     "resend": "^4.0.1",
     "sonner": "^1.7.0",
     "tailwind-merge": "^2.5.4",
+    "tailwindcss": "^3.4.15",
     "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.6.3",
     "zod": "^3.23.8",
     "zustand": "^5.0.1"
   },
   "devDependencies": {
-    "@types/node": "^22.9.0",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "autoprefixer": "^10.4.20",
     "eslint": "^9.15.0",
     "eslint-config-next": "15.5.26",
-    "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.15",
-    "tsx": "^4.19.2",
-    "typescript": "^5.6.3"
+    "tsx": "^4.19.2"
   }
 }
