@@ -6,8 +6,5 @@
     "build": "cd frontend && npm install && npm run build",
     "dev": "cd frontend && npm run dev",
     "start": "cd frontend && npm run start"
-  },
-  "dependencies": {
-    "next": "^15.1.7"
   }
 }
