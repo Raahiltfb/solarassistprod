@@ -139,7 +139,7 @@ export function sanitizeServiceEvents(
       const photos: string[] = [];
       if (wo.tickets?.before_photo_url) photos.push(wo.tickets.before_photo_url);
       if (wo.tickets?.after_photo_url) photos.push(wo.tickets.after_photo_url);
-      
+
       events.push({
         id: `wo-${wo.id}`,
         type: "technician_visit",
@@ -152,6 +152,14 @@ export function sanitizeServiceEvents(
       });
     } else if (wo.status !== "cancelled") {
       const isCleaning = wo.type === "cleaning";
+
+      // 24-Hour Notification Eligibility Rule:
+      // Client only receives active acknowledgement prompt when scheduled cleaning is within 24 hours
+      const nowTime = Date.now();
+      const scheduledTime = wo.scheduled_date ? new Date(wo.scheduled_date).getTime() : nowTime;
+      const hoursUntilScheduled = (scheduledTime - nowTime) / (1000 * 60 * 60);
+      const isEligibleForPrompt = isCleaning && hoursUntilScheduled <= 24 && hoursUntilScheduled >= -24;
+
       events.push({
         id: `wo-active-${wo.id}`,
         type: "technician_visit",
@@ -159,10 +167,10 @@ export function sanitizeServiceEvents(
         description: isCleaning
           ? `SolarAssist has scheduled a routine solar panel cleaning for ${siteName}.`
           : `SolarAssist automated O&M system has dispatched an engineer to ${siteName}. (Job #${wo.id.slice(0, 8)})`,
-        timestamp: wo.created_at,
-        actionable: isCleaning ? "cleaning_schedule_ack" : undefined,
-        actionableId: isCleaning ? wo.id : undefined,
-        actionableStatus: isCleaning ? (wo.client_acknowledged_at ? "completed" : "pending") : undefined,
+        timestamp: wo.scheduled_date || wo.created_at,
+        actionable: isEligibleForPrompt ? "cleaning_schedule_ack" : undefined,
+        actionableId: isEligibleForPrompt ? wo.id : undefined,
+        actionableStatus: isEligibleForPrompt ? (wo.client_acknowledged_at ? "completed" : "pending") : undefined,
         actionableContext: isCleaning ? {
           scheduled_date: wo.scheduled_date
         } : undefined
@@ -200,8 +208,19 @@ export function sanitizeServiceEvents(
     });
   }
 
-  // Sort newest first
-  return events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  // Sort upcoming events chronologically ascending (nearest upcoming first), past events descending
+  return events.sort((a, b) => {
+    const now = Date.now();
+    const tA = new Date(a.timestamp).getTime();
+    const tB = new Date(b.timestamp).getTime();
+    const isFutureA = tA > now;
+    const isFutureB = tB > now;
+
+    if (isFutureA && isFutureB) return tA - tB; // Nearest upcoming first
+    if (isFutureA) return -1;
+    if (isFutureB) return 1;
+    return tB - tA; // Past events newest first
+  });
 }
 
 /**

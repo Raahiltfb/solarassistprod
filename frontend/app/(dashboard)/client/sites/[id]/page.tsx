@@ -124,16 +124,37 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
     latestTelemetryTimestampMap,
   });
 
-  // Cleaning Information
+  // Source of Truth Hierarchy for Next Planned Service:
+  // 1. Canonical published scheduled cleaning visit for the site
+  // 2. If no future published visit exists, derive projected date from site last_cleaned_on + interval
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const { data: upcomingVisits } = await serviceClient
+    .from("cleaning_visits")
+    .select("scheduled_date")
+    .eq("site_id", site.id)
+    .gte("scheduled_date", todayStr)
+    .in("status", ["published", "scheduled", "planned", "approved"])
+    .order("scheduled_date", { ascending: true })
+    .limit(1);
+
+  const canonicalVisitDateStr = upcomingVisits && upcomingVisits.length > 0 ? upcomingVisits[0].scheduled_date : null;
+  const scheduledCleaningWo = workOrders.find(
+    (wo) => wo.type === "cleaning" && (wo.status === "scheduled" || wo.status === "published") && (wo.scheduled_date >= todayStr)
+  );
+
+  const earliestCanonicalDateStr = canonicalVisitDateStr || scheduledCleaningWo?.scheduled_date || null;
+
   const lastCleanedDate = site.last_cleaned_on ? new Date(site.last_cleaned_on) : null;
   const cycleDays = site.cleaning_cycle_days || 30;
-  const nextScheduledCleaningDate = lastCleanedDate 
+  const fallbackProjectedDate = lastCleanedDate
     ? new Date(lastCleanedDate.getTime() + cycleDays * 86400_000)
     : new Date(Date.now() + 7 * 86400_000);
 
-  // Find any scheduled cleaning work order
-  const scheduledCleaningWo = workOrders.find((wo) => wo.type === "cleaning" && wo.status === "scheduled");
-  const isCleaningScheduled = !!scheduledCleaningWo;
+  const nextScheduledCleaningDate = earliestCanonicalDateStr
+    ? new Date(earliestCanonicalDateStr)
+    : fallbackProjectedDate;
+
+  const isCleaningScheduled = Boolean(earliestCanonicalDateStr);
 
   async function acknowledgeCleaning(formData: FormData) {
     "use server";

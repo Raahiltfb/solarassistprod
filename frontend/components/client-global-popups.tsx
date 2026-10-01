@@ -20,11 +20,19 @@ export function ClientGlobalPopups({ events }: { events: any[] }) {
 
   useEffect(() => {
     setMounted(true);
-    // Filter out events that are pending
-    const unacknowledged = events.filter(e => 
-      e.actionableStatus === "pending" && 
-      (e.actionable === "cleaning_ack" || e.actionable === "cleaning_schedule_ack")
-    );
+    // Filter out events that are pending and within 24 hours of execution
+    const unacknowledged = events.filter((e) => {
+      if (e.actionableStatus !== "pending") return false;
+      if (e.actionable === "cleaning_ack") return true;
+      if (e.actionable === "cleaning_schedule_ack") {
+        const schDateStr = e.actionableContext?.scheduled_date || e.timestamp;
+        const schTime = new Date(schDateStr).getTime();
+        const nowTime = Date.now();
+        const diffHours = (schTime - nowTime) / (1000 * 60 * 60);
+        return diffHours <= 24 && diffHours >= -24;
+      }
+      return false;
+    });
     setPendingEvents(unacknowledged);
   }, [events]);
 

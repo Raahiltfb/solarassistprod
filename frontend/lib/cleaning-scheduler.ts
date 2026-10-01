@@ -249,12 +249,21 @@ export function validateAssignmentConstraint(
   targetDateStr: string,
   scheduledDateStr: string,
   teamDayWorkloadMins: number,
-  planningCapacityMins = 480
+  planningCapacityMins = 480,
+  siteMonthVisitsCount = 1
 ): { state: ConstraintSeverity; notes: string | null } {
   if (!rule || !rule.is_configured) {
     return {
       state: "blocking",
       notes: "BLOCKING: Site cleaning rules have not been configured.",
+    };
+  }
+
+  // 0. Hard Monthly Limit Check (Max 3 visits per calendar month)
+  if (siteMonthVisitsCount > 3) {
+    return {
+      state: "blocking",
+      notes: "BLOCKING: Site would exceed the hard maximum limit of 3 cleaning visits for this calendar month.",
     };
   }
 
@@ -485,6 +494,18 @@ export function generateMonthlyCleaningPlan({
 
         currentTarget.setDate(currentTarget.getDate() + activeInterval);
       }
+    }
+
+    // Interval-Based Hard Monthly Invariants:
+    // - 10-day sites: max 3 visits per month
+    // - 15-day sites: max 2 visits per month
+    // - 30-day sites: max 1 visit per month
+    // - Hard Cap: No site may ever exceed 3 visits per month
+    const configuredInterval = rule.normal_interval_days || 15;
+    const maxAllowedMonthlyVisits = configuredInterval >= 28 ? 1 : configuredInterval >= 14 ? 2 : 3;
+
+    if (siteTargetDates.length > maxAllowedMonthlyVisits) {
+      siteTargetDates.length = maxAllowedMonthlyVisits;
     }
 
     auditItems.push({

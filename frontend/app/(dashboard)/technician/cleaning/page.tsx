@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { toast } from "sonner";
-import { Camera, Image as ImageIcon, AlertTriangle, ArrowLeft } from "lucide-react";
+import { Camera, Image as ImageIcon, AlertTriangle, ArrowLeft, Calendar, Info, CheckCircle2 } from "lucide-react";
 
 import type { Site } from "@/lib/types";
 import { isValidStateTransition } from "@/lib/cleaning-domain";
@@ -59,6 +59,8 @@ function CleaningFormContent() {
   const [currentTime, setCurrentTime] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
 
+  const [targetWo, setTargetWo] = useState<any | null>(null);
+
   async function loadSites() {
     const { data } = await sb.from("sites").select("*");
 
@@ -73,6 +75,13 @@ function CleaningFormContent() {
     }
     if (queryWoId) {
       setOpen(true);
+      sb.from("work_orders")
+        .select("*, sites(*), technician_teams(*)")
+        .eq("id", queryWoId)
+        .single()
+        .then(({ data }) => {
+          if (data) setTargetWo(data);
+        });
     }
     const timer = setInterval(() => {
       setCurrentTime(new Date().toLocaleString());
@@ -338,13 +347,115 @@ function CleaningFormContent() {
         </DialogTrigger>
 
         <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              Submit Cleaning
-            </DialogTitle>
-          </DialogHeader>
+          {(() => {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const isFutureJob = targetWo?.scheduled_date && targetWo.scheduled_date > todayStr && targetWo?.status !== "completed";
+            const isCompletedJob = targetWo?.status === "completed";
 
-          <div className="space-y-4">
+            if (isFutureJob) {
+              return (
+                <>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-blue-600" /> Scheduled Service Detail
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-2">
+                    <div className="p-3.5 bg-blue-500/10 border border-blue-500/30 rounded-xl space-y-1.5 text-xs text-blue-800 dark:text-blue-300">
+                      <div className="font-semibold text-sm flex items-center gap-1.5">
+                        <Info className="h-4 w-4 text-blue-600" /> Future Scheduled Service
+                      </div>
+                      <p className="leading-relaxed">
+                        This cleaning service is scheduled for <strong className="text-foreground">{targetWo.scheduled_date}</strong>. The execution and completion form will open on the day of service.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2 text-xs border rounded-lg p-4 bg-card/50">
+                      <div className="flex justify-between py-1 border-b">
+                        <span className="text-muted-foreground font-medium">Site:</span>
+                        <span className="font-semibold text-foreground">{targetWo.sites?.name} ({targetWo.sites?.location || "Site"})</span>
+                      </div>
+                      <div className="flex justify-between py-1 border-b">
+                        <span className="text-muted-foreground font-medium">Scheduled Date:</span>
+                        <span className="font-mono font-bold text-foreground">{targetWo.scheduled_date}</span>
+                      </div>
+                      <div className="flex justify-between py-1 border-b">
+                        <span className="text-muted-foreground font-medium">Assigned Team:</span>
+                        <span className="font-semibold">{targetWo.technician_teams?.name || "Team Dispatched"}</span>
+                      </div>
+                      <div className="flex justify-between py-1 border-b">
+                        <span className="text-muted-foreground font-medium">Estimated Duration:</span>
+                        <span className="font-mono">{targetWo.estimated_duration_mins || 90} minutes</span>
+                      </div>
+                      <div className="flex justify-between py-1 border-b">
+                        <span className="text-muted-foreground font-medium">Service Type:</span>
+                        <span className="capitalize font-semibold text-emerald-600">{targetWo.type || "Cleaning"}</span>
+                      </div>
+                      <div className="pt-2">
+                        <span className="text-muted-foreground font-medium block mb-1">Service Instructions & Evidence Requirements:</span>
+                        <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-1">
+                          <li>1x Safety Gear Verification Photo</li>
+                          <li>1x Pre-Cleaning Panel Condition Photo</li>
+                          <li>1x Post-Cleaning Panel Condition Photo</li>
+                          <li>Record any damage observations or module issues immediately</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <DialogFooter>
+                      <Button onClick={() => setOpen(false)} variant="outline" className="w-full">
+                        Close Details
+                      </Button>
+                    </DialogFooter>
+                  </div>
+                </>
+              );
+            }
+
+            if (isCompletedJob) {
+              return (
+                <>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600" /> Completed Service Record
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-2">
+                    <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl space-y-1 text-xs text-emerald-800 dark:text-emerald-300">
+                      <div className="font-semibold text-sm">Service Successfully Completed</div>
+                      <p>Completed on {targetWo.completed_at ? new Date(targetWo.completed_at).toLocaleString() : targetWo.scheduled_date}.</p>
+                    </div>
+
+                    <div className="space-y-2 text-xs border rounded-lg p-4 bg-card/50">
+                      <div className="flex justify-between py-1 border-b">
+                        <span className="text-muted-foreground font-medium">Site:</span>
+                        <span className="font-semibold">{targetWo.sites?.name}</span>
+                      </div>
+                      <div className="flex justify-between py-1 border-b">
+                        <span className="text-muted-foreground font-medium">Completed Date:</span>
+                        <span className="font-mono">{targetWo.completed_at || targetWo.scheduled_date}</span>
+                      </div>
+                    </div>
+
+                    <DialogFooter>
+                      <Button onClick={() => setOpen(false)} variant="outline" className="w-full">
+                        Close Record
+                      </Button>
+                    </DialogFooter>
+                  </div>
+                </>
+              );
+            }
+
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle>
+                    Submit Cleaning
+                  </DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-4">
             {/* Auto set & uneditable Date & Time of Cleaning */}
             <div className="space-y-2">
               <Label>Date & Time of Cleaning</Label>
@@ -650,7 +761,7 @@ function CleaningFormContent() {
             </div>
           </div>
 
-          <DialogFooter className="flex flex-col gap-2 sm:flex-col">
+          <DialogFooter className="flex flex-col gap-2 sm:flex-col pt-4 border-t">
             <Button
               onClick={submit}
               disabled={!isFormValid || submitting}
@@ -664,7 +775,10 @@ function CleaningFormContent() {
               </p>
             )}
           </DialogFooter>
-        </DialogContent>
+        </>
+      );
+    })()}
+  </DialogContent>
       </Dialog>
     </div>
   );

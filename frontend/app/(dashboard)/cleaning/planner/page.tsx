@@ -35,6 +35,7 @@ import { CleaningVisit } from "@/lib/cleaning-domain";
 import { PlannerMatrix } from "@/components/cleaning/planner-matrix";
 import { SiteRuleDialog } from "@/components/cleaning/site-rule-dialog";
 import { BulkRuleDialog } from "@/components/cleaning/bulk-rule-dialog";
+import { ConflictsDialog } from "@/components/cleaning/conflicts-dialog";
 import { validateAssignmentConstraint } from "@/lib/cleaning-scheduler";
 
 export default function CleaningPlannerPage() {
@@ -52,6 +53,9 @@ export default function CleaningPlannerPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [publishing, setPublishing] = useState(false);
+
+  // Conflicts Dialog state
+  const [conflictsDialogOpen, setConflictsDialogOpen] = useState(false);
 
   // Results banner state after automatic planning
   const [planResultSummary, setPlanResultSummary] = useState<string | null>(null);
@@ -494,11 +498,16 @@ export default function CleaningPlannerPage() {
             </CardContent>
           </Card>
 
-          <Card className="border shadow-sm bg-card">
+          <Card
+            className="border shadow-sm bg-card cursor-pointer hover:border-amber-500/50 transition"
+            onClick={() => setConflictsDialogOpen(true)}
+          >
             <CardContent className="p-3 space-y-1">
               <span className="text-[10px] text-muted-foreground uppercase font-bold">Conflicts</span>
               <div className="text-xl font-bold font-mono text-amber-600">{conflictsCount}</div>
-              <span className="text-[10px] text-muted-foreground">Rules to review</span>
+              <span className="text-[10px] text-amber-600 underline font-medium flex items-center gap-1">
+                <ShieldAlert className="h-3 w-3 inline" /> Inspect ({conflictsCount})
+              </span>
             </CardContent>
           </Card>
         </div>
@@ -694,6 +703,7 @@ export default function CleaningPlannerPage() {
           month={month}
           teams={teams}
           sites={sites}
+          rules={rules}
           assignments={assignments}
           serviceRequests={serviceRequests}
           planningCapacityMins={plan?.planning_capacity_mins || 480}
@@ -703,6 +713,17 @@ export default function CleaningPlannerPage() {
           onAddManualAssignment={handleAddManualAssignment}
         />
       )}
+
+      {/* Actionable Conflicts Dialog */}
+      <ConflictsDialog
+        open={conflictsDialogOpen}
+        onOpenChange={setConflictsDialogOpen}
+        sites={sites}
+        rules={rules}
+        teams={teams}
+        assignments={assignments}
+        unconfiguredSites={unconfiguredSites}
+      />
 
       {/* Bulk Site Rule Dialog */}
       <BulkRuleDialog
