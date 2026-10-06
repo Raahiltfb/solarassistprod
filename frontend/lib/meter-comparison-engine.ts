@@ -1,3 +1,12 @@
+export interface MeterDiagnosticFinding {
+  finding: string;
+  severity: "low" | "medium" | "high" | "critical";
+  evidence: string;
+  recommended_action: string;
+  is_service_request_eligible: boolean;
+  sr_eligibility?: boolean;
+}
+
 export interface MeterComparisonResult {
   site_id: string;
   site_name: string;
@@ -7,28 +16,51 @@ export interface MeterComparisonResult {
   meter_export_kwh: number;
   loss_kwh: number;
   loss_pct: number;
-  status: "optimal" | "acceptable_loss" | "high_loss_warning" | "meter_discrepancy";
+  offline_inverters_count: number;
+  inverter_offline_count: number;
+  status: "optimal" | "acceptable_loss" | "high_loss_warning" | "meter_discrepancy" | "inverter_offline_affected";
   notes: string;
   recommended_action: string;
+  findings: MeterDiagnosticFinding[];
 }
 
 /**
  * Utility Meter vs Inverter Telemetry Energy Balance Engine:
  * Compares aggregated plant inverter telemetry generation against utility meter export readings to compute actual electrical transmission loss %.
+ * 
+ * Crucial Safeguard:
+ * Distinguishes inverter downtime / offline states from AC cable transmission loss and meter calibration drift.
  */
 export function calculateMeterComparison(
   siteId: string,
   siteName: string,
   periodStart: string,
   periodEnd: string,
-  inverterTelemetryRecords: any[],
-  meterReadings: any[]
+  inverters: any[] = [],
+  inverterTelemetryRecords: any[] = [],
+  meterReadings: any[] = []
 ): MeterComparisonResult {
+  const findings: MeterDiagnosticFinding[] = [];
+
+  // 0. Check Inverter Operational Availability
+  const offlineInverters = (inverters || []).filter((i) => i.status === "offline" || i.status === "fault");
+  const offlineCount = offlineInverters.length;
+
+  if (offlineCount > 0) {
+    const offlineNames = offlineInverters.map((i) => i.oem_device_id || i.serial_number).join(", ");
+    findings.push({
+      finding: `Inverter Downtime Active (${offlineCount} inverter(s) offline)`,
+      severity: "high",
+      evidence: `${offlineNames} currently offline or in fault state. Production loss is caused by inverter downtime.`,
+      recommended_action: `Dispatch technician to inspect grid AC breaker & inverter DC isolator for ${offlineNames}.`,
+      is_service_request_eligible: true,
+    });
+  }
+
   // 1. Calculate Inverter Telemetry Total Generation
   let invTotalKwh = 0;
 
   if (inverterTelemetryRecords && inverterTelemetryRecords.length > 0) {
-    // If telemetry has daily_generation_kwh, sum maximum daily gen per inverter
     const invDailyMap = new Map<string, number>();
     for (const tel of inverterTelemetryRecords) {
       const invId = tel.inverter_id;
@@ -65,28 +97,61 @@ export function calculateMeterComparison(
     ? Math.round(((invTotalKwh - meterExportKwh) / invTotalKwh) * 1000) / 10
     : 0;
 
-  let status: "optimal" | "acceptable_loss" | "high_loss_warning" | "meter_discrepancy" = "optimal";
+  let status: "optimal" | "acceptable_loss" | "high_loss_warning" | "meter_discrepancy" | "inverter_offline_affected" = "optimal";
   let notes = "";
-  let recommended_action = "";
 
-  if (lossPct < 0) {
+  if (offlineCount > 0 && invTotalKwh === 0) {
+    status = "inverter_offline_affected";
+    notes = `Plant inverters offline (${offlineNames(offlineInverters)}). Production loss is caused by inverter downtime, not cable loss.`;
+  } else if (lossPct < 0) {
     status = "meter_discrepancy";
     notes = `Utility export meter (${meterExportKwh.toFixed(1)} kWh) exceeds total inverter telemetry output (${invTotalKwh.toFixed(1)} kWh) by ${Math.abs(lossPct)}%.`;
-    recommendation: "Recalibrate utility meter or verify inverter CT sensor scaling factors.";
-    recommended_action = "Inspect CT polarity & recalibrate utility export meter.";
+    findings.push({
+      finding: "Negative Energy Balance / Meter Calibration Drift",
+      severity: "high",
+      evidence: `Utility export meter reading (${meterExportKwh.toFixed(1)} kWh) exceeds inverter telemetry generation (${invTotalKwh.toFixed(1)} kWh).`,
+      recommended_action: "Inspect CT ratio configuration & check Discom check meter calibration.",
+      is_service_request_eligible: true,
+    });
   } else if (lossPct <= 3.5) {
     status = "optimal";
-    notes = `Transmission loss of ${lossPct}% (${lossKwh.toFixed(1)} kWh) is within normal OEM operational tolerance (0% - 3.5%).`;
-    recommended_action = "No intervention required. Plant operating at optimal AC collection efficiency.";
+    notes = `Transmission loss of ${lossPct}% (${lossKwh.toFixed(1)} kWh) is within normal OEM AC collection efficiency tolerance (0% - 3.5%).`;
+    findings.push({
+      finding: "Optimal AC Transmission Balance",
+      severity: "low",
+      evidence: `Cable & transformer loss is ${lossPct}% (${lossKwh.toFixed(1)} kWh).`,
+      recommended_action: "No field intervention required. Plant operating at optimal AC collection efficiency.",
+      is_service_request_eligible: false,
+    });
   } else if (lossPct <= 6.0) {
     status = "acceptable_loss";
     notes = `Transmission loss of ${lossPct}% (${lossKwh.toFixed(1)} kWh) indicates elevated AC cable resistance or transformer core heating.`;
-    recommended_action = "Schedule thermal imaging of AC combiner boxes and step-up transformer during peak afternoon load.";
+    findings.push({
+      finding: "Elevated AC Cable Transmission Loss",
+      severity: "medium",
+      evidence: `AC collection loss is ${lossPct}% (${lossKwh.toFixed(1)} kWh).`,
+      recommended_action: "Schedule thermal imaging scan of AC combiner boxes and step-up transformer during peak afternoon load.",
+      is_service_request_eligible: false,
+    });
   } else {
     status = "high_loss_warning";
-    notes = `Critical AC transmission loss of ${lossPct}% (${lossKwh.toFixed(1)} kWh). Exceeds 6% safety threshold.`;
-    recommended_action = "Dispatch O&M Engineer immediately to audit AC cable insulation & check for unmetered auxiliary taps.";
+    notes = `Critical AC transmission loss of ${lossPct}% (${lossKwh.toFixed(1)} kWh). Exceeds 6% AC collection safety threshold.`;
+    findings.push({
+      finding: "Critical AC Transmission Loss (> 6%)",
+      severity: "critical",
+      evidence: `AC cable & step-up loss is ${lossPct}% (${lossKwh.toFixed(1)} kWh). Exceeds 6.0% threshold.`,
+      recommended_action: "Dispatch O&M Engineer immediately to audit AC cable insulation resistance & check for unmetered auxiliary taps.",
+      is_service_request_eligible: true,
+    });
   }
+
+  // Add sr_eligibility property to all findings
+  const enrichedFindings = findings.map((f) => ({
+    ...f,
+    sr_eligibility: f.is_service_request_eligible,
+  }));
+
+  const primaryAction = enrichedFindings.find((f) => f.is_service_request_eligible)?.recommended_action || notes;
 
   return {
     site_id: siteId,
@@ -97,8 +162,15 @@ export function calculateMeterComparison(
     meter_export_kwh: Math.round(meterExportKwh * 10) / 10,
     loss_kwh: Math.round(lossKwh * 10) / 10,
     loss_pct: lossPct,
+    offline_inverters_count: offlineCount,
+    inverter_offline_count: offlineCount,
     status,
     notes,
-    recommended_action,
+    recommended_action: primaryAction,
+    findings: enrichedFindings,
   };
+}
+
+function offlineNames(inverters: any[]): string {
+  return inverters.map((i) => i.oem_device_id || i.serial_number).join(", ");
 }

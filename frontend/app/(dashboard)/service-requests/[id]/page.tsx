@@ -205,7 +205,7 @@ export default function ServiceRequestDetailPage({
     }
   }
 
-  // 2. En Route -> Check In (GPS Capture) -> In Progress
+  // 2. En Route -> Check In -> In Progress
   async function handleCheckIn() {
     if (profile?.role === "technician" && workOrder.technician_id !== profile.id) {
       return toast.error("You can only update service requests assigned to you.");
@@ -214,14 +214,12 @@ export default function ServiceRequestDetailPage({
     setActionLoading(true);
     const checkInTime = new Date().toISOString();
 
-    const applyCheckIn = async (lat: number | null, lng: number | null, note?: string) => {
+    const applyCheckIn = async () => {
       const { error } = await sb
         .from("work_orders")
         .update({
           status: "in_progress",
           check_in_at: checkInTime,
-          check_in_lat: lat,
-          check_in_lng: lng,
           updated_at: checkInTime,
         })
         .eq("id", id);
@@ -232,31 +230,12 @@ export default function ServiceRequestDetailPage({
         return;
       }
 
-      if (note) {
-        toast.info(note);
-      }
       toast.success("Checked in at site — Service Request status set to In Progress");
       setActionLoading(false);
       fetchData();
     };
 
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          applyCheckIn(pos.coords.latitude, pos.coords.longitude);
-        },
-        (err) => {
-          applyCheckIn(
-            null,
-            null,
-            `GPS location unavailable (${err.message}). Check-in time recorded.`
-          );
-        },
-        { timeout: 10000, enableHighAccuracy: true }
-      );
-    } else {
-      applyCheckIn(null, null, "Geolocation API not supported by browser. Check-in time recorded.");
-    }
+    applyCheckIn();
   }
 
   // 3. Upload Evidence Photo
@@ -272,11 +251,14 @@ export default function ServiceRequestDetailPage({
 
       const { data } = sb.storage.from("solar-uploads").getPublicUrl(path);
       setEvidencePhoto(data.publicUrl);
-      toast.success("Evidence photo uploaded");
+      toast.success("Technical evidence photo uploaded successfully");
     } finally {
       setUploadingPhoto(false);
     }
   }
+
+  // State for typed evidence purpose
+  const [evidenceType, setEvidenceType] = useState<string>("after_service");
 
   // 4. Complete Service Request
   async function handleCompleteGeneralJob() {
@@ -284,18 +266,18 @@ export default function ServiceRequestDetailPage({
       return toast.error("You can only complete service requests assigned to you.");
     }
 
+    if (!completionNotes || completionNotes.trim() === "") {
+      return toast.error("Completion findings & technical notes are mandatory.");
+    }
+
     if (!evidencePhoto) {
-      return toast.error("An evidence photo is required to complete this service request. Please upload a photo.");
+      return toast.error("An evidence photo is required to complete this service request.");
     }
 
     setActionLoading(true);
     try {
       const completedTime = new Date().toISOString();
-      const updatedDescription = completionNotes
-        ? `${workOrder.description ? workOrder.description + "\n\n" : ""}Completion Notes: ${completionNotes}${
-            evidencePhoto ? `\nEvidence Photo: ${evidencePhoto}` : ""
-          }`
-        : workOrder.description;
+      const updatedDescription = `${workOrder.description ? workOrder.description + "\n\n" : ""}Completion Notes: ${completionNotes.trim()}\nEvidence Type: ${evidenceType}\nEvidence Photo: ${evidencePhoto}`;
 
       const { error } = await sb
         .from("work_orders")
@@ -315,7 +297,7 @@ export default function ServiceRequestDetailPage({
           .update({
             status: "in_progress",
             after_photo_url: evidencePhoto,
-            technician_remarks: completionNotes || "Service request completed by field technician.",
+            technician_remarks: `[Field Work Completed - Evidence: ${evidenceType}] ${completionNotes.trim()}`,
           })
           .eq("id", workOrder.ticket_id);
 
@@ -323,12 +305,12 @@ export default function ServiceRequestDetailPage({
           await sb.from("maintenance_remarks").insert({
             ticket_id: workOrder.ticket_id,
             author_id: profile.id,
-            body: `Service Request completed. Awaiting OEM telemetry clearance verification. Notes: ${completionNotes || "None"}`,
+            body: `Field Service Request completed. Underlying Ticket remains IN_PROGRESS pending automated telemetry recovery verification. Notes: ${completionNotes.trim()}`,
           });
         }
       }
 
-      toast.success("Service Request completed. Ticket set to Awaiting Telemetry Verification.");
+      toast.success("Service Request completed. Ticket set to Under Telemetry Verification.");
       setCompleteOpen(false);
       fetchData();
     } finally {
@@ -442,9 +424,16 @@ export default function ServiceRequestDetailPage({
                 <strong className="text-foreground">{workOrder.sites?.name}</strong> ({workOrder.sites?.location})
               </p>
             </div>
-            <Badge variant="outline" className={`text-sm px-3 py-1 font-semibold ${statusBadges[workOrder.status as WorkOrderStatus]}`}>
-              {workOrder.status.replace("_", " ")}
-            </Badge>
+            <div className="flex flex-col items-end gap-1.5">
+              <Badge variant="outline" className={`text-xs px-3 py-1 font-semibold ${statusBadges[workOrder.status as WorkOrderStatus]}`}>
+                SERVICE REQUEST: {workOrder.status.replace("_", " ").toUpperCase()}
+              </Badge>
+              {workOrder.tickets && (
+                <Badge variant="outline" className="text-[10px] font-bold px-2 py-0.5 bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300">
+                  UNDERLYING INCIDENT: {workOrder.tickets.status === "resolved" ? "RESOLVED" : "UNDER TELEMETRY VERIFICATION"}
+                </Badge>
+              )}
+            </div>
           </div>
         </CardHeader>
 
@@ -499,15 +488,6 @@ export default function ServiceRequestDetailPage({
               <p className="text-amber-800">
                 Timestamp: <strong>{formatDateTime(workOrder.check_in_at)}</strong>
               </p>
-              {workOrder.check_in_lat && workOrder.check_in_lng ? (
-                <p className="text-amber-800 font-mono">
-                  GPS Location: {workOrder.check_in_lat.toFixed(6)}, {workOrder.check_in_lng.toFixed(6)}
-                </p>
-              ) : (
-                <p className="text-amber-700 italic">
-                  GPS coordinates unavailable (Check-in timestamp recorded successfully).
-                </p>
-              )}
             </div>
           )}
 
@@ -516,11 +496,16 @@ export default function ServiceRequestDetailPage({
             <div className="border rounded-lg p-3 bg-emerald-50 border-emerald-200 text-xs space-y-1">
               <span className="font-semibold text-emerald-900 flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                Service Request Completed
+                Physical Field Visit Completed
               </span>
               <p className="text-emerald-800">
                 Completed Timestamp: <strong>{formatDateTime(workOrder.completed_at)}</strong>
               </p>
+              {workOrder.tickets && (
+                <p className="text-emerald-700 font-medium pt-1">
+                  Incident Status: Ticket remains in progress until telemetry verifies recovery.
+                </p>
+              )}
             </div>
           )}
 
@@ -529,7 +514,7 @@ export default function ServiceRequestDetailPage({
             <div className="border rounded-lg p-3 bg-blue-50/50 border-blue-200 text-xs space-y-1">
               <span className="font-semibold text-blue-900 flex items-center gap-1.5">
                 <FileText className="h-4 w-4 text-blue-600" />
-                Linked Originating Ticket
+                Linked Originating Ticket & Telemetry Verification State
               </span>
               <p className="text-blue-800">
                 Ticket Title: <strong>{workOrder.tickets.title}</strong> ({workOrder.tickets.priority?.toUpperCase()})
@@ -569,8 +554,8 @@ export default function ServiceRequestDetailPage({
                 disabled={actionLoading}
                 className="w-full h-14 text-base font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-lg"
               >
-                <MapPin className="h-5 w-5 mr-2" />
-                Check In at Site (Capture GPS &amp; Start)
+                <UserCheck className="h-5 w-5 mr-2" />
+                Check In at Site (Start Work)
               </Button>
             )}
 
@@ -597,26 +582,44 @@ export default function ServiceRequestDetailPage({
 
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>Complete Service Request</DialogTitle>
+                        <DialogTitle>Complete Technical Service Request</DialogTitle>
                         <DialogDescription>
-                          Record completion notes and photo evidence for this task.
+                          Record mandatory completion findings and upload typed visual evidence.
                         </DialogDescription>
                       </DialogHeader>
 
-                      <div className="space-y-4 py-2">
+                      <div className="space-y-4 py-2 text-xs">
                         <div className="space-y-1.5">
-                          <Label>Completion Notes / Findings</Label>
+                          <Label className="font-semibold text-foreground">
+                            Completion Findings / Notes <span className="text-red-500 font-bold">* (Mandatory)</span>
+                          </Label>
                           <Textarea
-                            placeholder="Describe actions taken, parts replaced, or site observations..."
+                            placeholder="Describe physical actions taken, measurements, replaced components, or site observations..."
                             value={completionNotes}
                             onChange={(e) => setCompletionNotes(e.target.value)}
-                            className="h-24"
+                            className="h-24 text-xs"
                           />
                         </div>
 
                         <div className="space-y-1.5">
-                          <Label className="text-xs font-semibold">
-                            Evidence Photo <span className="text-red-500 font-bold">* (Required)</span>
+                          <Label className="font-semibold text-foreground">Evidence Photo Type</Label>
+                          <Select value={evidenceType} onValueChange={setEvidenceType}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="text-xs">
+                              <SelectItem value="before_service">Before Service</SelectItem>
+                              <SelectItem value="after_service">After Service</SelectItem>
+                              <SelectItem value="equipment_condition">Equipment Condition</SelectItem>
+                              <SelectItem value="fault_evidence">Fault Evidence</SelectItem>
+                              <SelectItem value="repair_evidence">Repair Evidence</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label className="font-semibold text-foreground">
+                            Visual Evidence Photo <span className="text-red-500 font-bold">* (Required)</span>
                           </Label>
                           <Input
                             type="file"
@@ -624,6 +627,7 @@ export default function ServiceRequestDetailPage({
                             onChange={(e) =>
                               e.target.files?.[0] && handleUploadEvidence(e.target.files[0])
                             }
+                            className="h-9 text-xs"
                           />
                           {uploadingPhoto && (
                             <p className="text-xs text-muted-foreground animate-pulse">
@@ -631,8 +635,8 @@ export default function ServiceRequestDetailPage({
                             </p>
                           )}
                           {evidencePhoto && (
-                            <p className="text-xs text-green-600 font-medium">
-                              ✓ Photo uploaded successfully
+                            <p className="text-xs text-emerald-600 font-medium">
+                              ✓ Evidence photo uploaded successfully
                             </p>
                           )}
                         </div>
@@ -642,7 +646,7 @@ export default function ServiceRequestDetailPage({
                         <Button
                           onClick={handleCompleteGeneralJob}
                           disabled={actionLoading || uploadingPhoto}
-                          className="w-full"
+                          className="w-full text-xs h-9"
                         >
                           Confirm &amp; Mark Completed
                         </Button>

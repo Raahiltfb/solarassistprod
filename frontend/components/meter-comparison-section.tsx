@@ -188,23 +188,83 @@ export function MeterComparisonSection({
         </Card>
       </div>
 
-      {/* Detailed Loss Analysis & Technical Recommendation */}
+      {/* Inverter Offline Downtime Alert */}
+      {result.inverter_offline_count > 0 && (
+        <Card className="border-amber-500/50 bg-amber-500/10 dark:bg-amber-950/20 shadow-sm">
+          <CardContent className="pt-4 pb-4 flex items-start gap-3 text-xs">
+            <ShieldAlert className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <div className="font-semibold text-amber-800 dark:text-amber-300">
+                Inverter Downtime Detected ({result.inverter_offline_count} Inverter Offline)
+              </div>
+              <p className="text-amber-700 dark:text-amber-400 leading-relaxed">
+                {result.inverter_offline_count} inverter is currently offline or unreachable. Missing generation telemetry is attributable to inverter availability rather than electrical cable transmission loss.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Detailed Actionable Findings List */}
       <Card className="border shadow-sm">
         <CardHeader className="pb-3 border-b bg-muted/30">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Activity className="h-4 w-4 text-primary" />
-            <span>AC Electrical Loss & Meter Audit Summary</span>
+          <CardTitle className="text-sm font-semibold flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" />
+              <span>Diagnostic Findings & Action Reasoning</span>
+            </div>
+            <span className="text-xs text-muted-foreground font-normal">{result.findings.length} findings identified</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-4 space-y-3 text-xs">
-          <p className="text-muted-foreground leading-relaxed">{result.notes}</p>
-          
-          <div className="p-3 rounded-lg border bg-primary/5 border-primary/20 space-y-1">
-            <div className="font-semibold text-primary flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5" /> Recommended O&M Action
-            </div>
-            <p className="text-foreground leading-relaxed">{result.recommended_action}</p>
-          </div>
+        <CardContent className="p-0">
+          <Table className="text-xs">
+            <TableHeader className="bg-muted/50 uppercase tracking-wider font-semibold">
+              <TableRow>
+                <TableHead>Severity</TableHead>
+                <TableHead>Finding</TableHead>
+                <TableHead>Diagnostic Evidence</TableHead>
+                <TableHead>Recommended Action</TableHead>
+                <TableHead className="text-center">SR Eligibility</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {result.findings.map((f, idx) => (
+                <TableRow key={idx} className="hover:bg-muted/30">
+                  <TableCell>
+                    <Badge 
+                      variant={
+                        f.severity === "high" 
+                          ? "destructive" 
+                          : f.severity === "medium" 
+                          ? "warning" 
+                          : "secondary"
+                      }
+                      className="text-[10px] uppercase font-bold"
+                    >
+                      {f.severity}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="font-semibold text-foreground max-w-[180px]">
+                    {f.finding}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground max-w-[220px]">
+                    {f.evidence}
+                  </TableCell>
+                  <TableCell className="font-medium text-foreground max-w-[250px]">
+                    {f.recommended_action}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge 
+                      variant={f.sr_eligibility ? "default" : "outline"}
+                      className="text-[10px]"
+                    >
+                      {f.sr_eligibility ? "Eligible for SR" : "Monitor Only"}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 

@@ -8,7 +8,8 @@
     "build": "next build",
     "serve": "next start -p 3000 -H 0.0.0.0",
     "lint": "next lint",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "test:phase5": "tsx scripts/test-phase5-intelligence.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
