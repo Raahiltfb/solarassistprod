@@ -50,10 +50,17 @@ const NAV = [
   },
   {
     href: "/sites",
-    label: "Assets & Diagnostics",
+    label: "Assets",
     icon: Building2,
     roles: ["super_admin", "epc_admin"],
     subPaths: ["/alerts", "/inverters"],
+  },
+  {
+    href: "/diagnostics",
+    label: "Technical Intelligence",
+    icon: Activity,
+    roles: ["super_admin", "epc_admin"],
+    subPaths: [],
   },
   {
     href: "/reports",

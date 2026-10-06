@@ -151,7 +151,10 @@ export function resolveEffectiveSiteCleaningRule(
   rule?: SiteCleaningRule | null
 ): SiteCleaningRule {
   if (rule && rule.is_override && rule.is_configured) {
-    return rule;
+    return {
+      ...rule,
+      required_teams: rule.required_teams || 1,
+    };
   }
   return {
     id: rule?.id || `default-${siteId}`,
@@ -165,6 +168,7 @@ export function resolveEffectiveSiteCleaningRule(
     allowed_weekdays: rule?.allowed_weekdays || DEFAULT_SYSTEM_CLEANING_POLICY.allowed_weekdays,
     blackout_dates: rule?.blackout_dates || [],
     estimated_cleaning_mins: rule?.estimated_cleaning_mins || DEFAULT_SYSTEM_CLEANING_POLICY.estimated_cleaning_mins,
+    required_teams: rule?.required_teams || DEFAULT_SYSTEM_CLEANING_POLICY.required_teams || 1,
     created_at: rule?.created_at || new Date().toISOString(),
     updated_at: rule?.updated_at || new Date().toISOString(),
   };
@@ -339,9 +343,44 @@ export function validateAssignmentConstraint(
   return { state: "valid", notes: null };
 }
 
+export function isTeamPermittedOnCluster(
+  dateStr: string,
+  cluster: GeographicCluster,
+  teamId: string,
+  locationDayTeamLockMap: Map<string, Set<string>>,
+  effectiveRuleMap: Map<string, SiteCleaningRule>
+): boolean {
+  const lockKey = `${dateStr}:${cluster.cluster_id}`;
+  const lockedTeams = locationDayTeamLockMap.get(lockKey);
+  if (!lockedTeams || lockedTeams.size === 0) return true;
+  if (lockedTeams.has(teamId)) return true;
+
+  const maxAllowedTeams = Math.max(
+    1,
+    ...cluster.sites.map((s) => effectiveRuleMap.get(s.id)?.required_teams || 1)
+  );
+
+  return lockedTeams.size < maxAllowedTeams;
+}
+
+export function lockTeamOnCluster(
+  dateStr: string,
+  clusterId: string,
+  teamId: string,
+  locationDayTeamLockMap: Map<string, Set<string>>
+) {
+  const lockKey = `${dateStr}:${clusterId}`;
+  let lockedTeams = locationDayTeamLockMap.get(lockKey);
+  if (!lockedTeams) {
+    lockedTeams = new Set<string>();
+    locationDayTeamLockMap.set(lockKey, lockedTeams);
+  }
+  lockedTeams.add(teamId);
+}
+
 /**
  * Phase 2.7 Location-Day Batching Macro-Scheduler:
- * - RULE 1: ONE TEAM PER PHYSICAL LOCATION PER DAY (Hard Rule: COUNT(DISTINCT team) <= 1 per date+location)
+ * - RULE 1: ONE TEAM PER PHYSICAL LOCATION PER DAY (Hard Rule: COUNT(DISTINCT team) <= required_teams per date+location)
  * - RULE 2: Batch same-location work together on the same day whenever possible
  * - RULE 3: Select common valid date across sites in the physical location
  * - RULE 4: Preserve team ownership continuity per location
@@ -455,6 +494,8 @@ export function generateMonthlyCleaningPlan({
     travelKm: number;
     preferredTeam: TechnicianTeam | null;
     validCandidateDates: string[];
+    teamSlotIndex?: number;
+    requiredTeamsCount?: number;
   }
 
   const visitsToSchedule: RequiredVisitItem[] = [];
@@ -566,19 +607,26 @@ export function generateMonthlyCleaningPlan({
         return true;
       });
 
-      visitsToSchedule.push({
-        visitId: `visit-${site.id}-${idx}`,
-        site,
-        cluster,
-        rule,
-        targetDateStr,
-        visitSequenceInMonth: idx + 1,
-        cleaningMins,
-        travelMins: minTravelMins,
-        travelKm: minTravelKm,
-        preferredTeam,
-        validCandidateDates,
-      });
+      const requiredTeamsCount = Math.max(1, rule.required_teams || 1);
+      const perTeamCleaningMins = Math.ceil(cleaningMins / requiredTeamsCount);
+
+      for (let slot = 0; slot < requiredTeamsCount; slot++) {
+        visitsToSchedule.push({
+          visitId: `visit-${site.id}-${idx}-slot-${slot}`,
+          site,
+          cluster,
+          rule,
+          targetDateStr,
+          visitSequenceInMonth: idx + 1,
+          cleaningMins: perTeamCleaningMins,
+          travelMins: minTravelMins,
+          travelKm: minTravelKm,
+          preferredTeam,
+          validCandidateDates,
+          teamSlotIndex: slot,
+          requiredTeamsCount,
+        });
+      }
     });
   }
 
@@ -593,8 +641,8 @@ export function generateMonthlyCleaningPlan({
   const teamWorkloadMap = new Map<string, number>();
   const teamDaySequenceMap = new Map<string, number>();
   const teamDaySitesMap = new Map<string, Site[]>();
-  // HARD RULE 1 LOCK: key = `${dateStr}:${cluster_id}`, value = assigned_team_id
-  const locationDayTeamLockMap = new Map<string, string>();
+  // HARD RULE 1 LOCK: key = `${dateStr}:${cluster_id}`, value = Set of assigned_team_ids
+  const locationDayTeamLockMap = new Map<string, Set<string>>();
 
   // Group visits by (cluster_id, visitSequenceInMonth) to batch same-location work for each cycle
   const clusterCycleMap = new Map<string, RequiredVisitItem[]>();
@@ -657,10 +705,7 @@ export function generateMonthlyCleaningPlan({
         if (cycleScheduled) break;
 
         for (const candidateStr of candidateDates) {
-          const lockKey = `${candidateStr}:${cluster.cluster_id}`;
-          const existingLockedTeam = locationDayTeamLockMap.get(lockKey);
-
-          if (existingLockedTeam && existingLockedTeam !== team.id) continue;
+          if (!isTeamPermittedOnCluster(candidateStr, cluster, team.id, locationDayTeamLockMap, effectiveRuleMap)) continue;
 
           const dayKey = `${team.id}:${candidateStr}`;
           const existingSitesOnDay = teamDaySitesMap.get(dayKey) || [];
@@ -709,7 +754,7 @@ export function generateMonthlyCleaningPlan({
             // Schedule ALL sites of this location cycle TOGETHER on candidateStr!
             let newWorkload = currentWorkload + neededWorkload;
             teamWorkloadMap.set(dayKey, newWorkload);
-            locationDayTeamLockMap.set(lockKey, team.id);
+            lockTeamOnCluster(candidateStr, cluster.cluster_id, team.id, locationDayTeamLockMap);
 
             cycleVisits.forEach((vItem, idx) => {
               const seq = (teamDaySequenceMap.get(dayKey) || 0) + 1;
@@ -772,9 +817,7 @@ export function generateMonthlyCleaningPlan({
         for (const team of teamsToTry) {
           if (visitIdx >= totalVisits) break;
 
-          const lockKey = `${candidateStr}:${cluster.cluster_id}`;
-          const existingLockedTeam = locationDayTeamLockMap.get(lockKey);
-          if (existingLockedTeam && existingLockedTeam !== team.id) continue;
+          if (!isTeamPermittedOnCluster(candidateStr, cluster, team.id, locationDayTeamLockMap, effectiveRuleMap)) continue;
 
           const dayKey = `${team.id}:${candidateStr}`;
           const existingSitesOnDay = teamDaySitesMap.get(dayKey) || [];
@@ -822,14 +865,16 @@ export function generateMonthlyCleaningPlan({
 
               currentWorkload += neededMins;
               teamWorkloadMap.set(dayKey, currentWorkload);
-              locationDayTeamLockMap.set(lockKey, team.id);
+              lockTeamOnCluster(candidateStr, cluster.cluster_id, team.id, locationDayTeamLockMap);
 
               const seq = (teamDaySequenceMap.get(dayKey) || 0) + 1;
               teamDaySequenceMap.set(dayKey, seq);
               existingSitesOnDay.push(vItem.site);
               teamDaySitesMap.set(dayKey, existingSitesOnDay);
 
-              let rationale = `Multi-day Location Cycle split for ${team.name} on ${candidateStr}.`;
+              let rationale = vItem.requiredTeamsCount && vItem.requiredTeamsCount > 1
+                ? `Multi-team Location Cycle (Team ${vItem.teamSlotIndex! + 1} of ${vItem.requiredTeamsCount}) for ${team.name} on ${candidateStr}.`
+                : `Multi-day Location Cycle split for ${team.name} on ${candidateStr}.`;
 
               assignments.push({
                 site_id: vItem.site.id,
@@ -881,9 +926,7 @@ export function generateMonthlyCleaningPlan({
             const vItem = cycleVisits[visitIdx];
             if (!vItem.validCandidateDates.includes(candidateStr)) continue;
 
-            const lockKey = `${candidateStr}:${cluster.cluster_id}`;
-            const existingLockedTeam = locationDayTeamLockMap.get(lockKey);
-            if (existingLockedTeam && existingLockedTeam !== team.id) continue;
+            if (!isTeamPermittedOnCluster(candidateStr, cluster, team.id, locationDayTeamLockMap, effectiveRuleMap)) continue;
 
             const dayKey = `${team.id}:${candidateStr}`;
             const existingSitesOnDay = teamDaySitesMap.get(dayKey) || [];
@@ -910,7 +953,7 @@ export function generateMonthlyCleaningPlan({
 
               currentWorkload += neededMins;
               teamWorkloadMap.set(dayKey, currentWorkload);
-              locationDayTeamLockMap.set(lockKey, team.id);
+              lockTeamOnCluster(candidateStr, cluster.cluster_id, team.id, locationDayTeamLockMap);
 
               const seq = (teamDaySequenceMap.get(dayKey) || 0) + 1;
               teamDaySequenceMap.set(dayKey, seq);
@@ -1009,9 +1052,7 @@ export function generateMonthlyCleaningPlan({
         if (rule.blackout_dates && rule.blackout_dates.includes(dStr)) continue;
 
         for (const team of activeTeams) {
-          const lockKey = `${dStr}:${cluster.cluster_id}`;
-          const existingLockedTeam = locationDayTeamLockMap.get(lockKey);
-          if (existingLockedTeam && existingLockedTeam !== team.id) continue;
+          if (!isTeamPermittedOnCluster(dStr, cluster, team.id, locationDayTeamLockMap, effectiveRuleMap)) continue;
 
           const dayKey = `${team.id}:${dStr}`;
           const existingSitesOnDay = teamDaySitesMap.get(dayKey) || [];
@@ -1037,7 +1078,7 @@ export function generateMonthlyCleaningPlan({
             if (constraintValidation.state === "blocking") continue;
 
             teamWorkloadMap.set(dayKey, newWorkload);
-            locationDayTeamLockMap.set(lockKey, team.id);
+            lockTeamOnCluster(dStr, cluster.cluster_id, team.id, locationDayTeamLockMap);
 
             const seq = (teamDaySequenceMap.get(dayKey) || 0) + 1;
             teamDaySequenceMap.set(dayKey, seq);
@@ -1141,6 +1182,26 @@ export function validateDragDropCellPlacement(
     clusterMinsToMove = otherWingsToMove.reduce(
       (sum, a) => sum + (a.estimated_cleaning_mins || 90) + (a.estimated_travel_mins || 0), 0
     );
+  }
+
+  if (cluster) {
+    const existingAssignsOnClusterDay = allAssignments.filter(
+      a => a.id !== draggedAssignment.id &&
+           a.scheduled_date.startsWith(targetDateStr) &&
+           cluster.sites.some(cs => cs.id === a.site_id)
+    );
+    const assignedTeamsOnClusterDay = new Set(existingAssignsOnClusterDay.map(a => a.team_id));
+    const maxAllowedTeams = Math.max(1, ...cluster.sites.map(s => {
+      const r = rules.find(rule => rule.site_id === s.id);
+      return r?.required_teams || 1;
+    }));
+
+    if (!assignedTeamsOnClusterDay.has(targetTeamId) && assignedTeamsOnClusterDay.size >= maxAllowedTeams) {
+      return {
+        isValid: false,
+        reason: `Blocked: ${site.name} location permits at most ${maxAllowedTeams} team(s) on ${targetDateStr}.`
+      };
+    }
   }
 
   // Workload check including auto-moved cluster wings

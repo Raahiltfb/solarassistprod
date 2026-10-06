@@ -51,7 +51,7 @@ The system operates on a reactive O&M loop:
 | **Phase 2: Cleaning Automation** | REFINED & VERIFIED | Phase 0, 1 | Automatic monthly planning, team allocation, route generation, and job creation with admin supervision. |
 | **Phase 3: Field Execution** | REFINED & VERIFIED | Phase 1, 2 | Technician can execute daily work offline (PWA) with check-in without admin help. |
 | **Phase 4: Production-Grade Routing** | REFINED & VERIFIED | Phase 2, 3 | Generated routes use actual road-network travel times, distances, working hours, and capacity. |
-| **Phase 5: Technical Intelligence** | NOT STARTED | Phase 1 | O&M engineer can investigate technical problems (string anomalies, multi-inverter comparisons) via UI. |
+| **Phase 5: Technical Intelligence** | REFINED & VERIFIED | Phase 1 | O&M engineer can investigate technical problems (string anomalies, multi-inverter comparisons, utility meter loss) via UI. |
 | **Phase 6: Resolution / Verification Engine** | NOT STARTED | Phase 1, 3 | System verifies if physical intervention fixed the problem using telemetry, auto-reopens/escalates if failed. |
 | **Phase 7: Premium Client Experience** | NOT STARTED | Phase 1, 6 | Client understands performance, health score, maintenance history, and savings via a premium portal. |
 | **Phase 8: Scale + Hardening** | NOT STARTED | Phases 1-7 | System handles 100/500/1000+ sites with predictable DB/ingestion/UI performance. |
@@ -94,10 +94,10 @@ The system operates on a reactive O&M loop:
 - [x] Optimize route sequence preserving physical-location batching.
 
 ### Phase 5: Technical Intelligence
-- [ ] Implement historical string analysis with multi-string comparison.
-- [ ] Implement string anomaly detection (sustained underperformance vs transients).
-- [ ] Implement multi-inverter diagnostic comparison.
-- [ ] Compare against physical meter readings.
+- [x] Implement historical string analysis with multi-string comparison.
+- [x] Implement string anomaly detection (sustained underperformance vs transients).
+- [x] Implement multi-inverter diagnostic comparison.
+- [x] Compare against physical meter readings.
 
 ### Phase 6: Resolution / Verification Engine
 - [ ] Implement telemetry-based verification post-Job completion.
@@ -145,3 +145,4 @@ For each phase:
 - **2026-09-30**: Completed and verified Phase 2 (Cleaning Automation). Added historical team continuity to macro-scheduler, verified automatic monthly planning, team allocation, route generation, job creation, and admin review matrix UI.
 - **2026-09-30**: Completed Phase 3 (Field Execution). Built PWA offline sync engine (`offline-sync.ts`), camera photo capture integration (`capture="environment"`), and mobile-first Today's Work task workflow (`/technician/route`).
 - **2026-10-01**: Completed Phase 4 (Production-Grade Routing). Built composite server-side routing provider (`CompositeRoutingProvider` with OSRM and Haversine Road Factor fallback), physical-location batching TSP optimization, working shift feasibility validation, route unpublish/re-edit safety rules, and admin/technician route management UI. Verified against October 2026 real 35-site proving ground without schedule corruption.
+- **2026-10-06**: Completed Phase 5 (Technical Intelligence). Created DB schema for utility meters and meter readings (`0009_technical_intelligence.sql`), built automated string anomaly detection engine (`string-anomaly-engine.ts`) classifying transient vs sustained underperformance vs disconnected strings with 1-click ticket dispatching, multi-inverter comparative diagnostic engine (`inverter-diagnostic-engine.ts`) ranking yield, efficiency & thermal clipping, utility export meter vs inverter loss balance calculator (`meter-comparison-engine.ts`), and unified Technical Intelligence Control Hub (`/diagnostics`).

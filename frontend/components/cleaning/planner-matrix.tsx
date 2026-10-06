@@ -307,9 +307,9 @@ export function PlannerMatrix({
         <CardContent className="p-0 flex-1 overflow-hidden flex flex-col">
           <div className="w-full flex-1 overflow-auto max-h-full">
             <table className="w-full border-collapse text-xs select-none">
-              <thead className="sticky top-0 z-30 bg-card/95 backdrop-blur border-b shadow-[0_2px_5px_rgba(0,0,0,0.05)] text-muted-foreground font-semibold">
+              <thead className="sticky top-0 z-30 bg-card border-b shadow-[0_2px_5px_rgba(0,0,0,0.05)] text-muted-foreground font-semibold">
                 <tr>
-                  <th className="sticky left-0 z-40 bg-card/95 backdrop-blur p-4 min-w-[200px] border-r border-b shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-left uppercase tracking-wider text-[11px]">
+                  <th className="sticky left-0 z-40 bg-card p-4 min-w-[200px] border-r border-b shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-left uppercase tracking-wider text-[11px]">
                     Team / Date
                   </th>
                   {daysArray.map((day) => {
@@ -435,6 +435,13 @@ export function PlannerMatrix({
                                     <span>{assign.estimated_cleaning_mins || 90}m cleaning</span>
                                     <span>{assign.estimated_distance_km || 0} km</span>
                                   </div>
+                                  {assign.scheduler_rationale?.includes("Multi-team") && (
+                                    <div className="mt-1 flex items-center">
+                                      <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-semibold bg-primary/10 text-primary border border-primary/20">
+                                        Multi-Team Crew
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
 

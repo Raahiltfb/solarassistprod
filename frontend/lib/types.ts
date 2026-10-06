@@ -287,6 +287,7 @@ export const DEFAULT_SYSTEM_CLEANING_POLICY = {
   monsoon_end_md: "09-30",
   allowed_weekdays: [1, 2, 3, 4, 5],
   estimated_cleaning_mins: 90,
+  required_teams: 1,
 };
 
 export interface SiteCleaningRule {
@@ -301,6 +302,7 @@ export interface SiteCleaningRule {
   allowed_weekdays: number[] | null;
   blackout_dates: string[] | null;
   estimated_cleaning_mins: number;
+  required_teams?: number | null;
   created_at: string;
   updated_at: string;
 }

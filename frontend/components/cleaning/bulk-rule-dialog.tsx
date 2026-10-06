@@ -32,6 +32,7 @@ export function BulkRuleDialog({ open, onOpenChange, sites, rules, onSaved }: Bu
   const [monsoonEnd, setMonsoonEnd] = useState<string>("09-30");
   const [allowedWeekdays, setAllowedWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [estimatedMins, setEstimatedMins] = useState<string>("90");
+  const [requiredTeams, setRequiredTeams] = useState<string>("1");
   const [saving, setSaving] = useState(false);
 
   const ruleMap = new Map<string, SiteCleaningRule>();
@@ -115,6 +116,7 @@ export function BulkRuleDialog({ open, onOpenChange, sites, rules, onSaved }: Bu
       monsoon_end_md: monsoonEnd,
       allowed_weekdays: allowedWeekdays,
       estimated_cleaning_mins: Number(estimatedMins) || 90,
+      required_teams: Number(requiredTeams) || 1,
       updated_at: new Date().toISOString(),
     }));
 
@@ -337,14 +339,31 @@ export function BulkRuleDialog({ open, onOpenChange, sites, rules, onSaved }: Bu
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label>Estimated duration (mins)</Label>
-              <Input
-                type="number"
-                value={estimatedMins}
-                onChange={(e) => setEstimatedMins(e.target.value)}
-                className="h-8 text-xs"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Estimated duration (mins)</Label>
+                <Input
+                  type="number"
+                  value={estimatedMins}
+                  onChange={(e) => setEstimatedMins(e.target.value)}
+                  className="h-8 text-xs"
+                  placeholder="e.g. 90 or 1440"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Required Teams / Workforce</Label>
+                <Select value={requiredTeams} onValueChange={setRequiredTeams}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 Team (Standard ~2 techs)</SelectItem>
+                    <SelectItem value="2">2 Teams (~4 technicians)</SelectItem>
+                    <SelectItem value="3">3 Teams (~6 technicians)</SelectItem>
+                    <SelectItem value="4">4 Teams (~8 technicians)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
@@ -360,6 +379,7 @@ export function BulkRuleDialog({ open, onOpenChange, sites, rules, onSaved }: Bu
               <div>Monsoon period: {monsoonStart} – {monsoonEnd}</div>
               <div>Allowed days: {daysSummary}</div>
               <div>Estimated duration: {estimatedMins} minutes</div>
+              <div>Required workforce: {requiredTeams} {Number(requiredTeams) > 1 ? "teams (multi-team dispatch)" : "team"}</div>
             </div>
           </div>
         </div>

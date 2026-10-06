@@ -29,6 +29,7 @@ export function SiteRuleDialog({ open, onOpenChange, site, rule, onSaved }: Site
   const [monsoonEnd, setMonsoonEnd] = useState<string>("09-30");
   const [allowedWeekdays, setAllowedWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [estimatedMins, setEstimatedMins] = useState<string>("90");
+  const [requiredTeams, setRequiredTeams] = useState<string>("1");
   const [blackoutDatesStr, setBlackoutDatesStr] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
@@ -41,6 +42,7 @@ export function SiteRuleDialog({ open, onOpenChange, site, rule, onSaved }: Site
       setMonsoonEnd(rule.monsoon_end_md || "09-30");
       setAllowedWeekdays(rule.allowed_weekdays || [1, 2, 3, 4, 5]);
       setEstimatedMins(String(rule.estimated_cleaning_mins || 90));
+      setRequiredTeams(String(rule.required_teams || 1));
       setBlackoutDatesStr((rule.blackout_dates || []).join(", "));
     } else {
       setIsOverride(false);
@@ -50,6 +52,7 @@ export function SiteRuleDialog({ open, onOpenChange, site, rule, onSaved }: Site
       setMonsoonEnd("09-30");
       setAllowedWeekdays([1, 2, 3, 4, 5]);
       setEstimatedMins("90");
+      setRequiredTeams("1");
       setBlackoutDatesStr("");
     }
   }, [rule, site]);
@@ -101,6 +104,7 @@ export function SiteRuleDialog({ open, onOpenChange, site, rule, onSaved }: Site
       allowed_weekdays: allowedWeekdays,
       blackout_dates: blackoutDates,
       estimated_cleaning_mins: Number(estimatedMins) || 90,
+      required_teams: Number(requiredTeams) || 1,
       updated_at: new Date().toISOString(),
     };
 
@@ -249,17 +253,33 @@ export function SiteRuleDialog({ open, onOpenChange, site, rule, onSaved }: Site
                     value={estimatedMins}
                     onChange={(e) => setEstimatedMins(e.target.value)}
                     className="h-8 text-xs"
+                    placeholder="e.g. 90 or 1440"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Exceptions (blackout dates)</Label>
-                  <Input
-                    value={blackoutDatesStr}
-                    onChange={(e) => setBlackoutDatesStr(e.target.value)}
-                    placeholder="2026-09-15, 2026-09-20"
-                    className="h-8 text-xs"
-                  />
+                  <Label>Required Teams / Workforce</Label>
+                  <Select value={requiredTeams} onValueChange={setRequiredTeams}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 Team (Standard ~2 techs)</SelectItem>
+                      <SelectItem value="2">2 Teams (~4 technicians)</SelectItem>
+                      <SelectItem value="3">3 Teams (~6 technicians)</SelectItem>
+                      <SelectItem value="4">4 Teams (~8 technicians)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Exceptions (blackout dates)</Label>
+                <Input
+                  value={blackoutDatesStr}
+                  onChange={(e) => setBlackoutDatesStr(e.target.value)}
+                  placeholder="2026-09-15, 2026-09-20"
+                  className="h-8 text-xs"
+                />
               </div>
             </div>
 
@@ -275,6 +295,7 @@ export function SiteRuleDialog({ open, onOpenChange, site, rule, onSaved }: Site
                 <div>Monsoon period: {monsoonStart} – {monsoonEnd}</div>
                 <div>Allowed days: {daysSummary}</div>
                 <div>Estimated duration: {estimatedMins} minutes</div>
+                <div>Required workforce: {requiredTeams} {Number(requiredTeams) > 1 ? "teams (multi-team dispatch)" : "team"}</div>
                 {site?.last_cleaned_on && (
                   <div>
                     Last completed cleaning: <span className="font-mono text-foreground font-medium">{site.last_cleaned_on}</span>
