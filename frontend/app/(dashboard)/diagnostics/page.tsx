@@ -33,84 +33,43 @@ export default async function TechnicalIntelligencePage({
     );
   }
 
-  // 2. Fetch site inverters, telemetry, tickets in parallel
-  const [invertersRes, telemetryRes, ticketsRes] = await Promise.all([
-    sb.from("inverters").select("*").eq("site_id", selectedSite.id),
-    sb.from("telemetry").select("*").order("timestamp", { ascending: false }).limit(500),
-    sb.from("tickets").select("*").eq("site_id", selectedSite.id).eq("status", "resolved")
+  const siteIds = siteList.map((s) => s.id);
+
+  // 2. Fetch all org site inverters, tickets, and telemetry in parallel
+  const [invertersRes, ticketsRes, telemetryRes] = await Promise.all([
+    sb.from("inverters").select("*").in("site_id", siteIds),
+    sb.from("tickets").select("*").in("site_id", siteIds).eq("status", "resolved"),
+    sb.from("telemetry").select("*").order("timestamp", { ascending: false }).limit(500)
   ]);
 
-  const inverters = invertersRes.data ?? [];
-  const telemetry = telemetryRes.data ?? [];
-  const resolvedTickets = ticketsRes.data ?? [];
+  const allInverters = invertersRes.data ?? [];
+  const allResolvedTickets = ticketsRes.data ?? [];
+  const allTelemetry = telemetryRes.data ?? [];
+  const inverterIds = allInverters.map((i) => i.id);
 
-  const inverterIds = inverters.map((i) => i.id);
-
-  // 3. Fetch strings and string telemetry
-  let strings: any[] = [];
-  let stringTelemetry: any[] = [];
+  // 3. Fetch strings and string_telemetry for all org inverters
+  let allStrings: any[] = [];
+  let allStringTelemetry: any[] = [];
 
   if (inverterIds.length > 0) {
-    const { data: strData } = await sb
-      .from("strings")
-      .select("*")
-      .in("inverter_id", inverterIds)
-      .order("string_index");
+    const [strData, stData] = await Promise.all([
+      sb.from("strings").select("*").in("inverter_id", inverterIds).order("string_index"),
+      sb.from("string_telemetry").select("*").order("timestamp", { ascending: false }).limit(1000)
+    ]);
 
-    strings = strData ?? [];
-    const stringIds = strings.map((s) => s.id);
-
-    if (stringIds.length > 0) {
-      const { data: stData } = await sb
-        .from("string_telemetry")
-        .select("*")
-        .in("string_id", stringIds)
-        .order("timestamp", { ascending: false })
-        .limit(1000);
-
-      stringTelemetry = stData ?? [];
-    }
+    allStrings = strData.data ?? [];
+    allStringTelemetry = stData.data ?? [];
   }
-
-  // Map latest telemetry per inverter ID
-  const latestTelemetryMap = new Map<string, any>();
-  for (const tel of telemetry) {
-    if (!latestTelemetryMap.has(tel.inverter_id)) {
-      latestTelemetryMap.set(tel.inverter_id, tel);
-    }
-  }
-
-  // Calculate active anomalies
-  const anomalies = analyzeStringAnomalies(stringTelemetry, strings, inverters, siteList);
-
-  // Construct historical resolved anomaly records
-  const resolvedRecords = resolvedTickets.map((t) => ({
-    id: t.id,
-    site_id: selectedSite.id,
-    site_name: selectedSite.name,
-    inverter_name: inverters.find((i) => i.id === t.inverter_id)?.name || "Inverter 1",
-    string_index: 2,
-    anomaly_type: "sustained_underperformance",
-    detected_at: t.created_at,
-    recovered_at: t.updated_at || t.created_at,
-    duration_mins: 45,
-    ticket_id: t.id,
-    resolution_summary: t.description || "Telemetry confirmed string current recovery within 5% of peer median baseline.",
-    recovered_current_a: 5.1,
-    expected_current_a: 5.2,
-  }));
 
   return (
     <DiagnosticsClientWrapper
       sites={siteList}
-      selectedSite={selectedSite}
-      inverters={inverters}
-      strings={strings}
-      telemetry={telemetry}
-      stringTelemetry={stringTelemetry}
-      latestTelemetryMap={latestTelemetryMap}
-      anomalies={anomalies}
-      resolvedRecords={resolvedRecords}
+      initialSiteId={site_id || siteList[0]?.id}
+      allInverters={allInverters}
+      allStrings={allStrings}
+      allTelemetry={allTelemetry}
+      allStringTelemetry={allStringTelemetry}
+      allResolvedTickets={allResolvedTickets}
     />
   );
 }

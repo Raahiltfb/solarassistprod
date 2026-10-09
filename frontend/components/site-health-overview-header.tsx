@@ -21,10 +21,8 @@ export interface SiteHealthSummary {
 
 export function SiteHealthOverviewHeader({
   summary,
-  onNavigateToTab,
 }: {
   summary: SiteHealthSummary;
-  onNavigateToTab?: (tab: string) => void;
 }) {
   const getBadgeColor = (status: string) => {
     switch (status) {
@@ -108,7 +106,7 @@ export function SiteHealthOverviewHeader({
           </div>
 
           {/* Top Recommended Action */}
-          <div className="flex flex-col justify-between space-y-2 lg:max-w-xs shrink-0 bg-primary/5 p-3 rounded-xl border border-primary/20">
+          <div className="flex flex-col justify-center space-y-2 lg:max-w-xs shrink-0 bg-primary/5 p-3 rounded-xl border border-primary/20">
             <div className="space-y-1">
               <span className="text-[10px] uppercase font-bold text-primary flex items-center gap-1">
                 <Wrench className="h-3 w-3" /> Priority Recommended Action
@@ -117,17 +115,6 @@ export function SiteHealthOverviewHeader({
                 {summary.top_recommended_action}
               </p>
             </div>
-            {onNavigateToTab && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => onNavigateToTab("strings")}
-                className="h-7 text-[11px] p-0 text-primary hover:bg-transparent hover:underline justify-start gap-1 font-semibold"
-              >
-                <span>Drill Into String Diagnostics</span>
-                <ArrowRight className="h-3 w-3" />
-              </Button>
-            )}
           </div>
         </div>
       </CardContent>

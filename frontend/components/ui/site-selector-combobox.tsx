@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Search, ChevronDown, Building2, Check, MapPin } from "lucide-react";
+import { Search, ChevronDown, Building2, Check, MapPin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -17,11 +17,13 @@ export function SiteSelectorCombobox({
   sites,
   selectedSiteId,
   onSelectSite,
+  isPending,
   className,
 }: {
   sites: SiteOption[];
   selectedSiteId: string;
   onSelectSite: (site: SiteOption) => void;
+  isPending?: boolean;
   className?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -49,15 +51,20 @@ export function SiteSelectorCombobox({
       <Button
         type="button"
         variant="outline"
+        disabled={isPending}
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between gap-2 h-9 px-3 text-xs bg-background hover:bg-accent border border-input rounded-md shadow-sm font-medium"
       >
         <div className="flex items-center gap-2 truncate">
-          <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
+          {isPending ? (
+            <Loader2 className="h-3.5 w-3.5 text-primary shrink-0 animate-spin" />
+          ) : (
+            <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
+          )}
           <span className="truncate font-semibold text-foreground">
-            {selectedSite ? selectedSite.name : "Select Site"}
+            {isPending ? "Switching Site..." : selectedSite ? selectedSite.name : "Select Site"}
           </span>
-          {selectedSite?.capacity_kwp && (
+          {!isPending && selectedSite?.capacity_kwp && (
             <span className="text-[10px] text-muted-foreground font-mono shrink-0">
               ({selectedSite.capacity_kwp} kWp)
             </span>
