@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toast";
 
 export const metadata: Metadata = {
   title: "Solar Assist",
-  description: "Multi-tenant solar operations and monitoring platform",
+  description: "End-to-End Solar Asset Management Platform",
   manifest: "/manifest.json",
   icons: {
     icon: [
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "SolarAssist",
+    title: "Solar Assist",
   },
 };
 

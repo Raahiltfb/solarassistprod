@@ -159,7 +159,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <p className="text-xs text-slate-500">&copy; {new Date().getFullYear()} SolarAssist O&amp;M OS</p>
+          <p className="text-xs text-slate-500">&copy; {new Date().getFullYear()} Solar Assist Private Limited.</p>
         </div>
       </div>
 
