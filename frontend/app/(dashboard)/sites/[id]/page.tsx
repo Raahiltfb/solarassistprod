@@ -59,10 +59,12 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ id:
 
     const stringIds = strings.map((s) => s.id);
     if (stringIds.length > 0) {
-      const { data: stData } = await sb.from("string_telemetry")
-        .select("*")
+      const { data: stData } = await sb
+        .from("string_telemetry")
+        .select("string_id, voltage_v, current_a, power_kw, status, timestamp")
         .in("string_id", stringIds)
-        .order("timestamp", { ascending: false });
+        .order("timestamp", { ascending: false })
+        .limit(Math.max(stringIds.length * 2, 64));
       
       for (const st of stData ?? []) {
         if (!latestStringTelemetry.has(st.string_id)) {
@@ -182,10 +184,10 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ id:
                   <CardHeader className="pb-3 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <CardTitle className="text-base font-mono font-medium">
-                        {inv.oem_device_id}
+                        {inv.serial_number || inv.oem_device_id}
                       </CardTitle>
                       <p className="text-xs text-muted-foreground uppercase mt-0.5">
-                        {inv.oem} · {inv.model} · SN: <span className="font-mono font-semibold">{inv.serial_number}</span>
+                        {inv.oem} · {inv.model}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">

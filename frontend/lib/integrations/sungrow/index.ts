@@ -27,7 +27,7 @@ export const sungrowAdapter: OemAdapter = {
       serial_number: String(d.device_sn ?? ""),
       capacity_kw: Number(d.dev_fac_name ?? 0),
       string_count: 4,
-      installed_on: new Date().toISOString().slice(0, 10),
+      installed_on: d.install_date || d.commission_date ? String(d.install_date || d.commission_date).slice(0, 10) : undefined,
     }));
   },
   async fetchTelemetry(deviceId: string): Promise<NormalizedTelemetry[]> {

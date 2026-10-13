@@ -24,7 +24,7 @@ export const growattAdapter: OemAdapter = {
       serial_number: String(d.device_sn ?? ""),
       capacity_kw: Number(d.nominal_power ?? 0) / 1000,
       string_count: Number(d.string_num ?? 4),
-      installed_on: new Date().toISOString().slice(0, 10),
+      installed_on: d.create_date || d.install_date ? String(d.create_date || d.install_date).slice(0, 10) : undefined,
     }));
   },
   async fetchTelemetry(deviceId: string): Promise<NormalizedTelemetry[]> {

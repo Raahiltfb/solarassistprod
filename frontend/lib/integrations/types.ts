@@ -7,7 +7,7 @@ export interface NormalizedDevice {
   serial_number: string;
   capacity_kw: number;
   string_count: number;
-  installed_on: string;
+  installed_on?: string;
 }
 
 export interface NormalizedTelemetry {

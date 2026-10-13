@@ -7,6 +7,7 @@ class NormalizedStation(BaseModel):
     capacity_kwp: float
     location: str
     timezone: str
+    commissioned_on: Optional[str] = None
 
 class NormalizedDevice(BaseModel):
     oem_device_id: str
@@ -16,6 +17,7 @@ class NormalizedDevice(BaseModel):
     string_count: int
     status: str
     last_seen_at: str
+    installed_on: Optional[str] = None
 
 class NormalizedTelemetry(BaseModel):
     timestamp: str

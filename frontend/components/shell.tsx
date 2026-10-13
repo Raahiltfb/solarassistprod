@@ -130,6 +130,7 @@ export function Shell({ profile, children }: { profile: Profile; children: React
               <Link
                 key={it.href}
                 href={it.href}
+                prefetch={true}
                 data-testid={`nav-${it.href.slice(1)}`}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
@@ -205,6 +206,7 @@ export function Shell({ profile, children }: { profile: Profile; children: React
               <Link
                 key={it.href}
                 href={it.href}
+                prefetch={true}
                 className={cn(
                   "flex flex-col items-center justify-center flex-1 h-full py-1 text-[11px] font-medium transition-colors gap-1 min-w-0 px-1",
                   Active ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"

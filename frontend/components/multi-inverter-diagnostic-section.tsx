@@ -56,7 +56,7 @@ export function MultiInverterDiagnosticSection({
   };
 
   const chartData = comparisonResults.map((r) => ({
-    name: r.oem_device_id,
+    name: r.serial_number || r.oem_device_id,
     yield: r.specific_yield_kwh_kwp,
     efficiency: r.efficiency_pct,
     devPct: r.yield_deviation_pct,
@@ -78,7 +78,7 @@ export function MultiInverterDiagnosticSection({
           </div>
           <div>
             <div className="text-xs text-muted-foreground font-medium">Top Performing Inverter</div>
-            <div className="font-bold text-sm text-foreground font-mono">{topInverter?.oem_device_id || "—"}</div>
+            <div className="font-bold text-sm text-foreground font-mono">{topInverter?.serial_number || "—"}</div>
             <div className="text-xs text-emerald-600 dark:text-emerald-400 font-mono font-medium">
               {topInverter?.specific_yield_kwh_kwp.toFixed(2)} kWh/kWp ({topInverter?.yield_deviation_pct && topInverter.yield_deviation_pct > 0 ? `+${topInverter.yield_deviation_pct}%` : "0%"})
             </div>
@@ -91,7 +91,7 @@ export function MultiInverterDiagnosticSection({
           </div>
           <div>
             <div className="text-xs text-muted-foreground font-medium">Lowest Yield Inverter</div>
-            <div className="font-bold text-sm text-foreground font-mono">{lowestInverter?.oem_device_id || "—"}</div>
+            <div className="font-bold text-sm text-foreground font-mono">{lowestInverter?.serial_number || "—"}</div>
             <div className="text-xs text-amber-600 dark:text-amber-400 font-mono font-medium">
               {lowestInverter?.specific_yield_kwh_kwp.toFixed(2)} kWh/kWp ({lowestInverter?.yield_deviation_pct}% vs median)
             </div>
@@ -169,8 +169,8 @@ export function MultiInverterDiagnosticSection({
                 <TableHead className="cursor-pointer" onClick={() => handleSort("performance_rank")}>
                   Rank {sortField === "performance_rank" && (sortAsc ? "↑" : "↓")}
                 </TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort("oem_device_id")}>
-                  Inverter {sortField === "oem_device_id" && (sortAsc ? "↑" : "↓")}
+                <TableHead className="cursor-pointer" onClick={() => handleSort("serial_number")}>
+                  Inverter SN {sortField === "serial_number" && (sortAsc ? "↑" : "↓")}
                 </TableHead>
                 <TableHead className="text-right cursor-pointer" onClick={() => handleSort("capacity_kw")}>
                   Capacity {sortField === "capacity_kw" && (sortAsc ? "↑" : "↓")}
@@ -210,8 +210,8 @@ export function MultiInverterDiagnosticSection({
                     #{r.performance_rank}
                   </TableCell>
                   <TableCell className="font-semibold text-foreground">
-                    <div>{r.oem_device_id}</div>
-                    <div className="text-[10px] text-muted-foreground font-mono">{r.serial_number}</div>
+                    <div className="font-mono font-bold text-sm">{r.serial_number || r.oem_device_id}</div>
+                    <div className="text-[10px] text-muted-foreground">{r.model} ({r.oem})</div>
                   </TableCell>
                   <TableCell className="text-right font-mono">{r.capacity_kw} kW</TableCell>
                   <TableCell className="text-right font-mono">
@@ -261,7 +261,7 @@ export function MultiInverterDiagnosticSection({
                   <div className="flex items-center gap-2">
                     <Zap className="h-5 w-5 text-primary" />
                     <DialogTitle className="text-base font-bold">
-                      Inverter Diagnostic: {selectedInverter.oem_device_id}
+                      Inverter Diagnostic: {selectedInverter.serial_number || selectedInverter.oem_device_id}
                     </DialogTitle>
                   </div>
                   <Badge 

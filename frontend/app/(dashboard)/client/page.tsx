@@ -56,10 +56,14 @@ export default async function ClientPortfolioPage() {
     customerOrg = org;
   }
 
-  // Fetch client accessible sites (scoped strictly to client's organization if role is client)
+  // Fetch client accessible sites (scoped strictly to client's owned sites if role is client)
   let sitesQuery = serviceClient.from("sites").select("*").order("name");
-  if (profile.role === "client" && profile.org_id) {
-    sitesQuery = sitesQuery.eq("client_org_id", profile.org_id);
+  if (profile.role === "client") {
+    if (profile.org_id) {
+      sitesQuery = sitesQuery.or(`client_id.eq.${profile.id},client_org_id.eq.${profile.org_id}`);
+    } else {
+      sitesQuery = sitesQuery.eq("client_id", profile.id);
+    }
   }
   const { data: sitesRes } = await sitesQuery;
 

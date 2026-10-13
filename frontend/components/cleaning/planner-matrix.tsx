@@ -305,33 +305,67 @@ export function PlannerMatrix({
         </CardHeader>
 
         <CardContent className="p-0 flex-1 overflow-hidden flex flex-col">
-          <div className="w-full flex-1 overflow-auto max-h-full">
-            <table className="w-full border-collapse text-xs select-none">
-              <thead className="sticky top-0 z-30 bg-card border-b shadow-[0_2px_5px_rgba(0,0,0,0.05)] text-muted-foreground font-semibold">
-                <tr>
-                  <th className="sticky left-0 z-40 bg-card p-4 min-w-[200px] border-r border-b shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-left uppercase tracking-wider text-[11px]">
-                    Team / Date
-                  </th>
-                  {daysArray.map((day) => {
-                    const dateObj = new Date(year, month - 1, day);
-                    const dayOfWeek = dateObj.toLocaleString("en-IN", { weekday: "short" });
-                    const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
+          {teams.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center bg-card/60">
+              <div className="h-16 w-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-4 shadow-sm">
+                <UserCheck className="h-8 w-8" />
+              </div>
+              <h3 className="text-base font-bold text-foreground">No Operational Cleaning Teams</h3>
+              <p className="text-xs text-muted-foreground max-w-md mt-1 mb-5">
+                To schedule and dispatch monthly cleaning visits across your solar portfolio, active field teams must be configured in Workforce.
+              </p>
+              <a href="/workforce">
+                <Button size="sm" className="gap-2 text-xs h-8">
+                  <Wrench className="h-3.5 w-3.5" /> Manage Teams in Workforce
+                </Button>
+              </a>
+            </div>
+          ) : (
+            <>
+              {assignments.length === 0 && (
+                <div className="mx-4 mt-3 mb-1 p-3.5 bg-muted/40 border border-dashed rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2.5">
+                    <Calendar className="h-4 w-4 text-primary shrink-0" />
+                    <div>
+                      <span className="font-semibold text-foreground">No cleaning visits scheduled for {monthName} {year} yet.</span>
+                      <span className="text-muted-foreground ml-1.5">
+                        Configure site cleaning rules above to run automatic planning, or click any day cell below to place manual visits.
+                      </span>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={() => handleOpenManual()}>
+                    + Add Manual Visit
+                  </Button>
+                </div>
+              )}
 
-                    return (
-                      <th
-                        key={day}
-                        className={`py-2.5 px-3 min-w-[170px] text-center border-r border-b ${
-                          isWeekend ? "bg-muted/70 text-muted-foreground font-normal" : "bg-card"
-                        }`}
-                      >
-                        <div className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">{dayOfWeek}</div>
-                        <div className="font-bold text-base text-foreground mt-0.5">{day}</div>
+              <div className="w-full flex-1 overflow-auto max-h-full">
+                <table className="w-full border-collapse text-xs select-none">
+                  <thead className="sticky top-0 z-30 bg-card border-b shadow-[0_2px_5px_rgba(0,0,0,0.05)] text-muted-foreground font-semibold">
+                    <tr>
+                      <th className="sticky left-0 z-40 bg-card p-4 min-w-[200px] border-r border-b shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-left uppercase tracking-wider text-[11px]">
+                        Team / Date
                       </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody className="divide-y">
+                      {daysArray.map((day) => {
+                        const dateObj = new Date(year, month - 1, day);
+                        const dayOfWeek = dateObj.toLocaleString("en-IN", { weekday: "short" });
+                        const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
+
+                        return (
+                          <th
+                            key={day}
+                            className={`py-2.5 px-3 min-w-[170px] text-center border-r border-b ${
+                              isWeekend ? "bg-muted/70 text-muted-foreground font-normal" : "bg-card"
+                            }`}
+                          >
+                            <div className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">{dayOfWeek}</div>
+                            <div className="font-bold text-base text-foreground mt-0.5">{day}</div>
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
                 {teams.map((team) => (
                   <tr key={team.id} className="hover:bg-muted/10 transition-colors">
                     {/* Sticky Team Header Column */}
@@ -472,7 +506,9 @@ export function PlannerMatrix({
               </tbody>
             </table>
           </div>
-        </CardContent>
+        </>
+      )}
+    </CardContent>
       </Card>
 
       {/* Edit / Reassign Assignment Dialog */}

@@ -67,6 +67,23 @@ export async function POST(req: Request) {
     const prevPlan = prevPlanRes.data ?? null;
     const cleaningLogs = cleaningLogsRes.data ?? [];
 
+    // Strictly enforce: All active sites must be configured in site_cleaning_rules before auto-planning
+    const configuredRules = rules.filter((r) => r.is_configured);
+    const configuredRuleMap = new Map<string, any>();
+    configuredRules.forEach((r) => configuredRuleMap.set(r.site_id, r));
+    const unconfiguredSites = sites.filter((s) => !configuredRuleMap.has(s.id));
+
+    if (unconfiguredSites.length > 0) {
+      return NextResponse.json(
+        {
+          error: `Cannot generate schedule: All ${sites.length} sites must have cleaning rules configured first. Currently ${unconfiguredSites.length} site(s) are unconfigured.`,
+          unconfiguredSitesCount: unconfiguredSites.length,
+          unconfiguredSites: unconfiguredSites.map((s) => ({ id: s.id, name: s.name })),
+        },
+        { status: 400 }
+      );
+    }
+
     // Map previous team assignments for historical team continuity
     const previousTeamMap = new Map<string, string>();
     if (prevPlan && prevPlan.cleaning_plan_assignments) {

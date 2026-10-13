@@ -48,14 +48,24 @@ async function runPhase5Tests() {
 
   // --- Test B & C: Genuine peer-relative string underperformance detected & benchmark values exposed ---
   {
-    // Telemetry spanning 45 minutes (12:00 to 12:45)
-    const timestamps = ["2026-10-06T12:00:00Z", "2026-10-06T12:15:00Z", "2026-10-06T12:30:00Z", "2026-10-06T12:45:00Z"];
+    // Telemetry with prior normal history + sustained 45-minute underperformance
+    const normalTimestamps = ["2026-10-06T10:00:00Z", "2026-10-06T10:30:00Z", "2026-10-06T11:00:00Z", "2026-10-06T11:30:00Z"];
+    const anomTimestamps = ["2026-10-06T12:00:00Z", "2026-10-06T12:15:00Z", "2026-10-06T12:30:00Z", "2026-10-06T12:45:00Z"];
     const telemetry: any[] = [];
-    for (const ts of timestamps) {
+    
+    for (const ts of normalTimestamps) {
       telemetry.push(
         { string_id: "str-1", timestamp: ts, voltage_v: 650, current_a: 5.1, power_kw: 3.3 },
         { string_id: "str-2", timestamp: ts, voltage_v: 650, current_a: 5.0, power_kw: 3.25 },
-        { string_id: "str-3", timestamp: ts, voltage_v: 650, current_a: 2.5, power_kw: 1.62 }, // underperforming
+        { string_id: "str-3", timestamp: ts, voltage_v: 650, current_a: 5.0, power_kw: 3.25 }, // normal history
+        { string_id: "str-4", timestamp: ts, voltage_v: 650, current_a: 4.9, power_kw: 3.18 }
+      );
+    }
+    for (const ts of anomTimestamps) {
+      telemetry.push(
+        { string_id: "str-1", timestamp: ts, voltage_v: 650, current_a: 5.1, power_kw: 3.3 },
+        { string_id: "str-2", timestamp: ts, voltage_v: 650, current_a: 5.0, power_kw: 3.25 },
+        { string_id: "str-3", timestamp: ts, voltage_v: 650, current_a: 2.5, power_kw: 1.62 }, // underperforming dip
         { string_id: "str-4", timestamp: ts, voltage_v: 650, current_a: 4.9, power_kw: 3.18 }
       );
     }
@@ -83,6 +93,68 @@ async function runPhase5Tests() {
     );
   }
 
+  // --- Test Q: String operating at ~0.5A historically every day is NOT flagged (3-Way Cross-Validation) ---
+  {
+    const timestamps = ["2026-10-06T10:00:00Z", "2026-10-06T11:00:00Z", "2026-10-06T12:00:00Z", "2026-10-06T13:00:00Z"];
+    const telemetry: any[] = [];
+    for (const ts of timestamps) {
+      telemetry.push(
+        { string_id: "str-1", timestamp: ts, voltage_v: 650, current_a: 6.0, power_kw: 3.9 },
+        { string_id: "str-2", timestamp: ts, voltage_v: 650, current_a: 6.1, power_kw: 3.96 },
+        { string_id: "str-3", timestamp: ts, voltage_v: 650, current_a: 0.5, power_kw: 0.32 }, // String #3 ALWAYS operates at ~0.5A
+        { string_id: "str-4", timestamp: ts, voltage_v: 650, current_a: 5.9, power_kw: 3.83 }
+      );
+    }
+
+    const strings = [
+      { id: "str-1", inverter_id: "inv-1", string_index: 1 },
+      { id: "str-2", inverter_id: "inv-1", string_index: 2 },
+      { id: "str-3", inverter_id: "inv-1", string_index: 3 },
+      { id: "str-4", inverter_id: "inv-1", string_index: 4 },
+    ];
+    const inverters = [{ id: "inv-1", site_id: "site-1", oem_device_id: "INV-01", status: "online" }];
+    const sites = [{ id: "site-1", name: "Solar Site 1" }];
+
+    const result = analyzeStringAnomalies(telemetry, strings, inverters, sites);
+    const falseFlag = result.find((a) => a.string_index === 3);
+
+    assert(
+      !falseFlag,
+      "Test Q: String operating at ~0.5A historically every day is NOT flagged (3-Way Cross-Validation)"
+    );
+  }
+
+  // --- Test R: String historically hovering around 0A (e.g. unpopulated channel) is NOT flagged as error ---
+  {
+    const timestamps = ["2026-10-06T10:00:00Z", "2026-10-06T11:00:00Z", "2026-10-06T12:00:00Z", "2026-10-06T13:00:00Z"];
+    const telemetry: any[] = [];
+    for (const ts of timestamps) {
+      telemetry.push(
+        { string_id: "str-1", timestamp: ts, voltage_v: 600, current_a: 11.5, power_kw: 6.9 },
+        { string_id: "str-2", timestamp: ts, voltage_v: 600, current_a: 11.8, power_kw: 7.08 },
+        { string_id: "str-8", timestamp: ts, voltage_v: 600, current_a: 0.05, power_kw: 0.03 }, // Unpopulated channel hovering ~0A
+        { string_id: "str-4", timestamp: ts, voltage_v: 600, current_a: 11.2, power_kw: 6.72 }
+      );
+    }
+
+    const strings = [
+      { id: "str-1", inverter_id: "inv-1", string_index: 1 },
+      { id: "str-2", inverter_id: "inv-1", string_index: 2 },
+      { id: "str-8", inverter_id: "inv-1", string_index: 8 },
+      { id: "str-4", inverter_id: "inv-1", string_index: 4 },
+    ];
+    const inverters = [{ id: "inv-1", site_id: "site-1", oem_device_id: "INV-01", status: "online" }];
+    const sites = [{ id: "site-1", name: "Solar Site 1" }];
+
+    const result = analyzeStringAnomalies(telemetry, strings, inverters, sites);
+    const falseFlag = result.find((a) => a.string_index === 8);
+
+    assert(
+      !falseFlag,
+      "Test R: String hovering near 0A historically is NOT flagged as an anomaly or underperformance"
+    );
+  }
+
   // --- Test D: Insufficient peer data does not generate misleading expected values ---
   {
     const telemetry = [
@@ -101,9 +173,19 @@ async function runPhase5Tests() {
 
   // --- Test F & G: High-confidence sustained anomaly action recommendation & deduplication ---
   {
-    const timestamps = ["2026-10-06T12:00:00Z", "2026-10-06T12:15:00Z", "2026-10-06T12:30:00Z", "2026-10-06T12:45:00Z"];
+    const normalTimestamps = ["2026-10-06T10:00:00Z", "2026-10-06T11:00:00Z"];
+    const anomTimestamps = ["2026-10-06T12:00:00Z", "2026-10-06T12:15:00Z", "2026-10-06T12:30:00Z", "2026-10-06T12:45:00Z"];
     const telemetry: any[] = [];
-    for (const ts of timestamps) {
+
+    for (const ts of normalTimestamps) {
+      telemetry.push(
+        { string_id: "str-1", timestamp: ts, voltage_v: 650, current_a: 5.1, power_kw: 3.3 },
+        { string_id: "str-2", timestamp: ts, voltage_v: 650, current_a: 5.0, power_kw: 3.25 },
+        { string_id: "str-3", timestamp: ts, voltage_v: 650, current_a: 5.0, power_kw: 3.25 },
+        { string_id: "str-4", timestamp: ts, voltage_v: 650, current_a: 4.9, power_kw: 3.18 }
+      );
+    }
+    for (const ts of anomTimestamps) {
       telemetry.push(
         { string_id: "str-1", timestamp: ts, voltage_v: 650, current_a: 5.1, power_kw: 3.3 },
         { string_id: "str-2", timestamp: ts, voltage_v: 650, current_a: 5.0, power_kw: 3.25 },

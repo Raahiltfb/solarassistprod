@@ -78,12 +78,17 @@ class SolisAdapter(OemAdapter):
                 if " " in timezone_str:
                     timezone_str = timezone_str.split(" ", 1)[1]
                 
+                # Commissioned / Tracking start date
+                comm_date = s.get("connectTimeStr") or s.get("fisGenerateTimeStr") or s.get("createDateStr")
+                commissioned_on = comm_date[:10] if comm_date and len(comm_date) >= 10 else None
+
                 stations.append(NormalizedStation(
                     plant_id=plant_id,
                     name=name,
                     capacity_kwp=capacity,
                     location=location,
-                    timezone=timezone_str
+                    timezone=timezone_str,
+                    commissioned_on=commissioned_on
                 ))
         return stations
 

@@ -78,9 +78,10 @@ export default async function InverterDetailsPage({ params }: { params: Promise<
   if (stringIds.length > 0) {
     const { data: stData } = await sb
       .from("string_telemetry")
-      .select("*")
+      .select("string_id, voltage_v, current_a, power_kw, status, timestamp")
       .in("string_id", stringIds)
-      .order("timestamp", { ascending: false });
+      .order("timestamp", { ascending: false })
+      .limit(Math.max(stringIds.length * 2, 64));
 
     for (const st of stData ?? []) {
       if (!latestStringTelemetry.has(st.string_id)) {
@@ -135,9 +136,9 @@ export default async function InverterDetailsPage({ params }: { params: Promise<
         </div>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-display font-semibold font-mono">{inverter.oem_device_id}</h1>
+            <h1 className="text-3xl font-display font-semibold font-mono">{inverter.serial_number || inverter.oem_device_id}</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Serial Number: <b className="font-mono">{inverter.serial_number}</b> · OEM: <span className="capitalize">{inverter.oem}</span> · Model: {inverter.model}
+              OEM: <span className="capitalize">{inverter.oem}</span> · Model: {inverter.model}
             </p>
             <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
               Last updated: <span className="font-mono font-medium">{latestTelemetry.timestamp ? formatDateTime(latestTelemetry.timestamp) : "—"}</span>

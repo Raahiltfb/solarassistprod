@@ -513,18 +513,49 @@ export default function CleaningPlannerPage() {
         </div>
       </div>
 
+      {/* Site Cleaning Configuration Warning / Action Banner */}
+      {unconfiguredSites.length > 0 && (
+        <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs text-amber-950 dark:text-amber-200">
+          <div className="flex items-center gap-2.5">
+            <ShieldAlert className="h-5 w-5 text-amber-600 shrink-0" />
+            <div>
+              <span className="font-bold">Automatic Planning Locked:</span>
+              <span className="ml-1.5">
+                Every site must have cleaning rules configured before auto-scheduling. Currently <strong>{unconfiguredSites.length} of {sites.length}</strong> sites are unconfigured.
+              </span>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="default"
+            className="text-xs h-8 bg-amber-600 hover:bg-amber-700 text-white gap-1.5 shadow-sm font-semibold"
+            onClick={() => setBulkRuleOpen(true)}
+          >
+            <Settings className="h-3.5 w-3.5" />
+            Configure All {unconfiguredSites.length} Sites
+          </Button>
+        </div>
+      )}
+
       {/* Primary Operations Action Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 bg-muted/30 p-4 rounded-xl border">
         <div className="flex flex-wrap items-center gap-4">
           <Button
             onClick={handlePlanAutomatically}
-            disabled={generating || plan?.status === "published"}
-            variant="default"
+            disabled={generating || plan?.status === "published" || unconfiguredSites.length > 0}
+            variant={unconfiguredSites.length > 0 ? "secondary" : "default"}
             size="sm"
-            className="text-xs h-9 gap-2 shadow-sm"
+            className="text-xs h-9 gap-2 shadow-sm font-semibold"
+            title={unconfiguredSites.length > 0 ? `${unconfiguredSites.length} sites require configuration first` : undefined}
           >
-            <Calendar className="h-4 w-4 text-primary-foreground" />
-            <span>{generating ? "Planning Month..." : `Plan ${monthName}`}</span>
+            <Calendar className="h-4 w-4" />
+            <span>
+              {generating 
+                ? "Planning Month..." 
+                : unconfiguredSites.length > 0 
+                ? `Plan ${monthName} (Locked: ${unconfiguredSites.length} Unconfigured)` 
+                : `Plan ${monthName}`}
+            </span>
           </Button>
 
           <Button

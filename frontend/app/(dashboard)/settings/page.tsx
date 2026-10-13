@@ -6,8 +6,14 @@ import { SubNav } from "@/components/sub-nav";
 export default async function SettingsPage() {
   const sb = await createClient();
   const { data: { user } } = await sb.auth.getUser();
-  const { data: profile } = await sb.from("profiles").select("*, organizations(*)").eq("id", user!.id).single();
-  const { data: oems } = await sb.from("oem_integrations").select("*");
+
+  const [profileRes, oemsRes] = await Promise.all([
+    user ? sb.from("profiles").select("*, organizations(*)").eq("id", user.id).single() : Promise.resolve({ data: null }),
+    sb.from("oem_integrations").select("*"),
+  ]);
+
+  const profile = profileRes.data;
+  const oems = oemsRes.data;
 
   const integrations = [
     { provider: "solis",   connected: !!process.env.SOLIS_KEY_ID, label: "Solis Cloud" },

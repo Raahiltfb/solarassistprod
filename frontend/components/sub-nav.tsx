@@ -42,6 +42,7 @@ export function SubNav({ hub }: SubNavProps) {
             <Link
               key={tab.href}
               href={tab.href}
+              prefetch={true}
               className={cn(
                 "flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold rounded-t-lg transition-colors border-b-2 whitespace-nowrap",
                 isActive

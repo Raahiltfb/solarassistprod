@@ -54,8 +54,12 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
   }
 
   let siteQuery = serviceClient.from("sites").select("*").eq("id", id);
-  if (profile.role === "client" && profile.org_id) {
-    siteQuery = siteQuery.eq("client_org_id", profile.org_id);
+  if (profile.role === "client") {
+    if (profile.org_id) {
+      siteQuery = siteQuery.or(`client_id.eq.${profile.id},client_org_id.eq.${profile.org_id}`);
+    } else {
+      siteQuery = siteQuery.eq("client_id", profile.id);
+    }
   }
   const { data: site } = await siteQuery.maybeSingle();
 

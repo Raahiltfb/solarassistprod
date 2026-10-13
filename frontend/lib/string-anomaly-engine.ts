@@ -5,7 +5,8 @@ export type AnomalyType =
   | "sustained_underperformance" 
   | "transient_shadow" 
   | "voltage_droop"
-  | "global_low_production";
+  | "global_low_production"
+  | "inverter_offline";
 
 export type AnomalySeverity = "low" | "medium" | "high" | "critical";
 
@@ -23,15 +24,21 @@ export interface StringAnomaly {
   severity: AnomalySeverity;
   action_recommendation: DiagnosticAction;
   
-  // Measured vs Benchmark
+  // Measured vs 3-Way Benchmarks (Peer, Historical, Expected)
   actual_current_a: number;
-  benchmark_current_a: number; // Peer median
+  benchmark_current_a: number; // Metric 1: Peer median
+  historical_current_a: number; // Metric 2: Historical self median
+  expected_current_a: number;   // Metric 3: Design/rated target
+  
   actual_voltage_v: number;
   benchmark_voltage_v: number;
+  historical_voltage_v: number;
+  expected_voltage_v: number;
   
   // Deviations
   deviation_abs_a: number;
-  deviation_pct: number;
+  deviation_pct: number; // Peer deviation %
+  historical_deviation_pct: number; // Historical deviation %
   voltage_deviation_pct: number;
   
   // Persistence & Window
@@ -149,7 +156,49 @@ export function analyzeStringAnomalies(
     }
   }
 
-  // Group telemetry by inverter_id -> timestamp -> Array<{ string_id, point }>
+  // 1. Calculate String Historical Self Baselines (median current and voltage across recorded telemetry for each string)
+  const stringHistoricalMap = new Map<string, {
+    historicalCurrent: number;
+    historicalMaxCurrent: number;
+    historicalVoltage: number;
+    hasActiveHistory: boolean;
+  }>();
+  const stringTelemetryPointsMap = new Map<string, StringTelemetryPoint[]>();
+
+  for (const pt of telemetry) {
+    let list = stringTelemetryPointsMap.get(pt.string_id);
+    if (!list) {
+      list = [];
+      stringTelemetryPointsMap.set(pt.string_id, list);
+    }
+    list.push(pt);
+  }
+
+  stringTelemetryPointsMap.forEach((pts, strId) => {
+    const activeCurrents = pts
+      .map((p) => Number(p.current_a || 0))
+      .filter((c) => c > 0.2);
+    const allCurrents = pts.map((p) => Number(p.current_a || 0));
+    const activeVoltages = pts
+      .map((p) => Number(p.voltage_v || 0))
+      .filter((v) => v > 50);
+
+    const maxCurrent = allCurrents.length > 0 ? Math.max(...allCurrents) : 0;
+    const histCurrent = activeCurrents.length > 0 ? calculateMedian(activeCurrents) : 0;
+    const histVoltage = activeVoltages.length > 0 ? calculateMedian(activeVoltages) : 0;
+
+    // A string has active generation history ONLY if it historically generated >= 0.5A median or >= 0.8A peak
+    const hasActiveHistory = histCurrent >= 0.5 || maxCurrent >= 0.8;
+
+    stringHistoricalMap.set(strId, {
+      historicalCurrent: histCurrent,
+      historicalMaxCurrent: maxCurrent,
+      historicalVoltage: histVoltage,
+      hasActiveHistory,
+    });
+  });
+
+  // 2. Group telemetry by inverter_id -> timestamp -> Array<{ string_id, point }>
   const invTimeMap = new Map<string, Map<string, Array<{ string_id: string; point: StringTelemetryPoint }>>>();
 
   for (const pt of telemetry) {
@@ -169,6 +218,72 @@ export function analyzeStringAnomalies(
     }
 
     list.push({ string_id: pt.string_id, point: pt });
+  }
+
+  // Evaluate offline inverters and push offline diagnostic anomalies
+  for (const inv of inverters) {
+    const dbStatus = (inv.status || "").toLowerCase();
+    let isOffline = dbStatus === "offline" || dbStatus === "fault";
+
+    let lastSeenStr = inv.last_seen_at;
+    if (!isOffline && lastSeenStr) {
+      const lastSeenMs = new Date(lastSeenStr).getTime();
+      if (!isNaN(lastSeenMs) && Date.now() - lastSeenMs > 30 * 60 * 1000) {
+        isOffline = true;
+      }
+    }
+
+    if (isOffline) {
+      const siteObj = siteMap.get(inv.site_id);
+      const invName = inv.serial_number ? `SN: ${inv.serial_number}` : inv.oem_device_id || "Inverter";
+      const capKw = Number(inv.capacity_kw || 50);
+      const estKwh = Math.round(capKw * 0.7 * 2 * 100) / 100;
+      const firstTs = inv.last_seen_at || new Date().toISOString();
+
+      const existingTicket = activeTicketMap.get(`${inv.id}:0`);
+      const existingSr = activeSrMap.get(`${inv.id}:0`);
+
+      anomalies.push({
+        id: `anom-offline-${inv.id}`,
+        string_id: `str-offline-${inv.id}`,
+        string_index: 0,
+        inverter_id: inv.id,
+        inverter_name: invName,
+        site_id: inv.site_id,
+        site_name: siteObj?.name || "Site",
+        type: "inverter_offline",
+        severity: "critical",
+        action_recommendation: existingSr ? "MONITOR" : existingTicket ? "NOTIFY" : "CREATE_SERVICE_REQUEST",
+        actual_current_a: 0,
+        benchmark_current_a: 0,
+        historical_current_a: 0,
+        expected_current_a: 0,
+        actual_voltage_v: 0,
+        benchmark_voltage_v: 0,
+        historical_voltage_v: 0,
+        expected_voltage_v: 0,
+        deviation_abs_a: 0,
+        deviation_pct: -100,
+        historical_deviation_pct: -100,
+        voltage_deviation_pct: -100,
+        duration_mins: inv.last_seen_at ? Math.max(30, Math.round((Date.now() - new Date(inv.last_seen_at).getTime()) / 60000)) : 60,
+        first_detected_at: firstTs,
+        last_detected_at: new Date().toISOString(),
+        benchmark_methodology: "Communication Loss / Heartbeat Timeout (>30m stale telemetry)",
+        peer_strings_included: [],
+        peer_strings_excluded: [],
+        exclusion_reason: "Inverter is offline or unreachable",
+        estimated_loss_kwh: estKwh,
+        estimated_loss_inr: Math.round(estKwh * 7.5),
+        status: existingSr?.status === "completed" ? "resolved" : existingTicket ? "under_verification" : "active",
+        linked_service_request_id: existingSr?.id || null,
+        linked_ticket_id: existingTicket?.id || null,
+        ticket_status: existingTicket?.status || null,
+        service_request_status: existingSr?.status || null,
+        explanation_notes: `Inverter ${invName} is currently offline or unreachable. No active telemetry recorded.`,
+        recommended_action: `Dispatch technician to inspect AC grid breaker, DC isolator switch, and datalogger connectivity stick for ${invName}.`,
+      });
+    }
   }
 
   // Process telemetry for each inverter over time
@@ -192,8 +307,12 @@ export function analyzeStringAnomalies(
       type: AnomalyType;
       sumCurrent: number;
       sumPeerMedianCurrent: number;
+      sumHistCurrent: number;
+      sumExpCurrent: number;
       sumVoltage: number;
       sumPeerMedianVoltage: number;
+      sumHistVoltage: number;
+      sumExpVoltage: number;
       includedPeers: number[];
       excludedPeers: number[];
       exclusionReason?: string;
@@ -228,7 +347,6 @@ export function analyzeStringAnomalies(
 
       // Check Global Low Production vs Individual String Anomaly:
       // Global Low Production occurs when ALL strings track each other within 12% variance (e.g. overcast or plant-wide derating).
-      // If any string has 0A / open circuit or >20% underperformance relative to peers, it is an individual string anomaly.
       const hasIndividualAnomaly = readings.some((r) => {
         const c = Number(r.point.current_a || 0);
         const v = Number(r.point.voltage_v || 0);
@@ -263,7 +381,7 @@ export function analyzeStringAnomalies(
         }
       });
 
-      // Evaluate each string at timestamp
+      // Evaluate each string at timestamp using 3-Way Benchmark Cross-Validation
       for (const r of readings) {
         const strObj = stringMap.get(r.string_id);
         if (!strObj) continue;
@@ -271,13 +389,45 @@ export function analyzeStringAnomalies(
         const curr = Number(r.point.current_a) || 0;
         const volt = Number(r.point.voltage_v) || 0;
 
+        const histObj = stringHistoricalMap.get(r.string_id);
+        const histCurrent = histObj ? histObj.historicalCurrent : 0;
+        const histMaxCurrent = histObj ? histObj.historicalMaxCurrent : 0;
+        const histVoltage = histObj ? histObj.historicalVoltage : 0;
+        const hasActiveHistory = histObj ? histObj.hasActiveHistory : false;
+
+        // CRITICAL: If a string historically hovers around 0 (e.g. unpopulated channel, unused string input),
+        // its baseline is genuinely around 0. This is NOT an error and must NOT be flagged!
+        if (!hasActiveHistory || (histCurrent < 0.5 && histMaxCurrent < 0.8)) {
+          continue;
+        }
+
+        const expectedCurrent = strObj.capacity_kw
+          ? Math.round((strObj.capacity_kw / 5.0) * peerMedianCurrent * 100) / 100
+          : peerMedianCurrent;
+        const expectedVoltage = peerMedianVoltage;
+
+        // Metric 1: Peer Variance (Is current significantly below active sister strings?)
+        const isPeerCurrDev = curr < 0.80 * peerMedianCurrent && peerMedianCurrent >= 1.0;
+        const isPeerVoltDev = volt < 0.88 * peerMedianVoltage && peerMedianVoltage >= 150;
+
+        // Metric 2: Historical Self Variance (Is current significantly below what this string historically gets?)
+        const isHistCurrDev = histCurrent >= 0.5 ? curr < 0.80 * Math.min(histCurrent, peerMedianCurrent) : false;
+        const isHistVoltDev = histVoltage > 100 ? volt < 0.88 * Math.min(histVoltage, peerMedianVoltage) : false;
+
+        // Metric 3: Expected Rating Variance
+        const isExpCurrDev = expectedCurrent > 0.5 ? curr < 0.80 * expectedCurrent : false;
+        const isExpVoltDev = expectedVoltage > 100 ? volt < 0.88 * expectedVoltage : false;
+
         let detectedType: AnomalyType | null = null;
 
-        if (curr <= 0.1 && peerMedianCurrent >= 1.5 && volt < 50) {
+        // Require ALL THREE metrics to show variance before flagging!
+        // String disconnected: Only valid if string historically had active generation (histCurrent >= 0.8),
+        // but now dropped to near zero (<= 0.1A and V < 50V) while peers are active!
+        if (curr <= 0.1 && peerMedianCurrent >= 1.5 && volt < 50 && histCurrent >= 0.8 && expectedCurrent >= 0.8) {
           detectedType = "string_disconnected";
-        } else if (curr < 0.80 * peerMedianCurrent && peerMedianCurrent >= 1.0) {
+        } else if (isPeerCurrDev && isHistCurrDev && isExpCurrDev) {
           detectedType = "sustained_underperformance";
-        } else if (volt < 0.88 * peerMedianVoltage && peerMedianVoltage >= 150) {
+        } else if (isPeerVoltDev && isHistVoltDev && isExpVoltDev) {
           detectedType = "voltage_droop";
         }
 
@@ -288,8 +438,12 @@ export function analyzeStringAnomalies(
             streak.count += 1;
             streak.sumCurrent += curr;
             streak.sumPeerMedianCurrent += peerMedianCurrent;
+            streak.sumHistCurrent += histCurrent;
+            streak.sumExpCurrent += expectedCurrent;
             streak.sumVoltage += volt;
             streak.sumPeerMedianVoltage += peerMedianVoltage;
+            streak.sumHistVoltage += histVoltage;
+            streak.sumExpVoltage += expectedVoltage;
           } else {
             stringStreakMap.set(r.string_id, {
               firstTs: ts,
@@ -298,8 +452,12 @@ export function analyzeStringAnomalies(
               type: detectedType,
               sumCurrent: curr,
               sumPeerMedianCurrent: peerMedianCurrent,
+              sumHistCurrent: histCurrent,
+              sumExpCurrent: expectedCurrent,
               sumVoltage: volt,
               sumPeerMedianVoltage: peerMedianVoltage,
+              sumHistVoltage: histVoltage,
+              sumExpVoltage: expectedVoltage,
               includedPeers: includedPeers.filter((idx) => idx !== strObj.string_index),
               excludedPeers: excludedPeers.filter((idx) => idx !== strObj.string_index),
               exclusionReason,
@@ -338,13 +496,21 @@ export function analyzeStringAnomalies(
 
       const meanCurr = streak.sumCurrent / streak.count;
       const meanPeerCurr = streak.sumPeerMedianCurrent / streak.count;
+      const meanHistCurr = streak.sumHistCurrent / streak.count;
+      const meanExpCurr = streak.sumExpCurrent / streak.count;
+
       const meanVolt = streak.sumVoltage / streak.count;
       const meanPeerVolt = streak.sumPeerMedianVoltage / streak.count;
+      const meanHistVolt = streak.sumHistVoltage / streak.count;
+      const meanExpVolt = streak.sumExpVoltage / streak.count;
 
       const devAbsA = Math.round((meanCurr - meanPeerCurr) * 100) / 100;
       const devPct = meanPeerCurr > 0 
         ? Math.round(((meanCurr - meanPeerCurr) / meanPeerCurr) * 1000) / 10 
         : -100;
+      const histDevPct = meanHistCurr > 0
+        ? Math.round(((meanCurr - meanHistCurr) / meanHistCurr) * 1000) / 10
+        : 0;
       const voltDevPct = meanPeerVolt > 0
         ? Math.round(((meanVolt - meanPeerVolt) / meanPeerVolt) * 1000) / 10
         : 0;
@@ -354,22 +520,22 @@ export function analyzeStringAnomalies(
       const estLossKwh = Math.round((deltaCurrent * meanPeerVolt * durationHours / 1000.0) * 100) / 100;
       const estLossInr = Math.round(estLossKwh * 7.5);
 
-      const benchmarkMethodology = `Peer-string median of active sibling channels on ${invObj?.oem_device_id || "inverter"} (V > 50V, I > 0.2A)`;
+      const benchmarkMethodology = `3-Way Cross-Validated: Peer-String Median (${meanPeerCurr.toFixed(1)}A), Historical Self Baseline (${meanHistCurr.toFixed(1)}A), and Design Target (${meanExpCurr.toFixed(1)}A)`;
 
       let explanationNotes = "";
       let recommendedAction = "";
 
       if (finalType === "string_disconnected") {
-        explanationNotes = `String #${strObj.string_index} measured 0A current while sister strings averaged ${meanPeerCurr.toFixed(1)}A. Open circuit / blown fuse detected.`;
-        recommendedAction = `Dispatch technician to inspect DC fuse, isolator switch, and MC4 connectors on String #${strObj.string_index} at ${invObj?.oem_device_id}.`;
+        explanationNotes = `String #${strObj.string_index} measured 0A current while sister strings averaged ${meanPeerCurr.toFixed(1)}A and historical average was ${meanHistCurr.toFixed(1)}A. Open circuit / blown fuse confirmed.`;
+        recommendedAction = `Dispatch technician to inspect DC fuse, isolator switch, and MC4 connectors on String #${strObj.string_index} at ${invObj?.serial_number ? `SN: ${invObj.serial_number}` : invObj?.oem_device_id || "Inverter"}.`;
       } else if (finalType === "sustained_underperformance") {
-        explanationNotes = `String #${strObj.string_index} current (${meanCurr.toFixed(1)}A) is ${Math.abs(devPct)}% below peer median (${meanPeerCurr.toFixed(1)}A) for ${diffMins} mins.`;
+        explanationNotes = `3-Way Validated: String #${strObj.string_index} current (${meanCurr.toFixed(1)}A) is ${Math.abs(devPct)}% below peer median (${meanPeerCurr.toFixed(1)}A), ${Math.abs(histDevPct)}% below its own historical average (${meanHistCurr.toFixed(1)}A), and below design target (${meanExpCurr.toFixed(1)}A) for ${diffMins} mins.`;
         recommendedAction = `Inspect String #${strObj.string_index} modules for localized soiling, module glass crack, or faulty bypass diode.`;
       } else if (finalType === "transient_shadow") {
         explanationNotes = `Transient ${Math.abs(devPct)}% current dip on String #${strObj.string_index} (${diffMins} mins). Self-correcting passing cloud or temporary shadow.`;
         recommendedAction = `Monitor telemetry for auto-recovery. No immediate field dispatch required.`;
       } else {
-        explanationNotes = `String #${strObj.string_index} voltage (${meanVolt.toFixed(1)}V) is ${Math.abs(voltDevPct)}% below peer median voltage (${meanPeerVolt.toFixed(1)}V).`;
+        explanationNotes = `3-Way Validated: String #${strObj.string_index} voltage (${meanVolt.toFixed(1)}V) is ${Math.abs(voltDevPct)}% below peer median (${meanPeerVolt.toFixed(1)}V) and historical average (${meanHistVolt.toFixed(1)}V).`;
         recommendedAction = `Inspect String #${strObj.string_index} wiring for PID degradation or bypassed solar modules.`;
       }
 
@@ -382,7 +548,7 @@ export function analyzeStringAnomalies(
         string_id: strId,
         string_index: strObj.string_index,
         inverter_id: invId,
-        inverter_name: invObj?.oem_device_id || "Inverter",
+        inverter_name: invObj?.serial_number ? `SN: ${invObj.serial_number}` : invObj?.oem_device_id || "Inverter",
         site_id: invObj?.site_id || "",
         site_name: siteObj?.name || "Site",
         type: finalType,
@@ -390,10 +556,15 @@ export function analyzeStringAnomalies(
         action_recommendation: action,
         actual_current_a: Math.round(meanCurr * 100) / 100,
         benchmark_current_a: Math.round(meanPeerCurr * 100) / 100,
+        historical_current_a: Math.round(meanHistCurr * 100) / 100,
+        expected_current_a: Math.round(meanExpCurr * 100) / 100,
         actual_voltage_v: Math.round(meanVolt * 10) / 10,
         benchmark_voltage_v: Math.round(meanPeerVolt * 10) / 10,
+        historical_voltage_v: Math.round(meanHistVolt * 10) / 10,
+        expected_voltage_v: Math.round(meanExpVolt * 10) / 10,
         deviation_abs_a: devAbsA,
         deviation_pct: devPct,
+        historical_deviation_pct: histDevPct,
         voltage_deviation_pct: voltDevPct,
         duration_mins: diffMins,
         first_detected_at: streak.firstTs,

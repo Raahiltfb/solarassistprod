@@ -327,6 +327,8 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
             "status": "active",
             "timezone": station.timezone
         }
+        if station.commissioned_on:
+            site_fields["commissioned_on"] = station.commissioned_on
         
         if is_valid_mapped_site:
             # Update (preserve site's org_id assignment)
@@ -365,6 +367,8 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                     "status": dev.status,
                     "last_seen_at": dev.last_seen_at
                 }
+                if station.commissioned_on:
+                    inv_fields["installed_on"] = station.commissioned_on
                 
                 if db_inverters:
                     inv_id = db_inverters[0]["id"]
@@ -374,7 +378,7 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                     inv_fields.update({
                         "oem": provider,
                         "oem_device_id": dev.oem_device_id,
-                        "installed_on": datetime.now(timezone.utc).date().isoformat()
+                        "installed_on": station.commissioned_on or dev.installed_on or "2023-01-01"
                     })
                     res_inv = supabase_post("inverters", [inv_fields], headers_override={"Prefer": "return=representation"})
                     inv_id = res_inv[0]["id"]

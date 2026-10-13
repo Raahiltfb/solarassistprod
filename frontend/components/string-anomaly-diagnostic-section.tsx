@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { AlertTriangle, ShieldAlert, Zap, ArrowRight, Wrench, CheckCircle2, Filter, Info, LineChart, HelpCircle, Eye } from "lucide-react";
-import { analyzeStringAnomalies, StringAnomaly, AnomalyType } from "@/lib/string-anomaly-engine";
+import { analyzeStringAnomalies, calculateMedian, StringAnomaly, AnomalyType } from "@/lib/string-anomaly-engine";
 import { formatDateTime } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { ResponsiveContainer, LineChart as ReLineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend, ReferenceArea } from "recharts";
@@ -18,11 +18,13 @@ export function StringAnomalyDiagnosticSection({
   strings,
   inverters,
   sites,
+  onNavigateToTab,
 }: {
   telemetry: any[];
   strings: any[];
   inverters: any[];
   sites: any[];
+  onNavigateToTab?: (tab: string) => void;
 }) {
   const sb = createClient();
 
@@ -53,7 +55,7 @@ export function StringAnomalyDiagnosticSection({
         site_id: anomaly.site_id,
         inverter_id: anomaly.inverter_id,
         title: `[String Diagnostic] ${anomaly.type.replace("_", " ").toUpperCase()} - ${anomaly.inverter_name} String #${anomaly.string_index}`,
-        description: `${anomaly.recommended_action}\n\nTechnical Benchmark Details:\n- Actual Current: ${anomaly.actual_current_a}A\n- Benchmark (Peer Median): ${anomaly.benchmark_current_a}A\n- Deviation: ${anomaly.deviation_pct}%\n- Persistence: ${anomaly.duration_mins} mins\n- Peers Included: ${anomaly.peer_strings_included.join(", ")}\n- Exclusion Rationale: ${anomaly.exclusion_reason || "None"}`,
+        description: `${anomaly.recommended_action}\n\nTechnical 3-Way Benchmark Details:\n- Actual Current: ${anomaly.actual_current_a}A\n- Peer Median: ${anomaly.benchmark_current_a}A\n- Historical Self Baseline: ${anomaly.historical_current_a}A\n- Expected Design Target: ${anomaly.expected_current_a}A\n- Peer Deviation: ${anomaly.deviation_pct}%\n- Historical Deviation: ${anomaly.historical_deviation_pct}%\n- Persistence: ${anomaly.duration_mins} mins\n- Peers Included: ${anomaly.peer_strings_included.join(", ")}\n- Exclusion Rationale: ${anomaly.exclusion_reason || "None"}`,
         priority: anomaly.severity === "critical" ? "p1" : anomaly.severity === "high" ? "p2" : "p3",
         status: "open",
       }).select("id").single();
@@ -85,32 +87,49 @@ export function StringAnomalyDiagnosticSection({
     setChartMetricMode(anom.type === "voltage_droop" ? "voltage" : "current");
   }
 
-  // Generate timeseries data for Recharts proof modal (Current & Voltage)
-  const chartData = selectedAnomalyForChart
-    ? Array.from({ length: 12 }).map((_, i) => {
-        const timeStr = `${10 + Math.floor(i / 2)}:${i % 2 === 0 ? "00" : "30"}`;
-        const isAnomalyPeriod = i >= 6;
-
-        const peerCurr = selectedAnomalyForChart.benchmark_current_a ?? 5.0;
-        const actualCurr = selectedAnomalyForChart.actual_current_a ?? 0;
-
-        const peerVolt = selectedAnomalyForChart.benchmark_voltage_v ?? 650;
-        const actualVolt = selectedAnomalyForChart.actual_voltage_v ?? 600;
-
-        // Baseline before anomaly period tracks peer baseline
-        const curPoint = isAnomalyPeriod ? actualCurr : Math.round(peerCurr * 0.98 * 100) / 100;
-        const voltPoint = isAnomalyPeriod ? actualVolt : Math.round(peerVolt * 0.99 * 10) / 10;
-
-        return {
-          time: timeStr,
-          actualCurrent: Number(curPoint.toFixed(2)),
-          peerMedianCurrent: Number(peerCurr.toFixed(2)),
-          actualVoltage: Number(voltPoint.toFixed(1)),
-          peerMedianVoltage: Number(peerVolt.toFixed(1)),
-          isAnomaly: isAnomalyPeriod,
-        };
-      })
+  // Generate timeseries data from actual recorded string telemetry points
+  const stringHistoryPoints = selectedAnomalyForChart
+    ? telemetry
+        .filter((t) => t.string_id === selectedAnomalyForChart.string_id)
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
     : [];
+
+  const chartData = stringHistoryPoints.map((pt) => {
+    const ts = pt.timestamp;
+    const dateObj = new Date(ts);
+    const timeStr = dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+    const dateStr = dateObj.toLocaleDateString([], { month: "short", day: "numeric" });
+    const fullLabel = `${dateStr} ${timeStr}`;
+
+    // Compute sibling strings median at this exact timestamp
+    const siblingPoints = telemetry.filter(
+      (t) => t.timestamp === ts && t.string_id !== pt.string_id && (t.voltage_v || 0) > 50
+    );
+    const validCurrents = siblingPoints.map((t) => Number(t.current_a || 0)).filter((c) => c > 0.2);
+    const validVoltages = siblingPoints.map((t) => Number(t.voltage_v || 0)).filter((v) => v > 50);
+
+    const peerCurr = validCurrents.length > 0
+      ? calculateMedian(validCurrents)
+      : selectedAnomalyForChart?.benchmark_current_a ?? 5.0;
+    const peerVolt = validVoltages.length > 0
+      ? calculateMedian(validVoltages)
+      : selectedAnomalyForChart?.benchmark_voltage_v ?? 650;
+
+    const actualCurr = Number(pt.current_a || 0);
+    const actualVolt = Number(pt.voltage_v || 0);
+
+    return {
+      timestamp: ts,
+      time: fullLabel,
+      timeOnly: timeStr,
+      actualCurrent: Number(actualCurr.toFixed(2)),
+      peerMedianCurrent: Number(peerCurr.toFixed(2)),
+      historicalCurrent: Number((selectedAnomalyForChart?.historical_current_a ?? peerCurr).toFixed(2)),
+      actualVoltage: Number(actualVolt.toFixed(1)),
+      peerMedianVoltage: Number(peerVolt.toFixed(1)),
+      historicalVoltage: Number((selectedAnomalyForChart?.historical_voltage_v ?? peerVolt).toFixed(1)),
+    };
+  });
 
   const currentValues = chartData.flatMap((d) => [d.actualCurrent, d.peerMedianCurrent]).filter((v) => typeof v === "number" && !isNaN(v));
   const maxCurrent = currentValues.length > 0 ? Math.max(...currentValues) : 10;
@@ -245,38 +264,48 @@ export function StringAnomalyDiagnosticSection({
                     <div className="text-[10px] text-muted-foreground font-mono">{anom.inverter_name}</div>
                   </TableCell>
                   <TableCell className="font-bold font-mono">
-                    String #{anom.string_index}
+                    {anom.string_index > 0 ? `String #${anom.string_index}` : "All Strings"}
                   </TableCell>
                   <TableCell>
                     <div className="font-semibold text-foreground capitalize flex items-center gap-1.5">
-                      {anom.type.replace("_", " ")}
+                      {anom.type === "inverter_offline" ? (
+                        <span className="text-destructive font-bold flex items-center gap-1">
+                          <Zap className="h-3.5 w-3.5 fill-destructive" /> Inverter Offline
+                        </span>
+                      ) : (
+                        anom.type.replace("_", " ")
+                      )}
                     </div>
                     <div className="text-[10px] text-muted-foreground line-clamp-1 max-w-[200px]">
                       {anom.recommended_action}
                     </div>
                   </TableCell>
                   <TableCell className="text-right font-mono">
-                    <div className="font-bold text-foreground">{anom.actual_current_a} A</div>
+                    <div className="font-bold text-foreground">{anom.type === "inverter_offline" ? "0 A" : `${anom.actual_current_a} A`}</div>
                     <div className="text-[10px] text-muted-foreground flex items-center justify-end gap-1">
-                      <span>Median: {anom.benchmark_current_a} A</span>
-                      <button 
-                        onClick={() => setSelectedBenchmarkDetails(anom)} 
-                        className="text-primary hover:underline focus:outline-none"
-                        title="Why this expected value?"
-                      >
-                        <HelpCircle className="h-3 w-3" />
-                      </button>
+                      <span>{anom.type === "inverter_offline" ? "Offline" : `Median: ${anom.benchmark_current_a} A`}</span>
+                      {anom.type !== "inverter_offline" && (
+                        <button 
+                          onClick={() => setSelectedBenchmarkDetails(anom)} 
+                          className="text-primary hover:underline focus:outline-none"
+                          title="Why this expected value?"
+                        >
+                          <HelpCircle className="h-3 w-3" />
+                        </button>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="text-right font-mono">
-                    <div className="font-bold text-foreground">{anom.actual_voltage_v} V</div>
+                    <div className="font-bold text-foreground">{anom.type === "inverter_offline" ? "0 V" : `${anom.actual_voltage_v} V`}</div>
                     <div className="text-[10px] text-muted-foreground">
-                      Median: {anom.benchmark_voltage_v} V
+                      {anom.type === "inverter_offline" ? "Offline" : `Median: ${anom.benchmark_voltage_v} V`}
                     </div>
                   </TableCell>
                   <TableCell className="text-right font-mono">
-                    <span className={`font-bold ${anom.deviation_pct < -15 || anom.voltage_deviation_pct < -10 ? "text-destructive" : "text-amber-600"}`}>
-                      {anom.type === "voltage_droop"
+                    <span className={`font-bold ${anom.type === "inverter_offline" || anom.deviation_pct < -15 || anom.voltage_deviation_pct < -10 ? "text-destructive" : "text-amber-600"}`}>
+                      {anom.type === "inverter_offline"
+                        ? "OFFLINE"
+                        : anom.type === "voltage_droop"
                         ? `${anom.voltage_deviation_pct}% V`
                         : anom.deviation_pct > 0 ? `+${anom.deviation_pct}% I` : `${anom.deviation_pct}% I`}
                     </span>
@@ -357,23 +386,27 @@ export function StringAnomalyDiagnosticSection({
                 </DialogDescription>
               </DialogHeader>
 
-              {/* Anomaly Metrics Bar */}
+              {/* 3-Way Anomaly Metrics Bar */}
               <div className="grid grid-cols-5 gap-2 bg-muted/40 p-3 rounded-lg text-xs font-mono">
                 <div>
-                  <span className="text-muted-foreground block text-[10px]">CURRENT (ACT / MED)</span>
-                  <span className="font-bold text-foreground">{selectedAnomalyForChart.actual_current_a}A / {selectedAnomalyForChart.benchmark_current_a}A</span>
+                  <span className="text-muted-foreground block text-[10px]">CURRENT (ACT/PEER/HIST)</span>
+                  <span className="font-bold text-foreground">
+                    {selectedAnomalyForChart.actual_current_a}A / {selectedAnomalyForChart.benchmark_current_a}A / {selectedAnomalyForChart.historical_current_a}A
+                  </span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground block text-[10px]">VOLTAGE (ACT / MED)</span>
-                  <span className="font-bold text-foreground">{selectedAnomalyForChart.actual_voltage_v}V / {selectedAnomalyForChart.benchmark_voltage_v}V</span>
+                  <span className="text-muted-foreground block text-[10px]">VOLTAGE (ACT/PEER/HIST)</span>
+                  <span className="font-bold text-foreground">
+                    {selectedAnomalyForChart.actual_voltage_v}V / {selectedAnomalyForChart.benchmark_voltage_v}V / {selectedAnomalyForChart.historical_voltage_v}V
+                  </span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground block text-[10px]">I DEVIATION</span>
+                  <span className="text-muted-foreground block text-[10px]">PEER DEVIATION</span>
                   <span className="font-bold text-destructive">{selectedAnomalyForChart.deviation_pct}%</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground block text-[10px]">V DEVIATION</span>
-                  <span className="font-bold text-amber-600">{selectedAnomalyForChart.voltage_deviation_pct}%</span>
+                  <span className="text-muted-foreground block text-[10px]">HIST DEVIATION</span>
+                  <span className="font-bold text-amber-600">{selectedAnomalyForChart.historical_deviation_pct}%</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground block text-[10px]">PERSISTENCE</span>
@@ -391,7 +424,7 @@ export function StringAnomalyDiagnosticSection({
                       margin={{ top: 15, right: 30, left: 20, bottom: 5 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                      <XAxis dataKey="time" tick={{ fontSize: 11 }} />
+                      <XAxis dataKey="time" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
                       <YAxis 
                         width={55}
                         domain={chartMetricMode === "current" ? yDomainCurrent : yDomainVoltage} 
@@ -402,7 +435,15 @@ export function StringAnomalyDiagnosticSection({
                         contentStyle={{ backgroundColor: "#1e293b", borderColor: "#334155", color: "#f8fafc", fontSize: "12px" }}
                       />
                       <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }} />
-                      <ReferenceArea x1="13:00" x2="15:30" fill="rgba(239, 68, 68, 0.15)" stroke="rgba(239, 68, 68, 0.5)" label={{ value: "Anomaly Window", fill: "#ef4444", fontSize: 11 }} />
+                      {chartData.length > 0 && (
+                        <ReferenceArea 
+                          x1={chartData[Math.max(0, Math.floor(chartData.length * 0.5))]?.time} 
+                          x2={chartData[chartData.length - 1]?.time} 
+                          fill="rgba(239, 68, 68, 0.15)" 
+                          stroke="rgba(239, 68, 68, 0.5)" 
+                          label={{ value: "Anomaly Window", fill: "#ef4444", fontSize: 11 }} 
+                        />
+                      )}
                       {chartMetricMode === "current" && (
                         <Line
                           key="actualCurrent"
@@ -424,6 +465,19 @@ export function StringAnomalyDiagnosticSection({
                           stroke="#10b981"
                           strokeWidth={2.5}
                           strokeDasharray="5 5"
+                          dot={false}
+                          isAnimationActive={false}
+                        />
+                      )}
+                      {chartMetricMode === "current" && (
+                        <Line
+                          key="historicalCurrent"
+                          type="monotone"
+                          dataKey="historicalCurrent"
+                          name="Historical Self Baseline"
+                          stroke="#6366f1"
+                          strokeWidth={2}
+                          strokeDasharray="3 3"
                           dot={false}
                           isAnimationActive={false}
                         />
@@ -457,14 +511,30 @@ export function StringAnomalyDiagnosticSection({
                   </ResponsiveContainer>
                 ) : (
                   <div className="h-[280px] flex items-center justify-center text-xs text-muted-foreground">
-                    Loading telemetry graph...
+                    Loading recorded telemetry graph...
                   </div>
                 )}
               </div>
 
-              <div className="bg-primary/5 p-3 rounded-md border border-primary/20 text-xs">
-                <div className="font-semibold text-primary mb-0.5">O&M Engineer Diagnosis:</div>
-                <div className="text-foreground">{selectedAnomalyForChart.recommended_action}</div>
+              <div className="flex items-center justify-between gap-4 bg-primary/5 p-3 rounded-md border border-primary/20 text-xs">
+                <div className="space-y-0.5">
+                  <div className="font-semibold text-primary">O&M Engineer Diagnosis:</div>
+                  <div className="text-foreground">{selectedAnomalyForChart.recommended_action}</div>
+                </div>
+                {onNavigateToTab && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedAnomalyForChart(null);
+                      onNavigateToTab("multi-string");
+                    }}
+                    className="shrink-0 h-8 text-xs gap-1 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground"
+                  >
+                    <span>Inspect in Multi-String Analytics</span>
+                    <ArrowRight className="h-3 w-3" />
+                  </Button>
+                )}
               </div>
             </>
           )}

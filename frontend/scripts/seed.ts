@@ -52,28 +52,71 @@ async function upsertUser(email: string, password: string, fullName: string, rol
   return userId;
 }
 
-function randomTelemetry(capacityKw: number, hoursBack = 48) {
+function randomTelemetry(capacityKw: number, daysBack = 180) {
   const out: any[] = [];
   const now = Date.now();
+  const msPerHour = 3600_000;
+  const hoursBack = daysBack * 24;
+
   let cumEnergy = 0;
   for (let h = hoursBack; h >= 0; h--) {
-    const t = new Date(now - h * 3600_000);
+    const t = new Date(now - h * msPerHour);
     const hour = t.getHours();
-    // Solar bell curve 6am-6pm
-    const bell = Math.max(0, Math.sin(((hour - 6) / 12) * Math.PI));
-    const noise = 0.85 + Math.random() * 0.3;
-    const ac = +(capacityKw * bell * noise).toFixed(3);
-    const dc = +(ac * 1.05).toFixed(3);
+
+    if (hour === 0) cumEnergy = 0; // reset daily cumulative energy
+
+    let ac = 0;
+    let dc = 0;
+    if (hour >= 6 && hour <= 18) {
+      const bell = Math.sin(((hour - 6) / 12) * Math.PI);
+      const noise = 0.85 + Math.random() * 0.3;
+      ac = +(capacityKw * bell * noise).toFixed(3);
+      dc = +(ac * 1.05).toFixed(3);
+    }
     cumEnergy += ac;
-    if (hour === 0) cumEnergy = 0; // reset daily
+
     out.push({
       timestamp: t.toISOString(),
       ac_power_kw: ac,
       dc_power_kw: dc,
       energy_kwh: +cumEnergy.toFixed(3),
-      efficiency_pct: +(92 + Math.random() * 5).toFixed(2),
-      temperature_c: +(30 + Math.random() * 20).toFixed(1),
+      efficiency_pct: ac > 0 ? +(92 + Math.random() * 5).toFixed(2) : 0,
+      temperature_c: +(25 + Math.random() * 20).toFixed(1),
     });
+  }
+  return out;
+}
+
+function randomStringTelemetry(insertedStrings: any[], daysBack = 90) {
+  const out: any[] = [];
+  const now = Date.now();
+  const msPerHour = 3600_000;
+
+  for (const str of insertedStrings) {
+    const isUnderperforming = str.status === "underperforming";
+
+    for (let d = daysBack; d >= 0; d--) {
+      for (let hour = 6; hour <= 18; hour += 2) {
+        const t = new Date(now - (d * 24 + (24 - hour)) * msPerHour);
+        const bell = Math.sin(((hour - 6) / 12) * Math.PI);
+        const noise = 0.9 + Math.random() * 0.2;
+
+        const voltage = +(650 + bell * 80 + Math.random() * 20).toFixed(1);
+        const current = isUnderperforming
+          ? +(0.5 + Math.random() * 0.3).toFixed(2)
+          : +(6.0 * bell * noise).toFixed(2);
+        const power = +((voltage * current) / 1000).toFixed(3);
+
+        out.push({
+          string_id: str.id,
+          timestamp: t.toISOString(),
+          voltage_v: voltage,
+          current_a: current,
+          power_kw: power,
+          status: isUnderperforming ? "underperforming" : "ok",
+        });
+      }
+    }
   }
   return out;
 }
@@ -82,6 +125,7 @@ async function main() {
   await applySchema();
 
   console.log("→ wiping old data…");
+  await sb.from("string_telemetry").delete().gt("id", "00000000-0000-0000-0000-000000000000");
   await sb.from("telemetry").delete().gt("id", "00000000-0000-0000-0000-000000000000");
   await sb.from("alerts").delete().gt("id", "00000000-0000-0000-0000-000000000000");
   await sb.from("tickets").delete().gt("id", "00000000-0000-0000-0000-000000000000");
@@ -104,20 +148,32 @@ async function main() {
   const tech1 = await upsertUser("tech@solarassist.dev", "Solar@12345", "SolarAssist Technician", "technician", org1Id);
   void superId; void tech1;
 
+  console.log("→ oem integrations");
+  await sb.from("oem_integrations").insert({
+    org_id: org1Id,
+    provider: "solis",
+    is_active: true,
+    config: {
+      solis_key_id: process.env.SOLIS_KEY_ID || "1300386381678106385",
+      solis_key_secret: process.env.SOLIS_KEY_SECRET || "a21fcc244b2f4fe48097ceca92a1c160",
+      solis_api_url: process.env.SOLIS_API_URL || "https://www.soliscloud.com:13333"
+    }
+  });
+
   console.log("→ sites + assets");
   const sitesSeed = [
-    { org_id: org1Id, name: "Jodhpur Solar Park", location: "Rajasthan, India", lat: 26.28, lon: 73.02, cap: 5200 },
-    { org_id: org1Id, name: "Pavagada Plant", location: "Karnataka, India", lat: 14.10, lon: 77.27, cap: 3800 },
-    { org_id: org1Id, name: "Bhadla Array 3", location: "Rajasthan, India", lat: 27.53, lon: 71.91, cap: 7500 },
-    { org_id: org2Id, name: "Nevada Sunbelt", location: "Nevada, USA", lat: 36.17, lon: -115.14, cap: 4500 },
-    { org_id: org2Id, name: "Atacama Phase 2", location: "Antofagasta, Chile", lat: -23.65, lon: -70.40, cap: 6200 },
+    { org_id: org1Id, name: "Jodhpur Solar Park", location: "Rajasthan, India", lat: 26.28, lon: 73.02, cap: 5200, commissioned_on: "2021-03-15" },
+    { org_id: org1Id, name: "Pavagada Plant", location: "Karnataka, India", lat: 14.10, lon: 77.27, cap: 3800, commissioned_on: "2020-08-20" },
+    { org_id: org1Id, name: "Bhadla Array 3", location: "Rajasthan, India", lat: 27.53, lon: 71.91, cap: 7500, commissioned_on: "2022-01-10" },
+    { org_id: org2Id, name: "Nevada Sunbelt", location: "Nevada, USA", lat: 36.17, lon: -115.14, cap: 4500, commissioned_on: "2021-11-05" },
+    { org_id: org2Id, name: "Atacama Phase 2", location: "Antofagasta, Chile", lat: -23.65, lon: -70.40, cap: 6200, commissioned_on: "2023-04-18" },
   ];
 
   for (const s of sitesSeed) {
     const { data: site } = await sb.from("sites").insert({
       org_id: s.org_id, name: s.name, location: s.location,
       latitude: s.lat, longitude: s.lon, capacity_kwp: s.cap,
-      commissioned_on: "2022-06-15", cleaning_cycle_days: 30,
+      commissioned_on: s.commissioned_on, cleaning_cycle_days: 30,
       last_cleaned_on: new Date(Date.now() - (10 + Math.floor(Math.random() * 40)) * 86400_000).toISOString().slice(0, 10),
       client_id: null,
     }).select().single();
@@ -125,6 +181,8 @@ async function main() {
     // 4 inverters per site
     const invCount = 4;
     const providers = ["solis", "growatt", "sungrow"] as const;
+    const allInsertedStrings: any[] = [];
+
     for (let i = 0; i < invCount; i++) {
       const provider = providers[i % providers.length];
       const cap = Math.round(s.cap / invCount);
@@ -138,22 +196,23 @@ async function main() {
         string_count: 8,
         status: Math.random() > 0.9 ? "offline" : "online",
         last_seen_at: new Date().toISOString(),
-        installed_on: "2022-06-15",
+        installed_on: s.commissioned_on,
       }).select().single();
 
       // strings
-      const strings = Array.from({ length: 8 }, (_, idx) => ({
+      const stringsToInsert = Array.from({ length: 8 }, (_, idx) => ({
         inverter_id: inv!.id, string_index: idx + 1, modules_count: 20,
         capacity_kw: +(cap / 8).toFixed(2),
         status: Math.random() > 0.85 ? "underperforming" : "ok",
       }));
-      await sb.from("strings").insert(strings);
+      const { data: strings } = await sb.from("strings").insert(stringsToInsert).select();
+      if (strings) allInsertedStrings.push(...strings);
 
-      // telemetry (last 48h, hourly)
-      const tel = randomTelemetry(cap, 48).map((t) => ({ ...t, inverter_id: inv!.id }));
-      // insert in chunks
-      for (let k = 0; k < tel.length; k += 500) {
-        await sb.from("telemetry").insert(tel.slice(k, k + 500));
+      // telemetry (last 180 days, hourly)
+      const tel = randomTelemetry(cap, 180).map((t) => ({ ...t, inverter_id: inv!.id }));
+      // insert in chunks of 1000
+      for (let k = 0; k < tel.length; k += 1000) {
+        await sb.from("telemetry").insert(tel.slice(k, k + 1000));
       }
 
       // occasional alert on offline inverters
@@ -171,6 +230,12 @@ async function main() {
           sla_due_at: new Date(Date.now() + 24 * 3600_000).toISOString(),
         });
       }
+    }
+
+    // string telemetry (last 90 days for all site strings)
+    const strTel = randomStringTelemetry(allInsertedStrings, 90);
+    for (let k = 0; k < strTel.length; k += 1000) {
+      await sb.from("string_telemetry").insert(strTel.slice(k, k + 1000));
     }
 
     // 1 string fault alert per site

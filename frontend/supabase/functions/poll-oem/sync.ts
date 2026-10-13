@@ -38,27 +38,29 @@ export async function pollAndSyncAll(supabaseUrl: string, supabaseKey: string, t
   const startedAt = new Date();
   
   // 1. Concurrency Mutex Lock using DB state
-  // If there is another sync run marked 'running' that started within the last 15 minutes, we skip.
-  const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  // A full Solis sync takes ~3-4 min. If the edge runtime kills a run mid-way (wall-clock limit),
+  // its row stays 'running' forever and used to block the next cron tick for 15 min → logged as "failed".
+  // Now: runs older than 6 min are marked timed-out and do NOT block.
+  const staleCutoff = new Date(Date.now() - 6 * 60 * 1000).toISOString();
+  await supabase
+    .from("sync_runs")
+    .update({
+      status: "failed",
+      completed_at: new Date().toISOString(),
+      error_message: "Timed out: run was terminated before completion (edge runtime limit).",
+      error_count: 1,
+    })
+    .eq("status", "running")
+    .lt("started_at", staleCutoff);
+
   const { data: runningRuns } = await supabase
     .from("sync_runs")
     .select("id, started_at")
     .eq("status", "running")
-    .gt("started_at", fifteenMinutesAgo);
+    .gte("started_at", staleCutoff);
 
   if (runningRuns && runningRuns.length > 0) {
-    console.warn("Another sync session is already in progress. Logging skipped cycle.");
-    const skippedPayload = {
-      status: "failed",
-      oem: "solis",
-      trigger_source: triggerSource,
-      started_at: startedAt.toISOString(),
-      completed_at: startedAt.toISOString(),
-      error_message: "Skipped: Another synchronization run was already in progress.",
-      duration_seconds: 0.0,
-      error_count: 1
-    };
-    await supabase.from("sync_runs").insert([skippedPayload]);
+    console.warn("Another sync session is genuinely in progress. Skipping this tick (not a failure).");
     return { status: "skipped", message: "Another sync session in progress" };
   }
 
@@ -205,7 +207,7 @@ export async function pollAndSyncAll(supabaseUrl: string, supabaseKey: string, t
           } else {
             const { data: newSite } = await supabase
               .from("sites")
-              .insert([{ ...siteFields, org_id: orgId }])
+              .insert([{ ...siteFields, org_id: orgId, commissioned_on: (station as any).commissioned_on || "2022-06-15" }])
               .select("id")
               .single();
             if (!newSite) throw new Error("Failed to insert site");
@@ -225,7 +227,7 @@ export async function pollAndSyncAll(supabaseUrl: string, supabaseKey: string, t
             try {
               const { data: dbInvs } = await supabase
                 .from("inverters")
-                .select("id")
+                .select("id, installed_on")
                 .eq("oem", provider)
                 .eq("oem_device_id", dev.oem_device_id);
 
@@ -242,12 +244,15 @@ export async function pollAndSyncAll(supabaseUrl: string, supabaseKey: string, t
               let invId = "";
               if (dbInvs && dbInvs.length > 0) {
                 invId = dbInvs[0].id;
+                if (dev.installed_on) {
+                  invFields.installed_on = dev.installed_on;
+                }
                 await supabase.from("inverters").update(invFields).eq("id", invId);
                 console.log(`Updated Inverter ID: ${invId} under Site ${siteId}`);
               } else {
                 invFields.oem = provider;
                 invFields.oem_device_id = dev.oem_device_id;
-                invFields.installed_on = new Date().toISOString().split("T")[0];
+                invFields.installed_on = dev.installed_on || "2022-06-15";
                 const { data: newInv } = await supabase
                   .from("inverters")
                   .insert([invFields])

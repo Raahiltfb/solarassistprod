@@ -92,21 +92,36 @@ export function DiagnosticsClientWrapper({
 
   // Calculate high-level site health summary
   const totalInverters = siteInverters.length || 1;
-  const invertersAffectedSet = new Set(anomalies.map((a) => a.inverter_id));
-  const stringsAffectedCount = anomalies.length;
+
+  const offlineInvertersCount = siteInverters.filter((inv) => {
+    const dbStatus = (inv.status || "").toLowerCase();
+    if (dbStatus === "offline" || dbStatus === "fault") return true;
+    if (inv.last_seen_at && Date.now() - new Date(inv.last_seen_at).getTime() > 30 * 60 * 1000) return true;
+    return false;
+  }).length;
+
+  const isSiteOffline = siteInverters.length > 0 && offlineInvertersCount === siteInverters.length;
+  const invertersAffectedSet = new Set([
+    ...anomalies.map((a) => a.inverter_id),
+    ...siteInverters.filter((i) => (i.status || "").toLowerCase() === "offline").map((i) => i.id),
+  ]);
+
+  const stringsAffectedCount = anomalies.filter((a) => a.type !== "inverter_offline").length;
   const totalLossInr = anomalies.reduce((sum, a) => sum + a.estimated_loss_inr, 0);
   const totalLossKwh = anomalies.reduce((sum, a) => sum + a.estimated_loss_kwh, 0);
 
   // Health score calculation
-  const healthScore = Math.max(
-    0,
-    Math.min(100, Math.round(100 - (anomalies.length * 12 + invertersAffectedSet.size * 15)))
-  );
+  const baseHealth = 100 - (anomalies.length * 12 + invertersAffectedSet.size * 15 + offlineInvertersCount * 25);
+  const healthScore = isSiteOffline ? 0 : Math.max(0, Math.min(100, Math.round(baseHealth)));
 
-  const healthStatus = healthScore >= 90 ? "optimal" : healthScore >= 75 ? "warning" : "critical";
+  const healthStatus = isSiteOffline || healthScore < 75 ? "critical" : healthScore < 90 ? "warning" : "optimal";
 
   const topAction =
-    anomalies.length > 0
+    isSiteOffline
+      ? "CRITICAL: Plant is completely offline. Inspect main AC breaker, logger master gateway, and grid transformer."
+      : offlineInvertersCount > 0
+      ? `CRITICAL: ${offlineInvertersCount} inverter(s) offline. Dispatch technician to inspect AC grid breaker & datalogger stick.`
+      : anomalies.length > 0
       ? anomalies[0].recommended_action
       : "All site inverters and string telemetry performing within optimal baseline parameters.";
 
@@ -115,7 +130,8 @@ export function DiagnosticsClientWrapper({
     site_name: selectedSite.name,
     health_score: healthScore,
     active_issues_count: anomalies.length,
-    inverters_affected: invertersAffectedSet.size,
+    inverters_affected: Math.min(totalInverters, invertersAffectedSet.size),
+    inverters_offline_count: offlineInvertersCount,
     total_inverters: totalInverters,
     strings_affected: stringsAffectedCount,
     potential_loss_kwh: totalLossKwh,
@@ -187,12 +203,13 @@ export function DiagnosticsClientWrapper({
             strings={siteStrings}
             inverters={siteInverters}
             sites={sites}
+            onNavigateToTab={(tab) => setActiveTab(tab)}
           />
         </TabsContent>
 
         {/* Tab 2: Multi-String Analytics Overlay */}
         <TabsContent value="multi-string" className="pt-4">
-          <StringAnalyticsSection inverters={siteInverters} />
+          <StringAnalyticsSection inverters={siteInverters} anomalies={anomalies} />
         </TabsContent>
 
         {/* Tab 3: Multi-Inverter Diagnostic Comparison */}

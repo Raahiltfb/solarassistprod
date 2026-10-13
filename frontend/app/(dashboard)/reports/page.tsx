@@ -8,10 +8,17 @@ import { expectedDailyGeneration } from "@/lib/integrations/solcast";
 
 export default async function ReportsPage() {
   const sb = await createClient();
-  const { data: sites } = await sb.from("sites").select("*");
   const sinceIso = new Date(Date.now() - 30 * 86400_000).toISOString();
-  const { data: tel } = await sb.from("telemetry").select("inverter_id, ac_power_kw").gte("timestamp", sinceIso);
-  const { data: invs } = await sb.from("inverters").select("id, site_id");
+
+  const [sitesRes, telRes, invsRes] = await Promise.all([
+    sb.from("sites").select("*"),
+    sb.from("telemetry").select("inverter_id, ac_power_kw").gte("timestamp", sinceIso).limit(5000),
+    sb.from("inverters").select("id, site_id"),
+  ]);
+
+  const sites = sitesRes.data ?? [];
+  const tel = telRes.data ?? [];
+  const invs = invsRes.data ?? [];
 
   const invSite = new Map((invs ?? []).map((i) => [i.id, i.site_id]));
   const energyBySite = new Map<string, number>();

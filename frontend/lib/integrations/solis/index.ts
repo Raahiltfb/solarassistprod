@@ -108,9 +108,9 @@ export const solisAdapter: OemAdapter = {
       serial_number: String(d.sn ?? ""),
       capacity_kw: Number(d.power ?? 0) / 1000,
       string_count: Number(d.stringCount ?? 4),
-      installed_on: new Date()
-        .toISOString()
-        .slice(0, 10),
+      installed_on: d.createTime || d.commissionTime || d.installTime
+        ? new Date(Number(d.createTime || d.commissionTime || d.installTime)).toISOString().slice(0, 10)
+        : undefined,
     }));
   },
 

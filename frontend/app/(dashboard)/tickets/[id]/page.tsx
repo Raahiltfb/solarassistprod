@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import type { Profile } from "@/lib/types";
 import { CleaningEvidenceLinks } from "@/components/cleaning-evidence-links";
+import { TelemetryVerificationCard } from "@/components/tickets/telemetry-verification-card";
 
 const statusColors: Record<string, string> = {
   open: "bg-red-100 text-red-700 border-red-300",
@@ -385,6 +386,21 @@ export default function TicketDetailsPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Telemetry Resolution Verification Card (Phase 6) */}
+      <TelemetryVerificationCard
+        ticketId={ticket.id}
+        status={ticket.status}
+        priority={ticket.priority}
+        verificationStatus={ticket.verification_status}
+        preRepairMetric={ticket.pre_repair_metric}
+        postRepairMetric={ticket.post_repair_metric}
+        verificationNotes={ticket.verification_notes}
+        reopenedCount={ticket.reopened_count}
+        verifiedAt={ticket.verified_at}
+        reopenedAt={ticket.reopened_at}
+        onRefresh={fetchData}
+      />
 
       {ticket.description && (
         <Card className="shadow-sm">
