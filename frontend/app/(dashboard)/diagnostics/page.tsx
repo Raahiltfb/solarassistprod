@@ -39,19 +39,21 @@ export default async function TechnicalIntelligencePage({
   const siteIds = siteList.map((s) => s.id);
   const allStrings = stringsRes.data ?? [];
 
-  // 2. Fetch inverters, tickets, and telemetry in parallel
-  const [invertersRes, ticketsRes, telemetryRes] = await Promise.all([
+  // 2. Fetch inverters, tickets, telemetry, and fleet-wide string telemetry in parallel
+  const [invertersRes, ticketsRes, telemetryRes, fleetStringTelemetryRes] = await Promise.all([
     sb.from("inverters").select("*").in("site_id", siteIds),
     sb.from("tickets").select("*").in("site_id", siteIds).eq("status", "resolved"),
     sb.from("telemetry").select("*").order("timestamp", { ascending: false }).limit(500),
+    sb.from("string_telemetry").select("string_id, timestamp, voltage_v, current_a, power_kw, status").order("timestamp", { ascending: false }).limit(3000),
   ]);
 
   const allInverters = invertersRes.data ?? [];
   const allResolvedTickets = ticketsRes.data ?? [];
   const allTelemetry = telemetryRes.data ?? [];
+  const fleetStringTelemetry = fleetStringTelemetryRes.data ?? [];
 
   // 3. Fetch targeted string telemetry for the active site's strings
-  let allStringTelemetry: any[] = [];
+  let activeSiteStringTelemetry: any[] = [];
   const activeSiteInverterIds = allInverters
     .filter((i) => i.site_id === selectedSite.id)
     .map((i) => i.id);
@@ -68,8 +70,18 @@ export default async function TechnicalIntelligencePage({
       .order("timestamp", { ascending: false })
       .limit(1500);
 
-    allStringTelemetry = stData ?? [];
+    activeSiteStringTelemetry = stData ?? [];
   }
+
+  // Merge fleet string telemetry and active site string telemetry (dedup by string_id + timestamp)
+  const telMap = new Map<string, any>();
+  for (const st of fleetStringTelemetry) {
+    telMap.set(`${st.string_id}_${st.timestamp}`, st);
+  }
+  for (const st of activeSiteStringTelemetry) {
+    telMap.set(`${st.string_id}_${st.timestamp}`, st);
+  }
+  const allStringTelemetry = Array.from(telMap.values());
 
   return (
     <DiagnosticsClientWrapper

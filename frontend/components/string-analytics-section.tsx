@@ -6,6 +6,7 @@ import { format, parseISO, subDays, startOfDay, endOfDay, isSameDay } from "date
 import { createClient } from "@/lib/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { MiniCalendarPicker } from "@/components/ui/mini-calendar-picker";
 import { AlertTriangle, ShieldAlert } from "lucide-react";
 import { StringAnomaly } from "@/lib/string-anomaly-engine";
@@ -28,16 +29,28 @@ const STRING_COLORS = [
   "#4f46e5"  // Royal Blue
 ];
 
+interface StringAnalyticsSectionProps {
+  inverters: any[];
+  anomalies?: StringAnomaly[];
+  initialInverterId?: string;
+  initialMetric?: "voltage_v" | "current_a" | "power_kw";
+  targetStringIndex?: number;
+}
+
 export function StringAnalyticsSection({
   inverters,
   anomalies = [],
-}: {
-  inverters: any[];
-  anomalies?: StringAnomaly[];
-}) {
+  initialInverterId,
+  initialMetric,
+  targetStringIndex,
+}: StringAnalyticsSectionProps) {
   const sb = createClient();
 
-  const [selectedInvId, setSelectedInvId] = useState<string>(inverters[0]?.id || "");
+  const [selectedInvId, setSelectedInvId] = useState<string>(
+    initialInverterId && inverters.some((i) => i.id === initialInverterId)
+      ? initialInverterId
+      : inverters[0]?.id || ""
+  );
   const [strings, setStrings] = useState<any[]>([]);
   const [selectedStrIds, setSelectedStrIds] = useState<string[]>([]);
   
@@ -45,8 +58,23 @@ export function StringAnalyticsSection({
   const [endDate, setEndDate] = useState<Date>(endOfDay(new Date()));
 
   const [telemetry, setTelemetry] = useState<any[]>([]);
-  const [metric, setMetric] = useState<"voltage_v" | "current_a" | "power_kw">("voltage_v");
+  const [metric, setMetric] = useState<"voltage_v" | "current_a" | "power_kw">(
+    initialMetric || "current_a"
+  );
   const [loading, setLoading] = useState<boolean>(false);
+
+  // Synchronize state when navigating from diagnostic anomaly inspect action
+  useEffect(() => {
+    if (initialInverterId && inverters.some((i) => i.id === initialInverterId)) {
+      setSelectedInvId(initialInverterId);
+    }
+  }, [initialInverterId, inverters]);
+
+  useEffect(() => {
+    if (initialMetric) {
+      setMetric(initialMetric);
+    }
+  }, [initialMetric]);
 
   // Filter active anomalies for the currently selected inverter
   const invAnomalies = (anomalies || []).filter(
@@ -244,6 +272,7 @@ export function StringAnalyticsSection({
                   const isSelected = selectedStrIds.includes(str.id);
                   const anomaly = stringAnomalyMap.get(Number(str.string_index));
                   const hasIssue = !!anomaly;
+                  const isTarget = targetStringIndex !== undefined && Number(str.string_index) === targetStringIndex;
 
                   return (
                     <button
@@ -258,6 +287,8 @@ export function StringAnalyticsSection({
                       }
                       onClick={() => toggleStringSelection(str.id)}
                       className={`text-xs h-6 px-2 rounded font-semibold transition-all duration-150 active:scale-95 flex items-center gap-1 ${
+                        isTarget ? "ring-2 ring-primary ring-offset-2 ring-offset-background font-bold shadow-md " : ""
+                      }${
                         hasIssue
                           ? isSelected
                             ? "bg-amber-600 text-white shadow-sm ring-2 ring-amber-400 dark:bg-amber-700"
@@ -283,6 +314,11 @@ export function StringAnalyticsSection({
         </div>
 
         <div className="flex items-center gap-2">
+          {targetStringIndex !== undefined && (
+            <Badge variant="outline" className="text-[11px] bg-primary/10 text-primary border-primary/30">
+              Focus: String #{targetStringIndex} ({metric === "voltage_v" ? "Voltage" : "Current"})
+            </Badge>
+          )}
           <MiniCalendarPicker
             startDate={startDate}
             endDate={endDate}

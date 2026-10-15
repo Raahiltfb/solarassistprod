@@ -13,6 +13,12 @@ import { formatDateTime } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { ResponsiveContainer, LineChart as ReLineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend, ReferenceArea } from "recharts";
 
+export interface MultiStringNavigationContext {
+  inverterId?: string;
+  metric?: "voltage_v" | "current_a" | "power_kw";
+  stringIndex?: number;
+}
+
 export function StringAnomalyDiagnosticSection({
   telemetry,
   strings,
@@ -24,7 +30,7 @@ export function StringAnomalyDiagnosticSection({
   strings: any[];
   inverters: any[];
   sites: any[];
-  onNavigateToTab?: (tab: string) => void;
+  onNavigateToTab?: (tab: string, context?: MultiStringNavigationContext) => void;
 }) {
   const sb = createClient();
 
@@ -526,8 +532,14 @@ export function StringAnomalyDiagnosticSection({
                     size="sm"
                     variant="outline"
                     onClick={() => {
+                      const isVoltage = selectedAnomalyForChart.type === "voltage_droop";
+                      const targetMetric: "voltage_v" | "current_a" = isVoltage ? "voltage_v" : "current_a";
+                      onNavigateToTab("multi-string", {
+                        inverterId: selectedAnomalyForChart.inverter_id,
+                        metric: targetMetric,
+                        stringIndex: selectedAnomalyForChart.string_index,
+                      });
                       setSelectedAnomalyForChart(null);
-                      onNavigateToTab("multi-string");
                     }}
                     className="shrink-0 h-8 text-xs gap-1 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground"
                   >

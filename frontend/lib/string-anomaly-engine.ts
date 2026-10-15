@@ -187,8 +187,9 @@ export function analyzeStringAnomalies(
     const histCurrent = activeCurrents.length > 0 ? calculateMedian(activeCurrents) : 0;
     const histVoltage = activeVoltages.length > 0 ? calculateMedian(activeVoltages) : 0;
 
-    // A string has active generation history ONLY if it historically generated >= 0.5A median or >= 0.8A peak
-    const hasActiveHistory = histCurrent >= 0.5 || maxCurrent >= 0.8;
+    // A string has active generation history ONLY if it historically generated >= 1.5A median or >= 2.5A peak.
+    // Unpopulated channels or small bleed-current strings (e.g. 0.0A - 0.8A) do NOT have active generation history.
+    const hasActiveHistory = histCurrent >= 1.5 || maxCurrent >= 2.5;
 
     stringHistoricalMap.set(strId, {
       historicalCurrent: histCurrent,
@@ -395,9 +396,9 @@ export function analyzeStringAnomalies(
         const histVoltage = histObj ? histObj.historicalVoltage : 0;
         const hasActiveHistory = histObj ? histObj.hasActiveHistory : false;
 
-        // CRITICAL: If a string historically hovers around 0 (e.g. unpopulated channel, unused string input),
-        // its baseline is genuinely around 0. This is NOT an error and must NOT be flagged!
-        if (!hasActiveHistory || (histCurrent < 0.5 && histMaxCurrent < 0.8)) {
+        // CRITICAL: If a string historically hovers near 0 or is low-current (< 1.5A median and < 2.5A peak),
+        // its baseline is genuinely around 0A - 0.8A. This is NOT an error and must NOT be flagged as underperforming or disconnected!
+        if (!hasActiveHistory || (histCurrent < 1.5 && histMaxCurrent < 2.5)) {
           continue;
         }
 
@@ -406,24 +407,55 @@ export function analyzeStringAnomalies(
           : peerMedianCurrent;
         const expectedVoltage = peerMedianVoltage;
 
-        // Metric 1: Peer Variance (Is current significantly below active sister strings?)
-        const isPeerCurrDev = curr < 0.80 * peerMedianCurrent && peerMedianCurrent >= 1.0;
-        const isPeerVoltDev = volt < 0.88 * peerMedianVoltage && peerMedianVoltage >= 150;
+        const peerDropAbs = peerMedianCurrent - curr;
+        const histDropAbs = histCurrent - curr;
+        const expDropAbs = expectedCurrent - curr;
 
-        // Metric 2: Historical Self Variance (Is current significantly below what this string historically gets?)
-        const isHistCurrDev = histCurrent >= 0.5 ? curr < 0.80 * Math.min(histCurrent, peerMedianCurrent) : false;
-        const isHistVoltDev = histVoltage > 100 ? volt < 0.88 * Math.min(histVoltage, peerMedianVoltage) : false;
+        // Metric 1: Peer Variance
+        // Requires meaningful active solar generation (peer >= 2.0A),
+        // at least a 20% relative drop, AND at least 1.5A absolute drop.
+        // A drop from 0.6A to 0.3A (0.3A delta) is normal sensor noise/micro-fluctuation and is NOT an anomaly.
+        // Only significant multi-amp drops (e.g. 12A to 6A, or 5A to 2.5A) represent true faults.
+        const isPeerCurrDev =
+          peerMedianCurrent >= 2.0 &&
+          peerDropAbs >= 1.5 &&
+          curr < 0.80 * peerMedianCurrent;
+
+        const isPeerVoltDev =
+          peerMedianVoltage >= 150 &&
+          (peerMedianVoltage - volt) >= 30 &&
+          volt < 0.88 * peerMedianVoltage;
+
+        // Metric 2: Historical Self Variance
+        // String current must be significantly lower than what this string HISTORICALLY generates,
+        // requiring BOTH a >= 20% drop AND at least a 1.2A absolute drop from its historical baseline.
+        const isHistCurrDev =
+          histCurrent >= 1.5 &&
+          histDropAbs >= 1.2 &&
+          curr < 0.80 * histCurrent;
+
+        const isHistVoltDev =
+          histVoltage > 100 &&
+          (histVoltage - volt) >= 30 &&
+          volt < 0.88 * histVoltage;
 
         // Metric 3: Expected Rating Variance
-        const isExpCurrDev = expectedCurrent > 0.5 ? curr < 0.80 * expectedCurrent : false;
-        const isExpVoltDev = expectedVoltage > 100 ? volt < 0.88 * expectedVoltage : false;
+        const isExpCurrDev =
+          expectedCurrent >= 1.5 &&
+          expDropAbs >= 1.5 &&
+          curr < 0.80 * expectedCurrent;
+
+        const isExpVoltDev =
+          expectedVoltage > 100 &&
+          (expectedVoltage - volt) >= 30 &&
+          volt < 0.88 * expectedVoltage;
 
         let detectedType: AnomalyType | null = null;
 
         // Require ALL THREE metrics to show variance before flagging!
-        // String disconnected: Only valid if string historically had active generation (histCurrent >= 0.8),
-        // but now dropped to near zero (<= 0.1A and V < 50V) while peers are active!
-        if (curr <= 0.1 && peerMedianCurrent >= 1.5 && volt < 50 && histCurrent >= 0.8 && expectedCurrent >= 0.8) {
+        // String disconnected: Only valid if string historically had active generation (histCurrent >= 1.8),
+        // but now dropped to near zero (<= 0.1A and V < 50V) while peers are active (>= 2.0A)!
+        if (curr <= 0.1 && peerMedianCurrent >= 2.0 && volt < 50 && histCurrent >= 1.8 && expectedCurrent >= 1.8) {
           detectedType = "string_disconnected";
         } else if (isPeerCurrDev && isHistCurrDev && isExpCurrDev) {
           detectedType = "sustained_underperformance";
@@ -516,7 +548,8 @@ export function analyzeStringAnomalies(
         : 0;
 
       const durationHours = diffMins / 60.0;
-      const deltaCurrent = Math.max(0, meanPeerCurr - meanCurr);
+      const baselineCurrent = Math.min(meanPeerCurr, meanHistCurr > 0 ? meanHistCurr : meanPeerCurr);
+      const deltaCurrent = Math.max(0, baselineCurrent - meanCurr);
       const estLossKwh = Math.round((deltaCurrent * meanPeerVolt * durationHours / 1000.0) * 100) / 100;
       const estLossInr = Math.round(estLossKwh * 7.5);
 

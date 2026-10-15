@@ -83,53 +83,86 @@ export function SiteHealthOverviewHeader({
             </div>
           </div>
 
-          {/* Right Group: Diagnostic Counters & Priority Action */}
-          <div className="flex flex-col lg:flex-row items-stretch gap-3 flex-1 min-w-0 2xl:justify-end">
-            {/* Core Diagnostic Counters */}
-            <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 text-xs bg-muted/40 p-3.5 rounded-xl border border-border/60">
-              <div className="min-w-0">
-                <span className="text-[10px] uppercase font-semibold text-muted-foreground block leading-tight truncate" title="Active Issues">
-                  Active Issues
-                </span>
-                <span className={`text-base font-bold font-mono mt-0.5 block ${summary.active_issues_count > 0 ? "text-amber-600 dark:text-amber-400" : "text-foreground"}`}>
-                  {summary.active_issues_count}
-                </span>
-              </div>
-
-              <div className="min-w-0">
-                <span className="text-[10px] uppercase font-semibold text-muted-foreground block leading-tight truncate" title="Inverters Impacted">
-                  Inverters Impacted
-                </span>
-                <span className="text-base font-bold font-mono text-foreground mt-0.5 block">
-                  {summary.inverters_affected} / {summary.total_inverters}
-                </span>
-              </div>
-
-              <div className="min-w-0">
-                <span className="text-[10px] uppercase font-semibold text-muted-foreground block leading-tight truncate" title="Strings Affected">
-                  Strings Affected
-                </span>
-                <span className="text-base font-bold font-mono text-foreground mt-0.5 block">
-                  {summary.strings_affected}
-                </span>
-              </div>
-
-              <div className="min-w-0">
-                <span className="text-[10px] uppercase font-semibold text-muted-foreground block leading-tight truncate" title="Estimated Revenue Risk">
-                  Revenue Risk
-                </span>
-                <span className="text-base font-bold font-mono text-amber-600 dark:text-amber-400 mt-0.5 block">
-                  ₹{summary.potential_loss_inr.toLocaleString()}
-                </span>
-              </div>
+          {/* Diagnostic Counters */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 text-xs bg-muted/40 p-3.5 rounded-xl border border-border/60 shrink-0 2xl:w-auto">
+            <div className="min-w-0">
+              <span className="text-[10px] uppercase font-semibold text-muted-foreground block leading-tight truncate" title="Active Issues">
+                Active Issues
+              </span>
+              <span className={`text-base font-bold font-mono mt-0.5 block ${summary.active_issues_count > 0 ? "text-amber-600 dark:text-amber-400" : "text-foreground"}`}>
+                {summary.active_issues_count}
+              </span>
             </div>
 
-            {/* Top Recommended Action */}
-            <div className="flex flex-col justify-center space-y-1.5 lg:w-80 shrink-0 bg-primary/5 p-3 rounded-xl border border-primary/20">
-              <span className="text-[10px] uppercase font-bold text-primary flex items-center gap-1.5">
-                <Wrench className="h-3.5 w-3.5 shrink-0" /> Priority Action
+            <div className="min-w-0">
+              <span className="text-[10px] uppercase font-semibold text-muted-foreground block leading-tight truncate" title="Inverters Impacted">
+                Inverters Impacted
               </span>
-              <p className="text-xs font-semibold text-foreground line-clamp-2 leading-snug">
+              <span className="text-base font-bold font-mono text-foreground mt-0.5 block">
+                {summary.inverters_affected} / {summary.total_inverters}
+              </span>
+            </div>
+
+            <div className="min-w-0">
+              <span className="text-[10px] uppercase font-semibold text-muted-foreground block leading-tight truncate" title="Strings Affected">
+                Strings Affected
+              </span>
+              <span className="text-base font-bold font-mono text-foreground mt-0.5 block">
+                {summary.strings_affected}
+              </span>
+            </div>
+
+            <div className="min-w-0">
+              <span className="text-[10px] uppercase font-semibold text-muted-foreground block leading-tight truncate" title="Estimated Revenue Risk">
+                Revenue Risk
+              </span>
+              <span className="text-base font-bold font-mono text-amber-600 dark:text-amber-400 mt-0.5 block">
+                ₹{summary.potential_loss_inr.toLocaleString()}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Priority Action Dedicated Banner - Full Width & Zero Truncation */}
+        <div
+          className={`mt-4 p-3 sm:p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+            summary.health_status === "critical"
+              ? "bg-destructive/10 border-destructive/30 text-destructive-foreground"
+              : summary.health_status === "warning"
+              ? "bg-amber-500/10 border-amber-500/30"
+              : "bg-primary/5 border-primary/20"
+          }`}
+        >
+          <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
+            <div
+              className={`p-1.5 rounded-lg shrink-0 mt-0.5 sm:mt-0 ${
+                summary.health_status === "critical"
+                  ? "bg-destructive/20 text-destructive"
+                  : summary.health_status === "warning"
+                  ? "bg-amber-500/20 text-amber-600 dark:text-amber-400"
+                  : "bg-primary/10 text-primary"
+              }`}
+            >
+              <Wrench className="h-4 w-4" />
+            </div>
+            <div className="space-y-0.5 min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase tracking-wider font-extrabold text-muted-foreground">
+                  Priority O&M Action Recommendation
+                </span>
+                <span
+                  className={`text-[9px] font-bold px-1.5 py-0.2 rounded font-mono uppercase ${
+                    summary.health_status === "critical"
+                      ? "bg-destructive text-destructive-foreground"
+                      : summary.health_status === "warning"
+                      ? "bg-amber-500 text-white"
+                      : "bg-emerald-600 text-white"
+                  }`}
+                >
+                  {summary.health_status === "critical" ? "Urgent Dispatch" : summary.health_status === "warning" ? "Needs Review" : "Optimal"}
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm font-semibold text-foreground leading-normal break-words">
                 {summary.top_recommended_action}
               </p>
             </div>

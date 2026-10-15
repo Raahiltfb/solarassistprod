@@ -155,6 +155,37 @@ async function runPhase5Tests() {
     );
   }
 
+  // --- Test S: String hovering around 0.6A dipping to 0.3A (0.3A delta) is NOT flagged as error ---
+  {
+    const timestamps = ["2026-10-06T10:00:00Z", "2026-10-06T11:00:00Z", "2026-10-06T12:00:00Z", "2026-10-06T13:00:00Z"];
+    const telemetry: any[] = [];
+    for (const ts of timestamps) {
+      telemetry.push(
+        { string_id: "str-1", timestamp: ts, voltage_v: 600, current_a: 11.0, power_kw: 6.6 },
+        { string_id: "str-2", timestamp: ts, voltage_v: 600, current_a: 11.2, power_kw: 6.72 },
+        { string_id: "str-6", timestamp: ts, voltage_v: 600, current_a: ts.endsWith("13:00:00Z") ? 0.3 : 0.6, power_kw: 0.2 }, // 0.6A -> 0.3A
+        { string_id: "str-4", timestamp: ts, voltage_v: 600, current_a: 10.9, power_kw: 6.54 }
+      );
+    }
+
+    const strings = [
+      { id: "str-1", inverter_id: "inv-1", string_index: 1 },
+      { id: "str-2", inverter_id: "inv-1", string_index: 2 },
+      { id: "str-6", inverter_id: "inv-1", string_index: 6 },
+      { id: "str-4", inverter_id: "inv-1", string_index: 4 },
+    ];
+    const inverters = [{ id: "inv-1", site_id: "site-1", oem_device_id: "INV-01", status: "online" }];
+    const sites = [{ id: "site-1", name: "Solar Site 1" }];
+
+    const result = analyzeStringAnomalies(telemetry, strings, inverters, sites);
+    const falseFlag = result.find((a) => a.string_index === 6);
+
+    assert(
+      !falseFlag,
+      "Test S: String hovering around 0.6A dipping to 0.3A (0.3A delta) is NOT flagged as an anomaly or underperformance"
+    );
+  }
+
   // --- Test D: Insufficient peer data does not generate misleading expected values ---
   {
     const telemetry = [

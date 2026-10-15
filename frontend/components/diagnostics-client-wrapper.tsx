@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { SiteSelectorCombobox, SiteOption } from "@/components/ui/site-selector-combobox";
 import { SiteHealthOverviewHeader, SiteHealthSummary } from "@/components/site-health-overview-header";
+import { FleetStringHealthOverview } from "@/components/fleet-string-health-overview";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StringAnomalyDiagnosticSection } from "@/components/string-anomaly-diagnostic-section";
 import { StringAnalyticsSection } from "@/components/string-analytics-section";
@@ -33,6 +34,21 @@ export function DiagnosticsClientWrapper({
   const [selectedSiteId, setSelectedSiteId] = useState<string>(
     initialSiteId || sites[0]?.id || ""
   );
+  const [multiStringContext, setMultiStringContext] = useState<{
+    inverterId?: string;
+    metric?: "voltage_v" | "current_a" | "power_kw";
+    stringIndex?: number;
+  } | null>(null);
+
+  function handleNavigateToTab(
+    tab: string,
+    context?: { inverterId?: string; metric?: "voltage_v" | "current_a" | "power_kw"; stringIndex?: number }
+  ) {
+    if (context) {
+      setMultiStringContext(context);
+    }
+    setActiveTab(tab);
+  }
 
   function handleSelectSite(site: SiteOption) {
     setSelectedSiteId(site.id);
@@ -44,6 +60,40 @@ export function DiagnosticsClientWrapper({
   }
 
   const selectedSite = sites.find((s) => s.id === selectedSiteId) || sites[0];
+
+  // 1. Calculate active anomalies across the entire fleet
+  const fleetAnomalies: StringAnomaly[] = useMemo(() => {
+    return analyzeStringAnomalies(
+      allStringTelemetry,
+      allStrings,
+      allInverters,
+      sites
+    );
+  }, [allStringTelemetry, allStrings, allInverters, sites]);
+
+  // 2. Map issues per site for combobox badges and filtering
+  const siteIssuesMap = useMemo(() => {
+    const map: Record<string, { anomalyCount: number; isOffline: boolean; stringErrors: number }> = {};
+    for (const s of sites) {
+      const siteAnoms = fleetAnomalies.filter((a) => a.site_id === s.id);
+      const siteInvs = allInverters.filter((i) => i.site_id === s.id);
+      const isOffline =
+        siteInvs.length > 0 &&
+        siteInvs.every((inv) => {
+          const dbStatus = (inv.status || "").toLowerCase();
+          if (dbStatus === "offline" || dbStatus === "fault") return true;
+          if (inv.last_seen_at && Date.now() - new Date(inv.last_seen_at).getTime() > 30 * 60 * 1000) return true;
+          return false;
+        });
+      const strErrors = siteAnoms.filter((a) => a.type !== "inverter_offline").length;
+      map[s.id] = {
+        anomalyCount: siteAnoms.length,
+        isOffline,
+        stringErrors: strErrors,
+      };
+    }
+    return map;
+  }, [sites, fleetAnomalies, allInverters]);
 
   // Filter inverters and telemetry for current site
   const siteInverters = allInverters.filter((i) => i.site_id === selectedSite.id);
@@ -65,13 +115,10 @@ export function DiagnosticsClientWrapper({
     }
   }
 
-  // Calculate active anomalies dynamically
-  const anomalies: StringAnomaly[] = analyzeStringAnomalies(
-    siteStringTelemetry,
-    siteStrings,
-    siteInverters,
-    sites
-  );
+  // Active site anomalies
+  const anomalies: StringAnomaly[] = useMemo(() => {
+    return fleetAnomalies.filter((a) => a.site_id === selectedSite.id);
+  }, [fleetAnomalies, selectedSite.id]);
 
   // Construct historical resolved anomaly records
   const resolvedRecords: ResolvedAnomalyRecord[] = siteTickets.map((t) => ({
@@ -157,22 +204,34 @@ export function DiagnosticsClientWrapper({
           </p>
         </div>
 
-        {/* Searchable Combobox Site Selector */}
+        {/* Searchable Combobox Site Selector with issue badges & filters */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground font-semibold shrink-0">Site Selector:</span>
           <SiteSelectorCombobox
             sites={sites}
             selectedSiteId={selectedSite.id}
             onSelectSite={handleSelectSite}
+            siteIssuesMap={siteIssuesMap}
           />
         </div>
       </div>
 
-      {/* Top High-Level Site Health Summary */}
+      {/* Fleet String Health Overview: Fleet radar showing which sites need string attention */}
+      <FleetStringHealthOverview
+        sites={sites}
+        fleetAnomalies={fleetAnomalies}
+        activeSiteId={selectedSite.id}
+        onSelectSite={(siteId) => {
+          const target = sites.find((s) => s.id === siteId);
+          if (target) handleSelectSite(target);
+        }}
+      />
+
+      {/* Selected Site Health Summary Banner */}
       <SiteHealthOverviewHeader summary={healthSummary} />
 
-      {/* Main 5 Diagnostic Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      {/* Main 5 Diagnostic Tabs for Active Site */}
+      <Tabs id="active-string-diagnostics" value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="flex flex-wrap h-auto w-full justify-start gap-1 p-1 bg-muted rounded-lg border">
           <TabsTrigger value="anomalies" className="text-xs gap-1.5 py-2 px-3">
             <AlertTriangle className="h-3.5 w-3.5" />
@@ -203,13 +262,19 @@ export function DiagnosticsClientWrapper({
             strings={siteStrings}
             inverters={siteInverters}
             sites={sites}
-            onNavigateToTab={(tab) => setActiveTab(tab)}
+            onNavigateToTab={handleNavigateToTab}
           />
         </TabsContent>
 
         {/* Tab 2: Multi-String Analytics Overlay */}
         <TabsContent value="multi-string" className="pt-4">
-          <StringAnalyticsSection inverters={siteInverters} anomalies={anomalies} />
+          <StringAnalyticsSection
+            inverters={siteInverters}
+            anomalies={anomalies}
+            initialInverterId={multiStringContext?.inverterId}
+            initialMetric={multiStringContext?.metric}
+            targetStringIndex={multiStringContext?.stringIndex}
+          />
         </TabsContent>
 
         {/* Tab 3: Multi-Inverter Diagnostic Comparison */}

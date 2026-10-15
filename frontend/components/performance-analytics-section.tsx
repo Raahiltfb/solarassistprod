@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { format, parseISO, startOfDay, subDays, startOfMonth, startOfYear, endOfDay, isSameDay } from "date-fns";
+import { format, parseISO, startOfDay, subDays, startOfMonth, startOfYear, endOfDay, endOfMonth, endOfYear, isSameDay } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Info } from "lucide-react";
@@ -42,50 +42,77 @@ export function PerformanceAnalyticsSection({
     setRange(newRange);
     setReferenceDate(new Date());
     setCustomRange(null);
+    if ((newRange === "year" || newRange === "lifetime") && metric === "power") {
+      setMetric("generation");
+    }
   };
 
-  // Calculate start/end boundaries and dynamic label
-  let startDate = new Date();
-  let endDate = new Date();
-  let dateLabel = "";
+  // If user switches to year or lifetime while on power metric, auto-switch to generation
+  useEffect(() => {
+    if ((range === "year" || range === "lifetime") && metric === "power") {
+      setMetric("generation");
+    }
+  }, [range, metric]);
 
-  const refStart = startOfDay(referenceDate);
+  // Calculate start/end boundaries and dynamic label deterministically via useMemo
+  // This avoids generating new Date() instances on every render which previously caused infinite fetch loops on lifetime range
+  const { startDate, endDate, dateLabel } = useMemo(() => {
+    const refStart = startOfDay(referenceDate);
 
-  if (customRange) {
-    startDate = customRange.start;
-    endDate = customRange.end;
-    dateLabel = isSameDay(startDate, endDate)
-      ? format(startDate, "d MMM yyyy")
-      : `${format(startDate, "d MMM")} - ${format(endDate, "d MMM yyyy")}`;
-  } else if (range === "today") {
-    startDate = refStart;
-    endDate = new Date(refStart.getTime() + 24 * 60 * 60 * 1000 - 1);
-    dateLabel = format(referenceDate, "d MMM yyyy");
-  } else if (range === "week") {
-    startDate = subDays(refStart, 6);
-    endDate = new Date(refStart.getTime() + 24 * 60 * 60 * 1000 - 1);
-    dateLabel = `${format(startDate, "d MMM")} - ${format(endDate, "d MMM yyyy")}`;
-  } else if (range === "month") {
-    startDate = startOfMonth(referenceDate);
-    const endOfMonthDate = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0);
-    endDate = new Date(endOfMonthDate.getTime() + 24 * 60 * 60 * 1000 - 1);
-    dateLabel = format(referenceDate, "MMMM yyyy");
-  } else if (range === "year") {
-    startDate = startOfYear(referenceDate);
-    const endOfYearDate = new Date(referenceDate.getFullYear(), 11, 31);
-    endDate = new Date(endOfYearDate.getTime() + 24 * 60 * 60 * 1000 - 1);
-    dateLabel = format(referenceDate, "yyyy");
-  } else {
-    startDate = new Date("2020-01-01T00:00:00Z");
-    endDate = new Date();
-    dateLabel = "System Lifetime";
-  }
+    if (customRange) {
+      return {
+        startDate: customRange.start,
+        endDate: customRange.end,
+        dateLabel: isSameDay(customRange.start, customRange.end)
+          ? format(customRange.start, "d MMM yyyy")
+          : `${format(customRange.start, "d MMM")} - ${format(customRange.end, "d MMM yyyy")}`,
+      };
+    }
+    if (range === "today") {
+      return {
+        startDate: refStart,
+        endDate: endOfDay(referenceDate),
+        dateLabel: format(referenceDate, "d MMM yyyy"),
+      };
+    }
+    if (range === "week") {
+      const wkStart = subDays(refStart, 6);
+      return {
+        startDate: wkStart,
+        endDate: endOfDay(referenceDate),
+        dateLabel: `${format(wkStart, "d MMM")} - ${format(referenceDate, "d MMM yyyy")}`,
+      };
+    }
+    if (range === "month") {
+      return {
+        startDate: startOfMonth(referenceDate),
+        endDate: endOfMonth(referenceDate),
+        dateLabel: format(referenceDate, "MMMM yyyy"),
+      };
+    }
+    if (range === "year") {
+      return {
+        startDate: startOfYear(referenceDate),
+        endDate: endOfYear(referenceDate),
+        dateLabel: format(referenceDate, "yyyy"),
+      };
+    }
+    // lifetime: fixed epoch start to end of current reference date
+    return {
+      startDate: new Date("2020-01-01T00:00:00.000Z"),
+      endDate: endOfDay(referenceDate),
+      dateLabel: "System Lifetime",
+    };
+  }, [range, referenceDate, customRange]);
 
   // Determine effective aggregation range for PostgreSQL RPC
   const isSingleDayView = isSameDay(startDate, endDate);
   const effectiveRange = customRange 
     ? (isSingleDayView ? "today" : "week")
     : range;
+
+  const startIso = startDate.toISOString();
+  const endIso = endDate.toISOString();
 
   useEffect(() => {
     async function loadData() {
@@ -119,8 +146,8 @@ export function PerformanceAnalyticsSection({
         const { data: rpcData, error: rpcError } = await sb.rpc("get_telemetry_analytics", {
           p_inverter_ids: inverterIds,
           p_range: effectiveRange,
-          p_start_date: startDate.toISOString(),
-          p_end_date: endDate.toISOString(),
+          p_start_date: startIso,
+          p_end_date: endIso,
           p_total_capacity: totalCapacity,
         });
 
@@ -142,7 +169,7 @@ export function PerformanceAnalyticsSection({
       setLoading(false);
     }
     loadData();
-  }, [effectiveRange, startDate.getTime(), endDate.getTime(), inverterId, siteId, siteIds, isSite]);
+  }, [effectiveRange, startIso, endIso, inverterId, siteId, siteIds, isSite]);
 
   // Determine chart configurations
   const metricConfigs = {
@@ -173,6 +200,8 @@ export function PerformanceAnalyticsSection({
     ? `Solar Production (${dateLabel})`
     : isSingleDayView
     ? `Generation & Power · ${dateLabel}`
+    : range === "lifetime"
+    ? `Monthly Generation · System Lifetime`
     : `Daily Generation · ${dateLabel}`;
 
   const rangeLabels = isClientView
@@ -196,13 +225,15 @@ export function PerformanceAnalyticsSection({
       <div className="flex flex-wrap items-center justify-between gap-4 bg-accent/30 p-3.5 rounded-xl border border-border/40">
         <div className="flex items-center gap-3">
           <h4 className="text-sm font-semibold tracking-tight">{currentTitle}</h4>
-          <MiniCalendarPicker
-            startDate={startDate}
-            endDate={endDate}
-            onChange={(start, end) => {
-              setCustomRange({ start, end });
-            }}
-          />
+          {range !== "lifetime" && (
+            <MiniCalendarPicker
+              startDate={startDate}
+              endDate={endDate}
+              onChange={(start, end) => {
+                setCustomRange({ start, end });
+              }}
+            />
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
@@ -267,7 +298,7 @@ export function PerformanceAnalyticsSection({
           </div>
 
           <div className="h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer key={`${range}-${metric}`} width="100%" height="100%">
               {range === "today" ? (
                 <AreaChart data={chartData} margin={{ top: 10, right: 8, left: -10, bottom: 0 }}>
                   <defs>
@@ -314,6 +345,7 @@ export function PerformanceAnalyticsSection({
                     stroke={activeMetric.stroke}
                     fill="url(#perfMetricGrad)"
                     strokeWidth={2}
+                    isAnimationActive={range === "today"}
                   />
                 </AreaChart>
               ) : (
@@ -360,6 +392,7 @@ export function PerformanceAnalyticsSection({
                     stroke={activeMetric.stroke}
                     strokeWidth={1}
                     radius={[4, 4, 0, 0]}
+                    isAnimationActive={false}
                   />
                 </BarChart>
               )}
