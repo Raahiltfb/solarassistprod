@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -226,7 +229,7 @@ export default async function DashboardPage() {
       .select("id, site_id, oem, oem_device_id, model, serial_number, capacity_kw, string_count, status, last_seen_at, installed_on"),
     sb
       .from("tickets")
-      .select("*, sites(name), alerts(id, code, title)")
+      .select("*, sites(name), alerts:alerts!tickets_alert_id_fkey(id, code, title)")
       .order("created_at", { ascending: false }),
     sb
       .from("work_orders")
@@ -337,7 +340,17 @@ export default async function DashboardPage() {
   const onlineInverters = inverters.filter((i) => getSiteStatus([i], latestTimestampMap) !== "OFFLINE").length;
   const offlineInverters = inverters.filter((i) => getSiteStatus([i], latestTimestampMap) === "OFFLINE").length;
 
-  const openTickets = tickets.filter((t) => t.status !== "resolved" && t.status !== "closed");
+  function isConnectivityTicket(t: any) {
+    return (
+      t.ticket_type === "connectivity" ||
+      Boolean(t.title?.includes("[Internet/WiFi Down]")) ||
+      Boolean(t.description?.includes("[Root Cause Classification]: INTERNET OUTAGE"))
+    );
+  }
+
+  const openTickets = tickets.filter(
+    (t) => t.status !== "resolved" && t.status !== "closed" && !isConnectivityTicket(t)
+  );
   const openAlerts = alerts.filter((a) => a.status === "open" || a.status === "acknowledged");
 
   // Today's work orders (scheduled, en_route, in_progress, completed)
@@ -380,7 +393,7 @@ export default async function DashboardPage() {
     }
 
     const openCount = tickets.filter(
-      (t) => t.site_id === site.id && t.status !== "resolved" && t.status !== "closed"
+      (t) => t.site_id === site.id && t.status !== "resolved" && t.status !== "closed" && !isConnectivityTicket(t)
     ).length;
 
     return {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 /**
@@ -41,6 +42,10 @@ export async function DELETE(req: Request) {
       .update({ status: "closed", resolved_at: new Date().toISOString() })
       .in("id", ids);
     if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/tickets");
+    revalidatePath(`/sites/${site_id}`);
 
     return NextResponse.json({ success: true, closed: ids.length });
   } catch (err: any) {

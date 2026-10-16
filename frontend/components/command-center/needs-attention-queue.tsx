@@ -169,6 +169,11 @@ export function NeedsAttentionQueue({
         toast.error(data.error || "Failed to mark internet issue");
       } else {
         setAcknowledgedInternetSites((prev) => new Set([...prev, siteId]));
+        setUndoneSites((prev) => {
+          const n = new Set(prev);
+          n.delete(siteId);
+          return n;
+        });
         toast.success(`Marked ${siteName} as Internet Issue (Client Scope). P1 alerts suppressed.`);
         router.refresh();
       }
@@ -206,6 +211,11 @@ export function NeedsAttentionQueue({
         toast.success(data.message || "Ticket successfully created!");
         if (ticketForm.rootCause === "internet_outage") {
           setAcknowledgedInternetSites((prev) => new Set([...prev, targetSite.id]));
+          setUndoneSites((prev) => {
+            const n = new Set(prev);
+            n.delete(targetSite.id);
+            return n;
+          });
         }
         setCreateTicketOpen(false);
         router.refresh();

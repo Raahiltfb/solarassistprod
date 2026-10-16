@@ -402,9 +402,13 @@ export function analyzeStringAnomalies(
           continue;
         }
 
-        const expectedCurrent = strObj.capacity_kw
-          ? Math.round((strObj.capacity_kw / 5.0) * peerMedianCurrent * 100) / 100
-          : peerMedianCurrent;
+        const siblingStrings = Array.from(stringMap.values()).filter((s) => s.inverter_id === strObj.inverter_id);
+        const siblingCapacities = siblingStrings.map((s) => Number(s.capacity_kw || 0)).filter((c) => c > 0);
+        const avgSiblingCap = siblingCapacities.length > 0 ? calculateMedian(siblingCapacities) : 0;
+        const expectedRatio = (avgSiblingCap > 0 && Number(strObj.capacity_kw || 0) > 0)
+          ? Number(strObj.capacity_kw) / avgSiblingCap
+          : 1.0;
+        const expectedCurrent = Math.round(expectedRatio * peerMedianCurrent * 100) / 100;
         const expectedVoltage = peerMedianVoltage;
 
         const peerDropAbs = peerMedianCurrent - curr;
@@ -413,53 +417,49 @@ export function analyzeStringAnomalies(
 
         // Metric 1: Peer Variance
         // Requires meaningful active solar generation (peer >= 2.0A),
-        // at least a 20% relative drop, AND at least 1.5A absolute drop.
-        // A drop from 0.6A to 0.3A (0.3A delta) is normal sensor noise/micro-fluctuation and is NOT an anomaly.
-        // Only significant multi-amp drops (e.g. 12A to 6A, or 5A to 2.5A) represent true faults.
+        // at least a 25% relative drop, at least 1.8A absolute drop,
+        // and string current < 6.5A (a string producing 7A+ is generating strong power, not underperforming).
         const isPeerCurrDev =
           peerMedianCurrent >= 2.0 &&
-          peerDropAbs >= 1.5 &&
-          curr < 0.80 * peerMedianCurrent;
+          peerDropAbs >= 1.8 &&
+          curr < 0.75 * peerMedianCurrent &&
+          curr < 6.5;
 
         const isPeerVoltDev =
-          peerMedianVoltage >= 150 &&
-          (peerMedianVoltage - volt) >= 30 &&
-          volt < 0.88 * peerMedianVoltage;
+          peerMedianVoltage >= 180 &&
+          (peerMedianVoltage - volt) >= 40 &&
+          volt < 0.85 * peerMedianVoltage;
 
         // Metric 2: Historical Self Variance
-        // String current must be significantly lower than what this string HISTORICALLY generates,
-        // requiring BOTH a >= 20% drop AND at least a 1.2A absolute drop from its historical baseline.
         const isHistCurrDev =
-          histCurrent >= 1.5 &&
-          histDropAbs >= 1.2 &&
-          curr < 0.80 * histCurrent;
+          histCurrent >= 1.8 &&
+          histDropAbs >= 1.5 &&
+          curr < 0.75 * histCurrent &&
+          curr < 6.5;
 
         const isHistVoltDev =
-          histVoltage > 100 &&
-          (histVoltage - volt) >= 30 &&
-          volt < 0.88 * histVoltage;
+          histVoltage > 150 &&
+          (histVoltage - volt) >= 40 &&
+          volt < 0.85 * histVoltage;
 
         // Metric 3: Expected Rating Variance
         const isExpCurrDev =
-          expectedCurrent >= 1.5 &&
+          expectedCurrent >= 1.8 &&
           expDropAbs >= 1.5 &&
-          curr < 0.80 * expectedCurrent;
-
-        const isExpVoltDev =
-          expectedVoltage > 100 &&
-          (expectedVoltage - volt) >= 30 &&
-          volt < 0.88 * expectedVoltage;
+          curr < 0.75 * expectedCurrent;
 
         let detectedType: AnomalyType | null = null;
 
-        // Require ALL THREE metrics to show variance before flagging!
-        // String disconnected: Only valid if string historically had active generation (histCurrent >= 1.8),
-        // but now dropped to near zero (<= 0.1A and V < 50V) while peers are active (>= 2.0A)!
-        if (curr <= 0.1 && peerMedianCurrent >= 2.0 && volt < 50 && histCurrent >= 1.8 && expectedCurrent >= 1.8) {
+        // String disconnected: String historically had active generation (histCurrent >= 1.5),
+        // but now dropped to near zero (curr <= 0.2A) while peer strings are actively generating (peerMedianCurrent >= 2.0A).
+        // Note: Open circuit voltage (Voc > 50V) is often present even when disconnected due to blown fuse or open DC breaker.
+        const isDisconnected = curr <= 0.2 && peerMedianCurrent >= 2.0 && histCurrent >= 1.5;
+
+        if (isDisconnected) {
           detectedType = "string_disconnected";
         } else if (isPeerCurrDev && isHistCurrDev && isExpCurrDev) {
           detectedType = "sustained_underperformance";
-        } else if (isPeerVoltDev && isHistVoltDev && isExpVoltDev) {
+        } else if (isPeerVoltDev && isHistVoltDev) {
           detectedType = "voltage_droop";
         }
 
@@ -501,10 +501,17 @@ export function analyzeStringAnomalies(
 
     // Process streaks into explainable StringAnomaly objects
     stringStreakMap.forEach((streak, strId) => {
-      const strObj = stringMap.get(strId)!;
+      // Require at least 2 consecutive polling cycles for underperformance or voltage droop,
+      // so single-sample momentary dips (passing cloud/shadow jitter) are never flagged as active underperformers!
       const firstMs = new Date(streak.firstTs).getTime();
       const lastMs = new Date(streak.lastTs).getTime();
       const diffMins = Math.max(15, Math.round((lastMs - firstMs) / 60000));
+
+      if (streak.type !== "string_disconnected" && streak.count < 2 && diffMins < 20) {
+        return;
+      }
+
+      const strObj = stringMap.get(strId)!;
 
       let finalType = streak.type;
       let severity: AnomalySeverity = "medium";

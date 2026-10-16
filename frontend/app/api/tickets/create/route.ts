@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
@@ -42,7 +43,35 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Site not found" }, { status: 404 });
     }
 
-    const orgId = site.org_id || "c1e566ff-c676-4ceb-a2f1-c904783e2fa5";
+    const { data: profile } = await serviceClient
+      .from("profiles")
+      .select("org_id")
+      .eq("id", user.id)
+      .single();
+
+    const orgId = site.org_id || profile?.org_id || "ac763745-aed5-469d-9956-459fb00a337e";
+
+    // Deduplicate internet outage tickets if an open one already exists for this site
+    if (root_cause === "internet_outage") {
+      const { data: existingTicket } = await serviceClient
+        .from("tickets")
+        .select("*")
+        .eq("site_id", site_id)
+        .eq("ticket_type", "connectivity")
+        .not("status", "in", "(resolved,closed)")
+        .limit(1)
+        .maybeSingle();
+
+      if (existingTicket) {
+        revalidatePath("/dashboard");
+        revalidatePath("/tickets");
+        return NextResponse.json({
+          success: true,
+          ticket: existingTicket,
+          message: "Site is already marked as Internet Down.",
+        });
+      }
+    }
     const formattedDesc = `${description || "Incident logged via Command Center."}\n\n[Root Cause Classification]: ${root_cause.replace(/_/g, " ").toUpperCase()}${
       root_cause === "internet_outage"
         ? "\nNote: Connectivity/Datalogger issue acknowledged. Non-emergency inverter operational scope."
@@ -101,6 +130,10 @@ export async function POST(req: Request) {
         workOrder = wo;
       }
     }
+
+    revalidatePath("/dashboard");
+    revalidatePath("/tickets");
+    revalidatePath(`/sites/${site_id}`);
 
     return NextResponse.json({
       success: true,

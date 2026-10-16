@@ -174,46 +174,106 @@ export function StringAnalyticsSection({
     setSelectedStrIds([]);
   };
 
+  // Identify healthy baseline strings on this inverter (strings that are not flagged as anomalous)
+  const healthyStrings = strings.filter((s) => !stringAnomalyMap.has(Number(s.string_index)));
+  const healthyKeys = healthyStrings.map((s) => `String #${s.string_index}`);
+
   const focusIssueStrings = () => {
     const issueIds = strings
       .filter((s) => stringAnomalyMap.has(Number(s.string_index)))
       .map((s) => s.id);
-    if (issueIds.length > 0) {
-      setSelectedStrIds(issueIds);
+    // Also include the first healthy string so users can visually see the reference line!
+    const firstHealthy = healthyStrings[0];
+    const targetIds = firstHealthy ? [...issueIds, firstHealthy.id] : issueIds;
+    if (targetIds.length > 0) {
+      setSelectedStrIds(targetIds);
     }
   };
 
   // Find selected strings for display line elements
   const selectedStringsInfo = strings.filter((s) => selectedStrIds.includes(s.id));
 
-  // For each flagged string, locate the point of worst deviation vs. the median of the other strings
+  // For each flagged string, locate the point of worst deviation vs. the healthy peer baseline
   const [hoveredMarker, setHoveredMarker] = useState<string | null>(null);
   const anomalyMarkers = selectedStringsInfo
     .filter((s) => stringAnomalyMap.has(Number(s.string_index)))
     .map((s) => {
       const key = `String #${s.string_index}`;
       const anomaly = stringAnomalyMap.get(Number(s.string_index))!;
-      let worst: { timestamp: string; value: number; peer: number; gap: number } | null = null;
+
+      // Metric relevance check:
+      // Current-based anomalies show when metric is current_a or power_kw
+      // Voltage-based anomalies show when metric is voltage_v or power_kw
+      const isVoltageAnomaly = anomaly.type === "voltage_droop";
+      if (metric === "voltage_v" && !isVoltageAnomaly) return null;
+      if (metric === "current_a" && isVoltageAnomaly) return null;
+
+      const firstMs = new Date(anomaly.first_detected_at).getTime();
+      const lastMs = new Date(anomaly.last_detected_at).getTime();
+
+      let worstInWindow: { timestamp: string; value: number; peer: number; gap: number } | null = null;
+      let worstOverall: { timestamp: string; value: number; peer: number; gap: number } | null = null;
+
       for (const row of chartData as any[]) {
         const v = row[key];
         if (typeof v !== "number") continue;
-        const peers = Object.entries(row)
-          .filter(([k, val]) => k !== "timestamp" && k !== key && typeof val === "number")
-          .map(([, val]) => val as number)
-          .sort((a, b) => a - b);
-        if (peers.length === 0) continue;
-        const mid = Math.floor(peers.length / 2);
-        const peer = peers.length % 2 ? peers[mid] : (peers[mid - 1] + peers[mid]) / 2;
+
+        // Determine baseline:
+        // Priority 1: Median of healthy sister strings at this timestamp
+        const healthyValues = healthyKeys
+          .map((k) => row[k])
+          .filter((val) => typeof val === "number" && (metric === "voltage_v" ? val > 50 : val > 0.2)) as number[];
+
+        let peer = 0;
+        if (healthyValues.length > 0) {
+          healthyValues.sort((a, b) => a - b);
+          const mid = Math.floor(healthyValues.length / 2);
+          peer = healthyValues.length % 2 ? healthyValues[mid] : (healthyValues[mid - 1] + healthyValues[mid]) / 2;
+        } else {
+          // Priority 2: Other selected strings excluding self
+          const otherValues = Object.entries(row)
+            .filter(([k, val]) => k !== "timestamp" && k !== key && typeof val === "number" && (metric === "voltage_v" ? (val as number) > 50 : (val as number) > 0.2))
+            .map(([, val]) => val as number)
+            .sort((a, b) => a - b);
+          if (otherValues.length > 0) {
+            const mid = Math.floor(otherValues.length / 2);
+            peer = otherValues.length % 2 ? otherValues[mid] : (otherValues[mid - 1] + otherValues[mid]) / 2;
+          } else {
+            // Priority 3: Anomaly benchmark value
+            peer = metric === "voltage_v" ? anomaly.benchmark_voltage_v : anomaly.benchmark_current_a;
+          }
+        }
+
+        // Active solar generation threshold to avoid dusk/dawn/night jitter:
+        const isActiveGen = metric === "voltage_v" ? peer >= 150 : metric === "power_kw" ? peer >= 0.5 : peer >= 1.5;
+        if (!isActiveGen) continue;
+
         const gap = peer - v;
-        if (peer > 0 && (!worst || gap > worst.gap)) worst = { timestamp: row.timestamp, value: v, peer, gap };
+        if (gap <= 0) continue;
+
+        const rowMs = new Date(row.timestamp).getTime();
+        const isInWindow = rowMs >= firstMs && rowMs <= lastMs;
+
+        if (isInWindow) {
+          if (!worstInWindow || gap > worstInWindow.gap) {
+            worstInWindow = { timestamp: row.timestamp, value: v, peer, gap };
+          }
+        } else {
+          if (!worstOverall || gap > worstOverall.gap) {
+            worstOverall = { timestamp: row.timestamp, value: v, peer, gap };
+          }
+        }
       }
-      if (!worst || worst.gap <= 0) return null;
+
+      const targetPoint = worstInWindow || worstOverall;
+      if (!targetPoint) return null;
+
       return {
         id: s.id,
         stringIndex: s.string_index,
         anomaly,
-        ...worst,
-        pct: worst.peer > 0 ? (worst.gap / worst.peer) * 100 : 0,
+        ...targetPoint,
+        pct: targetPoint.peer > 0 ? (targetPoint.gap / targetPoint.peer) * 100 : 0,
         color: anomaly.severity === "critical" || anomaly.type === "string_disconnected" ? "#ef4444" : "#f59e0b",
       };
     })

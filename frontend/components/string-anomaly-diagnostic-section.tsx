@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -148,6 +148,68 @@ export function StringAnomalyDiagnosticSection({
     Math.max(0, Math.floor(minVoltage * 0.85)),
     Math.ceil(maxVoltage * 1.15) || 800,
   ];
+
+  // Accurately compute the anomaly window on the X-axis from genuine anomaly timestamps and telemetry deviations
+  const anomalyWindow = useMemo(() => {
+    if (!selectedAnomalyForChart || chartData.length === 0) return null;
+
+    const firstMs = new Date(selectedAnomalyForChart.first_detected_at).getTime();
+    const lastMs = new Date(selectedAnomalyForChart.last_detected_at).getTime();
+
+    // 1. Check points directly within [first_detected_at, last_detected_at]
+    const pointsInWindow = chartData.filter((d) => {
+      const ptMs = new Date(d.timestamp).getTime();
+      return ptMs >= firstMs && ptMs <= lastMs;
+    });
+
+    if (pointsInWindow.length > 0) {
+      return {
+        x1: pointsInWindow[0].time,
+        x2: pointsInWindow[pointsInWindow.length - 1].time,
+      };
+    }
+
+    // 2. Identify the actual physical drop in chartData
+    const isVoltage = selectedAnomalyForChart.type === "voltage_droop";
+    const deviatingPoints = chartData.filter((d) => {
+      if (isVoltage) {
+        return d.peerMedianVoltage > 150 && (d.peerMedianVoltage - d.actualVoltage) >= 30;
+      }
+      return d.peerMedianCurrent >= 1.5 && (d.peerMedianCurrent - d.actualCurrent) >= 1.5;
+    });
+
+    if (deviatingPoints.length > 0) {
+      return {
+        x1: deviatingPoints[0].time,
+        x2: deviatingPoints[deviatingPoints.length - 1].time,
+      };
+    }
+
+    // 3. Fallback: Closest chart points to first_detected_at and last_detected_at
+    let closestStart = chartData[0];
+    let closestEnd = chartData[chartData.length - 1];
+    let minDiffStart = Infinity;
+    let minDiffEnd = Infinity;
+
+    for (const pt of chartData) {
+      const ptMs = new Date(pt.timestamp).getTime();
+      const diffStart = Math.abs(ptMs - firstMs);
+      const diffEnd = Math.abs(ptMs - lastMs);
+      if (diffStart < minDiffStart) {
+        minDiffStart = diffStart;
+        closestStart = pt;
+      }
+      if (diffEnd < minDiffEnd) {
+        minDiffEnd = diffEnd;
+        closestEnd = pt;
+      }
+    }
+
+    return {
+      x1: closestStart.time,
+      x2: closestEnd.time,
+    };
+  }, [selectedAnomalyForChart, chartData]);
 
   return (
     <div className="space-y-6" data-testid="string-anomaly-section">
@@ -441,10 +503,10 @@ export function StringAnomalyDiagnosticSection({
                         contentStyle={{ backgroundColor: "#1e293b", borderColor: "#334155", color: "#f8fafc", fontSize: "12px" }}
                       />
                       <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }} />
-                      {chartData.length > 0 && (
+                      {anomalyWindow && (
                         <ReferenceArea 
-                          x1={chartData[Math.max(0, Math.floor(chartData.length * 0.5))]?.time} 
-                          x2={chartData[chartData.length - 1]?.time} 
+                          x1={anomalyWindow.x1} 
+                          x2={anomalyWindow.x2} 
                           fill="rgba(239, 68, 68, 0.15)" 
                           stroke="rgba(239, 68, 68, 0.5)" 
                           label={{ value: "Anomaly Window", fill: "#ef4444", fontSize: 11 }} 
