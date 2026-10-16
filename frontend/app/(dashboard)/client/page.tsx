@@ -1,7 +1,6 @@
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { KpiCard } from "@/components/kpi-card";
 import { PerformanceAnalyticsSection } from "@/components/performance-analytics-section";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,14 +17,20 @@ import {
   MapPin,
   Info,
   Wrench,
-  Sun
+  Sun,
+  SprayCan,
+  Calendar,
+  BarChart3,
+  Check
 } from "lucide-react";
 import { calculateClientHealthScore } from "@/lib/client-health-score";
-import { calculateFinancialSavings, sanitizeServiceEvents } from "@/lib/client-sanitizer";
+import { calculateFinancialSavings, sanitizeServiceEvents, formatClientServiceRequests } from "@/lib/client-sanitizer";
 import { ClientGlobalPopups } from "@/components/client-global-popups";
+import { ClientHealthBreakdownModal } from "@/components/client-health-breakdown-modal";
+import { ClientServiceRequestsSection } from "@/components/client-service-requests-section";
+import { ClientEvidenceViewer } from "@/components/client-evidence-viewer";
 import { getSiteStatus } from "@/lib/status-utils";
 import { kWh, formatDateTime, formatDate } from "@/lib/utils";
-import { CleaningEvidenceLinks } from "@/components/cleaning-evidence-links";
 
 export default async function ClientPortfolioPage() {
   const sb = await createClient();
@@ -56,7 +61,7 @@ export default async function ClientPortfolioPage() {
     customerOrg = org;
   }
 
-  // Fetch client accessible sites (scoped strictly to client's owned sites if role is client)
+  // Fetch client accessible sites (strictly scoped via tenant rules)
   let sitesQuery = serviceClient.from("sites").select("*").order("name");
   if (profile.role === "client") {
     if (profile.org_id) {
@@ -69,24 +74,41 @@ export default async function ClientPortfolioPage() {
 
   const sites = sitesRes ?? [];
   const siteIds = sites.map((s) => s.id);
+  const sitesMap = new Map(sites.map((s) => [s.id, s]));
 
   let inverters: any[] = [];
   let alerts: any[] = [];
   let cleaningLogs: any[] = [];
   let workOrders: any[] = [];
+  let tickets: any[] = [];
+  let upcomingVisits: any[] = [];
+
+  const todayStr = new Date().toISOString().slice(0, 10);
 
   if (siteIds.length > 0) {
-    const [invRes, altRes, clnRes, woRes] = await Promise.all([
+    const [invRes, altRes, clnRes, woRes, tktRes, visRes] = await Promise.all([
       serviceClient.from("inverters").select("*").in("site_id", siteIds),
       serviceClient.from("alerts").select("*").in("site_id", siteIds),
-      serviceClient.from("cleaning_logs").select("*").in("site_id", siteIds).order("performed_at", { ascending: false }).limit(20),
-      serviceClient.from("work_orders").select("*").in("site_id", siteIds).order("created_at", { ascending: false }).limit(20),
+      serviceClient.from("cleaning_logs").select("*").in("site_id", siteIds).order("performed_at", { ascending: false }).limit(25),
+      serviceClient.from("work_orders").select("*, tickets(before_photo_url, after_photo_url)").in("site_id", siteIds).order("created_at", { ascending: false }).limit(25),
+      serviceClient.from("tickets").select("*").in("site_id", siteIds).order("created_at", { ascending: false }).limit(25),
+      serviceClient.from("cleaning_visits").select("*, sites(name)").in("site_id", siteIds).gte("scheduled_date", todayStr).in("status", ["published", "scheduled", "planned", "approved"]).order("scheduled_date", { ascending: true }),
     ]);
 
     inverters = invRes.data ?? [];
     alerts = altRes.data ?? [];
     cleaningLogs = clnRes.data ?? [];
     workOrders = woRes.data ?? [];
+    tickets = tktRes.data ?? [];
+    upcomingVisits = visRes.data ?? [];
+  }
+
+  // Canonical upcoming cleaning map
+  const upcomingCleaningMap = new Map<string, any>();
+  for (const v of upcomingVisits) {
+    if (!upcomingCleaningMap.has(v.site_id)) {
+      upcomingCleaningMap.set(v.site_id, v);
+    }
   }
 
   const inverterIds = inverters.map((i) => i.id);
@@ -149,11 +171,12 @@ export default async function ClientPortfolioPage() {
     }
   }
 
-  // Calculate Health Score
+  // Calculate Health Score with Phase 6 verification states
   const healthResult = calculateClientHealthScore({
     inverters,
     alerts: alerts.filter((a) => a.status === "open"),
     sites,
+    tickets,
     latestTelemetryTimestampMap,
   });
 
@@ -167,7 +190,8 @@ export default async function ClientPortfolioPage() {
   const todaySavingsResult = calculateFinancialSavings(todayGenerationKwh, avgTariff);
 
   // Sanitized Service Timeline Events
-  const serviceEvents = sanitizeServiceEvents(alerts, workOrders, cleaningLogs).slice(0, 5);
+  const serviceEvents = sanitizeServiceEvents(alerts, workOrders, cleaningLogs, tickets);
+  const clientServiceRequests = formatClientServiceRequests(tickets, workOrders, sitesMap);
 
   const portfolioName = customerOrg?.name || profile.organization || "Solar Portfolio";
   const allSystemsHealthy = attentionSitesCount === 0;
@@ -189,15 +213,22 @@ export default async function ClientPortfolioPage() {
             {portfolioName}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Clear, at-a-glance performance summary and maintenance care for your solar installations.
+            Transparent performance metrics, routine maintenance care, and verified operational status for your solar installations.
           </p>
         </div>
 
-        <Link href="/client/sites">
-          <Button className="gap-2">
-            <Building2 className="h-4 w-4" /> View All Sites ({sites.length})
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2.5">
+          <Link href="/client/reports">
+            <Button variant="outline" className="gap-2 text-xs">
+              <BarChart3 className="h-4 w-4" /> Monthly Reports
+            </Button>
+          </Link>
+          <Link href="/client/sites">
+            <Button className="gap-2 text-xs">
+              <Building2 className="h-4 w-4" /> View All Sites ({sites.length})
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Viewport 1: 10-Second Executive Status Banner */}
@@ -237,9 +268,9 @@ export default async function ClientPortfolioPage() {
                 </div>
                 <p className="text-sm text-muted-foreground max-w-2xl">
                   {allSystemsHealthy ? (
-                    `All ${sites.length} solar sites are actively generating clean electricity. SolarAssist 24/7 O&M monitoring is active.`
+                    `All ${sites.length} solar sites are actively generating clean electricity. SolarAssist 24/7 automated O&M supervision is active.`
                   ) : (
-                    `SolarAssist is actively investigating an operational item at ${sitesNeedingAttention.join(", ")}. No manual action required.`
+                    `SolarAssist is actively managing operational items at ${sitesNeedingAttention.join(", ")}. Certified technicians and automated telemetry verification are supervising recovery.`
                   )}
                 </p>
               </div>
@@ -253,7 +284,9 @@ export default async function ClientPortfolioPage() {
               <div className="h-8 w-px bg-border" />
               <div>
                 <div className="text-xs text-muted-foreground">System Health</div>
-                <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">{healthResult.score} / 100</div>
+                <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                  {healthResult.score} / 100
+                </div>
               </div>
             </div>
           </div>
@@ -294,12 +327,12 @@ export default async function ClientPortfolioPage() {
           <CardContent className="pt-0">
             <p className="text-xs text-muted-foreground flex items-start gap-1">
               <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-              <span>How much electricity your solar system produced today relative to its size.</span>
+              <span>Electricity generated relative to installed solar capacity.</span>
             </p>
           </CardContent>
         </Card>
 
-        {/* Metric 3: System Health Score */}
+        {/* Metric 3: System Health Score with Explainability */}
         <Card className="hover:shadow-sm transition-shadow">
           <CardHeader className="pb-2">
             <CardDescription className="text-xs font-medium uppercase tracking-wider flex items-center justify-between">
@@ -310,18 +343,27 @@ export default async function ClientPortfolioPage() {
               {healthResult.score} <span className="text-sm font-sans font-normal text-muted-foreground">/ 100</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
-            <p className="text-xs text-muted-foreground">
+          <CardContent className="pt-0 space-y-2">
+            <p className="text-xs text-muted-foreground line-clamp-1">
               {healthResult.summary}
             </p>
+            <ClientHealthBreakdownModal
+              healthResult={healthResult}
+              trigger={
+                <button type="button" className="text-xs text-primary font-medium hover:underline flex items-center gap-1">
+                  <span>View explainable factors</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </button>
+              }
+            />
           </CardContent>
         </Card>
 
-        {/* Metric 4: Financial Savings (Only if real tariff is configured) */}
+        {/* Metric 4: Financial Savings */}
         <Card className="hover:shadow-sm transition-shadow">
           <CardHeader className="pb-2">
             <CardDescription className="text-xs font-medium uppercase tracking-wider flex items-center justify-between">
-              <span>Estimated Savings</span>
+              <span>Estimated Lifetime Savings</span>
               <Coins className="h-4 w-4 text-emerald-500" />
             </CardDescription>
             <CardTitle className="text-3xl font-bold font-mono text-foreground mt-1">
@@ -336,7 +378,7 @@ export default async function ClientPortfolioPage() {
         </Card>
       </div>
 
-      {/* Interactive Production Charts & Service Timeline */}
+      {/* Production Analytics Chart & Upcoming Care Widget */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Interactive Production Analytics Chart */}
         <Card className="lg:col-span-2">
@@ -348,7 +390,7 @@ export default async function ClientPortfolioPage() {
               </CardDescription>
             </div>
             <Badge variant="outline" className="text-xs font-mono">
-              Interactive
+              Live Telemetry
             </Badge>
           </CardHeader>
           <CardContent className="pt-4">
@@ -362,75 +404,71 @@ export default async function ClientPortfolioPage() {
           </CardContent>
         </Card>
 
-        {/* Service & Maintenance History */}
-        <Card>
-          <CardHeader className="pb-3 border-b">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <Wrench className="h-4 w-4 text-primary" /> Service & Maintenance Care
-            </CardTitle>
-            <CardDescription className="text-xs">O&M Support Records</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-4 space-y-4">
-            {serviceEvents.length === 0 ? (
-              <div className="text-sm text-muted-foreground text-center py-8">
-                No recent maintenance items. Systems operating smoothly.
+        {/* Upcoming Routine Cleaning & Care Schedule */}
+        <Card className="flex flex-col justify-between">
+          <div>
+            <CardHeader className="pb-3 border-b">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <SprayCan className="h-4 w-4 text-primary" /> Upcoming Cleaning Care
+                </CardTitle>
+                <Badge variant="outline" className="text-xs font-mono">
+                  {upcomingVisits.length} Planned
+                </Badge>
               </div>
-            ) : (
-              serviceEvents.map((evt) => (
-                <div key={evt.id} className="flex gap-3 text-xs items-start border-b pb-3 last:border-0 last:pb-0">
-                  <div className="h-7 w-7 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
-                    {evt.type === "technician_visit" ? (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                    ) : evt.type === "auto_resolved" ? (
-                      <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                    ) : (
-                      <Activity className="h-3.5 w-3.5 text-amber-500" />
-                    )}
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center justify-between font-medium">
-                      <span className="text-foreground">{evt.title}</span>
-                      <span className="text-[10px] text-muted-foreground">{formatDateTime(evt.timestamp)}</span>
-                    </div>
-                    <p className="text-muted-foreground leading-relaxed">{evt.description}</p>
+              <CardDescription className="text-xs">
+                Scheduled module washing to eliminate soiling loss
+              </CardDescription>
+            </CardHeader>
 
-                    {(evt.safety_photo_url || evt.before_photo_url || evt.after_photo_url || evt.damage_photo_url) && (
-                      <div className="pt-1">
-                        <CleaningEvidenceLinks
-                          safetyPhotoUrl={evt.safety_photo_url}
-                          beforePhotoUrl={evt.before_photo_url}
-                          afterPhotoUrl={evt.after_photo_url}
-                          damagePhotoUrl={evt.damage_photo_url}
-                          damageObserved={evt.actionableContext?.damage_observed}
-                        />
-                      </div>
-                    )}
-                    {(evt.actionable === "cleaning_ack" || evt.actionable === "cleaning_schedule_ack") && evt.actionableStatus === "pending" && (
-                      <div className="pt-2">
-                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                          Awaiting Acknowledgment
-                        </Badge>
-                      </div>
-                    )}
-                    
-                    {(evt.actionable === "cleaning_ack" || evt.actionable === "cleaning_schedule_ack") && evt.actionableStatus === "completed" && (
-                      <div className="pt-2 flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        Acknowledged
-                      </div>
-                    )}
-                  </div>
+            <CardContent className="pt-4 space-y-3.5">
+              {upcomingVisits.length === 0 ? (
+                <div className="text-xs text-muted-foreground text-center py-8 space-y-2">
+                  <CheckCircle2 className="h-6 w-6 text-emerald-500 mx-auto" />
+                  <div>All panel cleanings are currently up to date.</div>
                 </div>
-              ))
-            )}
-          </CardContent>
+              ) : (
+                upcomingVisits.slice(0, 4).map((visit) => (
+                  <div key={visit.id} className="p-3 border rounded-xl bg-card space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-foreground">{visit.sites?.name || "Solar Site"}</span>
+                      <Badge variant="secondary" className="text-[10px] capitalize">
+                        {visit.status}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between text-muted-foreground text-[11px]">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3 text-primary" /> {formatDate(visit.scheduled_date)}
+                      </span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">Certified Cleaning Team</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </div>
+
+          <div className="p-4 border-t bg-muted/20 text-xs text-muted-foreground flex items-center justify-between">
+            <span>Regular 15-30 day routine cycles</span>
+            <Link href="/client/reports" className="text-primary font-medium hover:underline text-[11px]">
+              View Historical Proofs →
+            </Link>
+          </div>
         </Card>
       </div>
 
-      {/* Your Solar Sites Cards (Progressive Disclosure) */}
+      {/* Service Requests & Operational Care Section */}
+      <ClientServiceRequestsSection
+        serviceRequests={clientServiceRequests}
+      />
+
+      {/* Your Solar Sites Cards */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold tracking-tight">Your Solar Sites ({sites.length})</h2>
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">Your Solar Sites ({sites.length})</h2>
+            <p className="text-xs text-muted-foreground">Select an individual site for detailed inverter metrics and maintenance logs</p>
+          </div>
           <Link href="/client/sites" className="text-xs text-primary font-medium flex items-center gap-1 hover:underline">
             View all sites <ArrowUpRight className="h-3 w-3" />
           </Link>
@@ -454,7 +492,10 @@ export default async function ClientPortfolioPage() {
             const siteSavings = calculateFinancialSavings(siteTodayYield, s.grid_tariff_inr_per_kwh);
             const isSiteNormal = siteStatus === "ONLINE";
 
-            const calcNextDate = s.last_cleaned_on
+            const canonicalVisit = upcomingCleaningMap.get(s.id);
+            const nextCleaningStr = canonicalVisit
+              ? canonicalVisit.scheduled_date
+              : s.last_cleaned_on
               ? new Date(new Date(s.last_cleaned_on).getTime() + (s.cleaning_cycle_days || 15) * 86400_000).toISOString().slice(0, 10)
               : s.next_cleaning_date;
 
@@ -478,11 +519,11 @@ export default async function ClientPortfolioPage() {
                       <div className="font-semibold font-mono">{s.capacity_kwp} kWp</div>
                     </div>
                     <div>
-                      <div className="text-muted-foreground">Current Power Output</div>
+                      <div className="text-muted-foreground">Current Output</div>
                       <div className="font-semibold font-mono">{sitePower.toFixed(2)} kW</div>
                     </div>
                     <div>
-                      <div className="text-muted-foreground">Energy Produced Today</div>
+                      <div className="text-muted-foreground">Energy Today</div>
                       <div className="font-semibold font-mono text-emerald-600 dark:text-emerald-400">{siteTodayYield.toFixed(1)} kWh</div>
                     </div>
                     <div>
@@ -498,7 +539,7 @@ export default async function ClientPortfolioPage() {
                       Last Cleaned: <span className="font-medium text-foreground">{s.last_cleaned_on ? formatDate(s.last_cleaned_on) : "Never recorded"}</span>
                     </div>
                     <div>
-                      Next Planned: <span className="font-medium text-emerald-600 dark:text-emerald-400">{calcNextDate ? formatDate(calcNextDate) : "—"}</span>
+                      Next Planned: <span className="font-medium text-emerald-600 dark:text-emerald-400">{nextCleaningStr ? formatDate(nextCleaningStr) : "—"}</span>
                     </div>
                   </div>
 

@@ -10,7 +10,8 @@
     "lint": "next lint",
     "seed": "tsx scripts/seed.ts",
     "test:phase5": "tsx scripts/test-phase5-intelligence.ts",
-    "test:phase6": "tsx scripts/test-phase6-verification.ts"
+    "test:phase6": "tsx scripts/test-phase6-verification.ts",
+    "test:phase7": "tsx scripts/test-phase7-client-experience.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

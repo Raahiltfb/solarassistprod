@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PerformanceAnalyticsSection } from "@/components/performance-analytics-section";
-import { KpiCard } from "@/components/kpi-card";
 import { 
   MapPin, 
   Zap, 
@@ -18,17 +17,21 @@ import {
   CheckCircle2, 
   ArrowLeft, 
   Calendar, 
-  Image as ImageIcon, 
+  ImageIcon, 
   AlertCircle,
   Info,
   Sun,
-  Wrench
+  Wrench,
+  BarChart3,
+  ArrowUpRight
 } from "lucide-react";
-import { getSanitizedInverterStatus, calculateFinancialSavings, sanitizeServiceEvents } from "@/lib/client-sanitizer";
+import { getSanitizedInverterStatus, calculateFinancialSavings, sanitizeServiceEvents, formatClientServiceRequests } from "@/lib/client-sanitizer";
 import { calculateClientHealthScore } from "@/lib/client-health-score";
+import { ClientHealthBreakdownModal } from "@/components/client-health-breakdown-modal";
+import { ClientServiceRequestsSection } from "@/components/client-service-requests-section";
+import { ClientEvidenceViewer } from "@/components/client-evidence-viewer";
 import { getSiteStatus } from "@/lib/status-utils";
 import { kWh, formatDateTime, formatDate } from "@/lib/utils";
-import { CleaningEvidenceLinks } from "@/components/cleaning-evidence-links";
 
 export default async function ClientSiteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -67,23 +70,24 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
     notFound();
   }
 
-  // Fetch inverters, telemetry, alerts, cleaning logs, work orders for this site
-  const [invRes, altRes, clnRes, woRes] = await Promise.all([
+  // Fetch inverters, telemetry, alerts, cleaning logs, work orders, tickets for this site
+  const [invRes, altRes, clnRes, woRes, tktRes] = await Promise.all([
     serviceClient.from("inverters").select("*").eq("site_id", site.id),
     serviceClient.from("alerts").select("*").eq("site_id", site.id),
     serviceClient.from("cleaning_logs").select("*").eq("site_id", site.id).order("performed_at", { ascending: false }),
     serviceClient.from("work_orders").select("*, tickets(before_photo_url, after_photo_url)").eq("site_id", site.id).order("created_at", { ascending: false }),
+    serviceClient.from("tickets").select("*").eq("site_id", site.id).order("created_at", { ascending: false }),
   ]);
 
   const inverters = invRes.data ?? [];
   const alerts = altRes.data ?? [];
   const cleaningLogs = clnRes.data ?? [];
   const workOrders = woRes.data ?? [];
+  const tickets = tktRes.data ?? [];
 
   const inverterIds = inverters.map((i) => i.id);
 
   let latestTelemetry: any[] = [];
-
   if (inverterIds.length > 0) {
     const latestTelsRes = await serviceClient.rpc("get_latest_telemetry", { inverter_ids: inverterIds });
     latestTelemetry = latestTelsRes.data ?? [];
@@ -120,11 +124,12 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
   const savingsResult = calculateFinancialSavings(lifetimeYield, site.grid_tariff_inr_per_kwh);
   const todaySavingsResult = calculateFinancialSavings(todayYield, site.grid_tariff_inr_per_kwh);
 
-  // Health Score calculation
+  // Health Score calculation with verification engine states
   const healthResult = calculateClientHealthScore({
     inverters,
     alerts: alerts.filter((a) => a.status === "open"),
     sites: [site],
+    tickets,
     latestTelemetryTimestampMap,
   });
 
@@ -172,8 +177,9 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
     revalidatePath(`/client/sites/${id}`);
   }
 
-  // Sanitized Service Timeline Events
-  const serviceEvents = sanitizeServiceEvents(alerts, workOrders, cleaningLogs);
+  // Sanitized Service Timeline Events & Structured Requests
+  const serviceEvents = sanitizeServiceEvents(alerts, workOrders, cleaningLogs, tickets);
+  const clientServiceRequests = formatClientServiceRequests(tickets, workOrders, new Map([[site.id, site]]));
 
   return (
     <div className="space-y-6" data-testid="client-site-detail-page">
@@ -204,30 +210,37 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
             </p>
           </div>
 
-          <Link href="/client/sites">
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-              <ArrowLeft className="h-3.5 w-3.5" /> Back to Sites
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <Link href={`/client/reports?site_id=${site.id}`}>
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                <BarChart3 className="h-3.5 w-3.5" /> Monthly Report
+              </Button>
+            </Link>
+            <Link href="/client/sites">
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                <ArrowLeft className="h-3.5 w-3.5" /> Back to Sites
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 
       {/* Scheduled Cleaning Banner */}
-      {isCleaningScheduled && scheduledCleaningWo && (
-        <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-lg flex items-center justify-between gap-4 text-xs">
+      {isCleaningScheduled && (
+        <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-xl flex items-center justify-between gap-4 text-xs">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            <div className="h-9 w-9 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
               <SprayCan className="h-4 w-4" />
             </div>
             <div>
-              <div className="font-semibold text-sm text-foreground">Scheduled Maintenance</div>
+              <div className="font-semibold text-sm text-foreground">Scheduled Preventive Cleaning</div>
               <p className="text-muted-foreground mt-0.5">
-                Cleaning scheduled for {formatDate(scheduledCleaningWo.scheduled_date)}. Our SolarAssist technician team is dispatched to maintain peak performance at {site.name}.
+                Cleaning visit confirmed for <span className="font-semibold text-foreground">{formatDate(nextScheduledCleaningDate.toISOString())}</span>. SolarAssist certified technicians are dispatched to ensure maximum daily solar generation.
               </p>
             </div>
           </div>
           <Badge variant="secondary" className="shrink-0 font-medium">
-            Scheduled
+            Confirmed Visit
           </Badge>
         </div>
       )}
@@ -266,12 +279,12 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
           <CardContent className="pt-0">
             <p className="text-xs text-muted-foreground flex items-start gap-1">
               <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-              <span>How much electricity your solar system produced today relative to its size.</span>
+              <span>Electricity generated relative to installed solar capacity.</span>
             </p>
           </CardContent>
         </Card>
 
-        {/* Card 3: System Health */}
+        {/* Card 3: System Health with Explainability */}
         <Card className="hover:shadow-sm transition-shadow">
           <CardHeader className="pb-2">
             <CardDescription className="text-xs font-medium uppercase tracking-wider flex items-center justify-between">
@@ -282,10 +295,20 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
               {healthResult.score} <span className="text-sm font-sans font-normal text-muted-foreground">/ 100</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
-            <p className="text-xs text-muted-foreground">
+          <CardContent className="pt-0 space-y-2">
+            <p className="text-xs text-muted-foreground line-clamp-1">
               {healthResult.summary}
             </p>
+            <ClientHealthBreakdownModal
+              healthResult={healthResult}
+              siteName={site.name}
+              trigger={
+                <button type="button" className="text-xs text-primary font-medium hover:underline flex items-center gap-1">
+                  <span>View explainable factors</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </button>
+              }
+            />
           </CardContent>
         </Card>
 
@@ -312,7 +335,7 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
       <Card>
         <CardHeader className="pb-3 border-b">
           <CardTitle className="text-base font-semibold">Solar Inverter Equipment ({inverters.length})</CardTitle>
-          <CardDescription className="text-xs">Reassuring status and current power output for each solar inverter</CardDescription>
+          <CardDescription className="text-xs">Reassuring status and operating power output for each solar inverter</CardDescription>
         </CardHeader>
         <CardContent className="pt-4 space-y-3">
           {inverters.length === 0 ? (
@@ -366,7 +389,7 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
             <CardDescription className="text-xs">Interactive energy output and specific yield trends for {site.name}</CardDescription>
           </div>
           <Badge variant="outline" className="text-xs font-mono">
-            Interactive
+            Live Telemetry
           </Badge>
         </CardHeader>
         <CardContent className="pt-4">
@@ -380,7 +403,7 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
         </CardContent>
       </Card>
 
-      {/* Cleaning Schedule & Service Timeline */}
+      {/* Cleaning Schedule & Service Records */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Cleaning Schedule */}
         <Card>
@@ -424,16 +447,30 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
                       <span className="text-muted-foreground">{formatDateTime(log.performed_at)}</span>
                     </div>
 
-                    {/* Evidence links - no inline images */}
                     <div className="pt-1">
-                      <CleaningEvidenceLinks
+                      <ClientEvidenceViewer
+                        title={`Cleaning Evidence • ${site.name}`}
                         safetyPhotoUrl={log.safety_photo_url}
                         beforePhotoUrl={log.before_photo_url}
                         afterPhotoUrl={log.after_photo_url}
                         damagePhotoUrl={log.damage_photo_url}
                         damageObserved={log.damage_observed}
+                        damageType={log.damage_type}
+                        remarks={log.remarks}
                       />
                     </div>
+
+                    {/* Acknowledgment action */}
+                    {!log.client_acknowledged && (
+                      <div className="pt-1">
+                        <form action={acknowledgeCleaning}>
+                          <input type="hidden" name="logId" value={log.id} />
+                          <Button type="submit" size="sm" variant="outline" className="text-xs h-7 gap-1">
+                            <CheckCircle2 className="h-3 w-3" /> Acknowledge Cleaning Visit
+                          </Button>
+                        </form>
+                      </div>
+                    )}
                   </div>
                 ))
               )}
@@ -441,71 +478,14 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
           </CardContent>
         </Card>
 
-        {/* Service & Maintenance Activity */}
-        <Card>
-          <CardHeader className="pb-3 border-b">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <Wrench className="h-4 w-4 text-primary" /> Service & Maintenance Care
-            </CardTitle>
-            <CardDescription className="text-xs">O&M Support Records</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-4 space-y-4 text-xs">
-            {serviceEvents.length === 0 ? (
-              <div className="text-muted-foreground text-center py-10">No items recorded. System operating smoothly.</div>
-            ) : (
-              serviceEvents.map((evt) => (
-                <div key={evt.id} className="flex gap-3 items-start border-b pb-3 last:border-0 last:pb-0">
-                  <div className="h-7 w-7 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
-                    {evt.type === "technician_visit" ? (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                    ) : evt.type === "auto_resolved" ? (
-                      <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                    ) : (
-                      <Activity className="h-3.5 w-3.5 text-amber-500" />
-                    )}
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center justify-between font-medium">
-                      <span className="text-foreground">{evt.title}</span>
-                      <span className="text-[10px] text-muted-foreground">{formatDateTime(evt.timestamp)}</span>
-                    </div>
-                    <p className="text-muted-foreground leading-relaxed">{evt.description}</p>
-                    
-                    {/* Evidence links without inline images */}
-                    {(evt.safety_photo_url || evt.before_photo_url || evt.after_photo_url || evt.damage_photo_url) && (
-                      <div className="pt-1">
-                        <CleaningEvidenceLinks
-                          safetyPhotoUrl={evt.safety_photo_url}
-                          beforePhotoUrl={evt.before_photo_url}
-                          afterPhotoUrl={evt.after_photo_url}
-                          damagePhotoUrl={evt.damage_photo_url}
-                          damageObserved={evt.actionableContext?.damage_observed}
-                        />
-                      </div>
-                    )}
-
-                    {evt.actionable === "cleaning_ack" && (
-                      <div className="pt-2">
-                        {evt.actionableStatus === "pending" ? (
-                          <form action={acknowledgeCleaning}>
-                            <input type="hidden" name="logId" value={evt.actionableId} />
-                            <Button type="submit" size="sm" variant="default" className="text-xs h-8">
-                              Acknowledge Cleaning
-                            </Button>
-                          </form>
-                        ) : (
-                          <Badge variant="success" className="text-[10px] gap-1 px-2 py-0.5">
-                            <CheckCircle2 className="h-3 w-3" /> Acknowledged
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+        {/* Transparent Service Requests Tracker */}
+        <div>
+          <ClientServiceRequestsSection
+            serviceRequests={clientServiceRequests}
+            title="Service Requests for This Site"
+            description="Transparent lifecycle tracking and telemetry verification for all maintenance on this installation."
+          />
+        </div>
       </div>
     </div>
   );

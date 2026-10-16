@@ -432,9 +432,9 @@ export function analyzeStringAnomalies(
 
         // Metric 2: Historical Self Variance
         const isHistCurrDev =
-          histCurrent >= 1.8 &&
-          histDropAbs >= 1.5 &&
-          curr < 0.75 * histCurrent &&
+          histCurrent >= 1.5 &&
+          histDropAbs >= 1.0 &&
+          curr < 0.80 * histCurrent &&
           curr < 6.5;
 
         const isHistVoltDev =

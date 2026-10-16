@@ -25,6 +25,13 @@ const NAV = [
     roles: ["client"],
     subPaths: [],
   },
+  {
+    href: "/client/reports",
+    label: "Monthly Reports",
+    icon: BarChart3,
+    roles: ["client"],
+    subPaths: [],
+  },
 
   // Admin & EPC Admin Roles (Primary Hub Architecture)
   {

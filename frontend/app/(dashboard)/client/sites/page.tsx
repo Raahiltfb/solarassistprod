@@ -4,9 +4,10 @@ import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, ArrowUpRight, Building2, Zap, ShieldCheck, Sun, Activity, Info, Coins } from "lucide-react";
+import { MapPin, ArrowUpRight, Building2, Zap, ShieldCheck, Sun, Activity, Info, Coins, BarChart3, SprayCan } from "lucide-react";
 import { getSiteStatus } from "@/lib/status-utils";
 import { calculateFinancialSavings } from "@/lib/client-sanitizer";
+import { formatDate } from "@/lib/utils";
 
 export default async function ClientSitesListPage() {
   const sb = await createClient();
@@ -44,9 +45,23 @@ export default async function ClientSitesListPage() {
   const siteIds = sites.map((s) => s.id);
 
   let inverters: any[] = [];
+  let upcomingVisits: any[] = [];
+  const todayStr = new Date().toISOString().slice(0, 10);
+
   if (siteIds.length > 0) {
-    const { data: invs } = await serviceClient.from("inverters").select("*").in("site_id", siteIds);
-    inverters = invs ?? [];
+    const [invsRes, visRes] = await Promise.all([
+      serviceClient.from("inverters").select("*").in("site_id", siteIds),
+      serviceClient.from("cleaning_visits").select("site_id, scheduled_date").in("site_id", siteIds).gte("scheduled_date", todayStr).in("status", ["published", "scheduled", "planned", "approved"]).order("scheduled_date", { ascending: true }),
+    ]);
+    inverters = invsRes.data ?? [];
+    upcomingVisits = visRes.data ?? [];
+  }
+
+  const upcomingVisitsMap = new Map<string, string>();
+  for (const v of upcomingVisits) {
+    if (!upcomingVisitsMap.has(v.site_id)) {
+      upcomingVisitsMap.set(v.site_id, v.scheduled_date);
+    }
   }
 
   const inverterIds = inverters.map((i) => i.id);
@@ -74,7 +89,7 @@ export default async function ClientSitesListPage() {
 
   return (
     <div className="space-y-6" data-testid="client-sites-page">
-      <div className="flex items-center justify-between border-b pb-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-4">
         <div>
           <div className="flex items-center gap-2">
             <Link href="/client" className="text-xs text-muted-foreground hover:text-primary transition-colors">
@@ -90,6 +105,12 @@ export default async function ClientSitesListPage() {
             Select an individual solar installation to inspect daily energy production, maintenance care, and detailed history.
           </p>
         </div>
+
+        <Link href="/client/reports">
+          <Button variant="outline" size="sm" className="gap-2 text-xs">
+            <BarChart3 className="h-4 w-4" /> Portfolio Reports
+          </Button>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -114,6 +135,13 @@ export default async function ClientSitesListPage() {
           const todaySpecificYield = capacity > 0 ? (todayGeneration / capacity) : 0;
           const savingsResult = calculateFinancialSavings(todayGeneration, s.grid_tariff_inr_per_kwh);
           const isSiteNormal = siteStatus === "ONLINE";
+
+          const canonicalVisitDate = upcomingVisitsMap.get(s.id);
+          const nextCleaningStr = canonicalVisitDate
+            ? canonicalVisitDate
+            : s.last_cleaned_on
+            ? new Date(new Date(s.last_cleaned_on).getTime() + (s.cleaning_cycle_days || 15) * 86400_000).toISOString().slice(0, 10)
+            : s.next_cleaning_date;
 
           return (
             <Card key={s.id} className="overflow-hidden hover:shadow-md transition-shadow flex flex-col justify-between">
@@ -161,15 +189,25 @@ export default async function ClientSitesListPage() {
                     </div>
                   </div>
 
-                  <div className="p-2.5 bg-primary/5 rounded-lg border border-primary/10 flex items-start gap-1.5 text-[11px] text-muted-foreground">
-                    <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-                    <span>Specific Yield: How much electricity your solar system produced today relative to its size ({todaySpecificYield.toFixed(2)} kWh/kWp).</span>
+                  <div className="pt-2 border-t flex items-center justify-between text-[11px] text-muted-foreground">
+                    <div>
+                      Last Cleaned: <span className="font-medium text-foreground">{s.last_cleaned_on ? formatDate(s.last_cleaned_on) : "Never recorded"}</span>
+                    </div>
+                    <div>
+                      Next Cleaning: <span className="font-medium text-emerald-600 dark:text-emerald-400">{nextCleaningStr ? formatDate(nextCleaningStr) : "—"}</span>
+                    </div>
                   </div>
                 </CardContent>
               </div>
 
               <CardContent className="pt-0">
-                <div className="pt-3 border-t flex justify-end">
+                <div className="pt-3 border-t flex items-center justify-between gap-2">
+                  <Link href={`/client/reports?site_id=${s.id}`}>
+                    <Button variant="ghost" size="sm" className="text-xs gap-1 h-7 text-muted-foreground hover:text-foreground">
+                      <BarChart3 className="h-3 w-3" /> Report
+                    </Button>
+                  </Link>
+
                   <Link href={`/client/sites/${s.id}`}>
                     <Button variant="default" size="sm" className="text-xs gap-1.5 h-8">
                       View Details & History <ArrowUpRight className="h-3.5 w-3.5" />
