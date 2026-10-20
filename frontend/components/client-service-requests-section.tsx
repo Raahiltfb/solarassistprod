@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { 
   Wrench, 
   CheckCircle2, 
@@ -15,7 +16,10 @@ import {
   ArrowRight, 
   RefreshCw,
   Search,
-  Check
+  Check,
+  Info,
+  Radio,
+  Zap
 } from "lucide-react";
 import type { ClientServiceRequest } from "@/lib/client-sanitizer";
 import { ClientEvidenceViewer } from "@/components/client-evidence-viewer";
@@ -29,8 +33,8 @@ interface ClientServiceRequestsSectionProps {
 
 export function ClientServiceRequestsSection({
   serviceRequests,
-  title = "Service Requests & Operational Care",
-  description = "Transparent lifecycle tracking from automated fault detection to field intervention and telemetry verification.",
+  title = "System Operational Log & Service Care",
+  description = "Transparent operational tracking from automated fault detection to field intervention and telemetry recovery verification.",
 }: ClientServiceRequestsSectionProps) {
   const [filter, setFilter] = useState<"all" | "active" | "resolved">("all");
   const [searchTerm, setSearchTerm] = useState("");
@@ -46,7 +50,9 @@ export function ClientServiceRequestsSection({
         req.ticketNumber.toLowerCase().includes(q) ||
         req.title.toLowerCase().includes(q) ||
         req.siteName.toLowerCase().includes(q) ||
-        req.statusLabel.toLowerCase().includes(q)
+        req.statusLabel.toLowerCase().includes(q) ||
+        (req.whatIsGoingOn && req.whatIsGoingOn.toLowerCase().includes(q)) ||
+        (req.whatSaIsDoing && req.whatSaIsDoing.toLowerCase().includes(q))
       );
     }
     return true;
@@ -84,12 +90,12 @@ export function ClientServiceRequestsSection({
   ];
 
   return (
-    <Card className="border shadow-sm overflow-hidden">
+    <Card className="border shadow-sm overflow-hidden" data-testid="client-service-requests-section">
       <CardHeader className="pb-3 border-b bg-card">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <Wrench className="h-4 w-4 text-primary" />
+              <ShieldCheck className="h-4 w-4 text-primary" />
               <CardTitle className="text-base font-semibold">{title}</CardTitle>
             </div>
             <CardDescription className="text-xs text-muted-foreground mt-0.5">
@@ -98,14 +104,14 @@ export function ClientServiceRequestsSection({
           </div>
 
           {/* Filter Pills */}
-          <div className="flex items-center gap-1.5 self-start md:self-auto">
+          <div className="flex items-center gap-1.5 self-start md:self-auto flex-wrap">
             <Button
               variant={filter === "all" ? "default" : "outline"}
               size="sm"
               onClick={() => setFilter("all")}
               className="text-xs h-7 px-2.5"
             >
-              All ({serviceRequests.length})
+              All Events ({serviceRequests.length})
             </Button>
             <Button
               variant={filter === "active" ? "default" : "outline"}
@@ -125,17 +131,30 @@ export function ClientServiceRequestsSection({
             </Button>
           </div>
         </div>
+
+        {serviceRequests.length > 2 && (
+          <div className="mt-3 relative">
+            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search by issue type, error description, site name, or ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8 h-8 text-xs bg-muted/40"
+            />
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="pt-4 space-y-4">
         {filteredRequests.length === 0 ? (
           <div className="p-8 text-center border rounded-xl bg-accent/20 space-y-2">
             <ShieldCheck className="h-8 w-8 text-emerald-500 mx-auto" />
-            <div className="text-sm font-semibold text-foreground">No Service Requests In This View</div>
+            <div className="text-sm font-semibold text-foreground">No Items In This View</div>
             <p className="text-xs text-muted-foreground max-w-sm mx-auto">
               {filter === "active"
-                ? "All solar installations are operating within normal baseline. No active field interventions required."
-                : "No service request records matching your filter."}
+                ? "All solar installations are operating within normal baseline. No active operational faults detected."
+                : "No operational error records matching your filter."}
             </p>
           </div>
         ) : (
@@ -146,20 +165,23 @@ export function ClientServiceRequestsSection({
               return (
                 <div
                   key={req.id}
-                  className="p-4 border rounded-xl bg-card hover:border-primary/40 transition-colors space-y-3.5"
+                  className="p-4 border rounded-xl bg-card hover:border-primary/40 transition-colors space-y-3.5 shadow-sm"
                 >
                   {/* Top Bar: Identifier, Site, Status Badge */}
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-bold text-foreground bg-muted px-2 py-0.5 rounded">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-xs font-bold text-foreground bg-muted px-2 py-0.5 rounded border">
                         {req.ticketNumber}
                       </span>
-                      <span className="text-xs font-medium text-foreground">{req.siteName}</span>
-                      <span className="text-xs text-muted-foreground">• {req.macroCategory}</span>
+                      <span className="text-xs font-semibold text-foreground">{req.siteName}</span>
+                      <span className="text-xs text-muted-foreground">•</span>
+                      <Badge variant="outline" className="text-[10px] uppercase tracking-wider font-semibold">
+                        {req.macroCategory}
+                      </Badge>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-[11px] text-muted-foreground font-mono">
                         {formatDateTime(req.updatedAt)}
                       </span>
                       <Badge variant={req.statusBadgeVariant} className="text-xs capitalize">
@@ -168,10 +190,35 @@ export function ClientServiceRequestsSection({
                     </div>
                   </div>
 
-                  {/* Title & Description */}
-                  <div className="space-y-1">
-                    <h3 className="font-semibold text-sm text-foreground">{req.title}</h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{req.explanation}</p>
+                  {/* Title */}
+                  <div>
+                    <h3 className="font-semibold text-sm text-foreground flex items-center gap-1.5">
+                      <Activity className="h-4 w-4 text-primary shrink-0" />
+                      {req.title}
+                    </h3>
+                  </div>
+
+                  {/* Semi-Technical Explainability Panels: What is going on & What SA is doing */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-0.5">
+                    <div className="bg-muted/40 p-3 rounded-lg border border-border/60 space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                        <Info className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                        <span>What is going on</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {req.whatIsGoingOn || req.explanation}
+                      </p>
+                    </div>
+
+                    <div className="bg-emerald-500/5 p-3 rounded-lg border border-emerald-500/20 space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                        <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+                        <span>What SolarAssist is doing</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {req.whatSaIsDoing || "SolarAssist automated telemetry engine and 24/7 O&M team are supervising resolution and verifying power generation."}
+                      </p>
+                    </div>
                   </div>
 
                   {/* 5-Step Progress Bar */}
@@ -215,10 +262,10 @@ export function ClientServiceRequestsSection({
 
                   {/* Operational Findings / Telemetry Metrics */}
                   {(req.preRepairMetric || req.postRepairMetric || req.technicianFindings) && (
-                    <div className="bg-muted/40 p-3 rounded-lg border text-xs space-y-1.5">
+                    <div className="bg-muted/30 p-3 rounded-lg border text-xs space-y-1.5">
                       <div className="font-semibold text-[11px] text-foreground flex items-center gap-1.5">
                         <Activity className="h-3.5 w-3.5 text-primary" />
-                        Operational Verification Findings
+                        Operational Findings & Recovery Proof
                       </div>
 
                       {req.preRepairMetric && (
@@ -248,7 +295,7 @@ export function ClientServiceRequestsSection({
                   {hasPhotos && (
                     <div className="pt-1 flex flex-wrap items-center justify-between gap-2 border-t text-xs">
                       <span className="text-muted-foreground text-[11px] flex items-center gap-1">
-                        <Camera className="h-3 w-3" /> Service Proof Photos Available
+                        <Camera className="h-3 w-3" /> Photographic Inspection Proof Available
                       </span>
                       <ClientEvidenceViewer
                         title={`Service Evidence • ${req.ticketNumber}`}

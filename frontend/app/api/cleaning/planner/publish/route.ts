@@ -123,6 +123,16 @@ export async function POST(req: Request) {
         publishedWorkOrdersCount++;
       }
 
+      // Sync site table with published schedule so client portal and notifications stay in sync
+      await sb
+        .from("sites")
+        .update({
+          next_cleaning_date: assign.scheduled_date,
+          cleaning_schedule_type: "planner",
+          cleaning_schedule_acknowledged_at: null,
+        })
+        .eq("id", assign.site_id);
+
       // Upsert Daily Route for EVERY Team Member on Scheduled Date
       for (const member of teamMembers) {
         const routePayload = {

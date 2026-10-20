@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { actionId, isSchedule } = body;
+    const { actionId, isSchedule, entityType } = body;
 
     if (!actionId) {
       return NextResponse.json({ error: "Missing actionId" }, { status: 400 });
@@ -35,55 +35,104 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
-    if (profile.role === "client" && profile.org_id) {
-      let targetSiteId: string | null = null;
-
-      if (isSchedule) {
-        const { data: wo } = await serviceClient
-          .from("work_orders")
-          .select("site_id")
-          .eq("id", actionId)
-          .maybeSingle();
-        targetSiteId = wo?.site_id || null;
-      } else {
-        const { data: log } = await serviceClient
-          .from("cleaning_logs")
-          .select("site_id")
-          .eq("id", actionId)
-          .maybeSingle();
-        targetSiteId = log?.site_id || null;
-      }
-
-      if (targetSiteId) {
-        const { data: site } = await serviceClient
-          .from("sites")
-          .select("client_org_id")
-          .eq("id", targetSiteId)
-          .maybeSingle();
-
-        if (site && site.client_org_id !== profile.org_id) {
-          return NextResponse.json({ error: "Forbidden: Access denied for this site" }, { status: 403 });
-        }
-      }
-    }
-
     if (isSchedule) {
-      const { error } = await serviceClient
+      const cleanSiteId = typeof actionId === "string" ? actionId.replace(/^site-clean-/, "") : actionId;
+
+      // 1. Try updating sites table
+      const { data: siteData } = await serviceClient
+        .from("sites")
+        .update({
+          cleaning_schedule_acknowledged_at: nowIso,
+          cleaning_schedule_notes: "Schedule acknowledged by Client on " + nowIso.slice(0, 10),
+        })
+        .eq("id", cleanSiteId)
+        .select("id, next_cleaning_date")
+        .maybeSingle();
+
+      // 2. Try updating work_orders
+      const { data: woData } = await serviceClient
         .from("work_orders")
         .update({ client_acknowledged_at: nowIso })
-        .eq("id", actionId);
+        .eq("id", actionId)
+        .select("site_id, scheduled_date")
+        .maybeSingle();
 
-      if (error) throw error;
+      // 3. Try updating cleaning_visits
+      const { data: cvData } = await serviceClient
+        .from("cleaning_visits")
+        .update({ acknowledged_at: nowIso, acknowledged_by: user.id })
+        .eq("id", actionId)
+        .select("site_id, scheduled_date")
+        .maybeSingle();
+
+      // Cross-synchronize matching visit/work_order/site on site and date if found
+      const siteId = siteData?.id || woData?.site_id || cvData?.site_id;
+      const scheduledDate = siteData?.next_cleaning_date || woData?.scheduled_date || cvData?.scheduled_date;
+
+      if (siteId) {
+        await serviceClient
+          .from("sites")
+          .update({
+            cleaning_schedule_acknowledged_at: nowIso,
+          })
+          .eq("id", siteId);
+
+        if (scheduledDate) {
+          await Promise.all([
+            serviceClient
+              .from("work_orders")
+              .update({ client_acknowledged_at: nowIso })
+              .eq("site_id", siteId)
+              .eq("scheduled_date", scheduledDate)
+              .eq("type", "cleaning"),
+            serviceClient
+              .from("cleaning_visits")
+              .update({ acknowledged_at: nowIso, acknowledged_by: user.id })
+              .eq("site_id", siteId)
+              .eq("scheduled_date", scheduledDate),
+          ]);
+        }
+      }
     } else {
-      const { error } = await serviceClient
+      // Completed Cleaning Acknowledgment
+      // 1. Try updating cleaning_logs
+      const { data: logData } = await serviceClient
         .from("cleaning_logs")
         .update({
           client_acknowledged: true,
           client_acknowledged_at: nowIso,
         })
+        .eq("id", actionId)
+        .select("site_id, work_order_id, cleaning_visit_id")
+        .maybeSingle();
+
+      // 2. Try updating work_orders
+      const { data: woData } = await serviceClient
+        .from("work_orders")
+        .update({ client_acknowledged_at: nowIso })
+        .eq("id", actionId)
+        .select("site_id")
+        .maybeSingle();
+
+      // 3. Try updating cleaning_visits
+      await serviceClient
+        .from("cleaning_visits")
+        .update({ acknowledged_at: nowIso, acknowledged_by: user.id })
         .eq("id", actionId);
 
-      if (error) throw error;
+      // If log has linked work_order_id or cleaning_visit_id, acknowledge them too
+      if (logData?.work_order_id) {
+        await serviceClient
+          .from("work_orders")
+          .update({ client_acknowledged_at: nowIso })
+          .eq("id", logData.work_order_id);
+      }
+      if (logData?.cleaning_visit_id) {
+        await serviceClient
+          .from("cleaning_visits")
+          .update({ acknowledged_at: nowIso, acknowledged_by: user.id })
+          .eq("id", logData.cleaning_visit_id);
+      }
     }
 
     return NextResponse.json({ success: true });

@@ -26,12 +26,14 @@ import {
   ArrowUpRight
 } from "lucide-react";
 import { getSanitizedInverterStatus, calculateFinancialSavings, sanitizeServiceEvents, formatClientServiceRequests } from "@/lib/client-sanitizer";
+import { ClientGlobalPopups } from "@/components/client-global-popups";
 import { calculateClientHealthScore } from "@/lib/client-health-score";
 import { ClientHealthBreakdownModal } from "@/components/client-health-breakdown-modal";
 import { ClientServiceRequestsSection } from "@/components/client-service-requests-section";
 import { ClientEvidenceViewer } from "@/components/client-evidence-viewer";
 import { getSiteStatus } from "@/lib/status-utils";
 import { kWh, formatDateTime, formatDate } from "@/lib/utils";
+import { resolveSiteCleaning } from "@/lib/cleaning-schedule-sync";
 
 export default async function ClientSiteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -139,31 +141,17 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
   const todayStr = new Date().toISOString().slice(0, 10);
   const { data: upcomingVisits } = await serviceClient
     .from("cleaning_visits")
-    .select("scheduled_date")
+    .select("id, site_id, scheduled_date, status, acknowledged_at, sites(name)")
     .eq("site_id", site.id)
     .gte("scheduled_date", todayStr)
     .in("status", ["published", "scheduled", "planned", "approved"])
     .order("scheduled_date", { ascending: true })
-    .limit(1);
+    .limit(5);
 
-  const canonicalVisitDateStr = upcomingVisits && upcomingVisits.length > 0 ? upcomingVisits[0].scheduled_date : null;
-  const scheduledCleaningWo = workOrders.find(
-    (wo) => wo.type === "cleaning" && (wo.status === "scheduled" || wo.status === "published") && (wo.scheduled_date >= todayStr)
-  );
-
-  const earliestCanonicalDateStr = canonicalVisitDateStr || scheduledCleaningWo?.scheduled_date || null;
-
-  const lastCleanedDate = site.last_cleaned_on ? new Date(site.last_cleaned_on) : null;
   const cycleDays = site.cleaning_cycle_days || 30;
-  const fallbackProjectedDate = lastCleanedDate
-    ? new Date(lastCleanedDate.getTime() + cycleDays * 86400_000)
-    : new Date(Date.now() + 7 * 86400_000);
-
-  const nextScheduledCleaningDate = earliestCanonicalDateStr
-    ? new Date(earliestCanonicalDateStr)
-    : fallbackProjectedDate;
-
-  const isCleaningScheduled = Boolean(earliestCanonicalDateStr);
+  const cleanRes = resolveSiteCleaning(site, { visits: upcomingVisits || [], workOrders, todayStr });
+  const isCleaningScheduled = cleanRes.isScheduled;
+  const nextScheduledCleaningDate = new Date(cleanRes.displayDate);
 
   async function acknowledgeCleaning(formData: FormData) {
     "use server";
@@ -177,12 +165,14 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
     revalidatePath(`/client/sites/${id}`);
   }
 
-  // Sanitized Service Timeline Events & Structured Requests
-  const serviceEvents = sanitizeServiceEvents(alerts, workOrders, cleaningLogs, tickets);
-  const clientServiceRequests = formatClientServiceRequests(tickets, workOrders, new Map([[site.id, site]]));
+  // Sanitized Service Timeline Events & Structured Requests (including 2-day in advance schedule popups & all alerts/errors)
+  const serviceEvents = sanitizeServiceEvents(alerts, workOrders, cleaningLogs, tickets, upcomingVisits || [], [site]);
+  const clientServiceRequests = formatClientServiceRequests(tickets, workOrders, new Map([[site.id, site]]), alerts);
 
   return (
     <div className="space-y-6" data-testid="client-site-detail-page">
+      <ClientGlobalPopups events={serviceEvents} />
+      
       {/* Navigation Breadcrumb & Header */}
       <div className="space-y-3 border-b pb-4">
         <div className="flex items-center gap-2 text-xs">
@@ -235,12 +225,12 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
             <div>
               <div className="font-semibold text-sm text-foreground">Scheduled Preventive Cleaning</div>
               <p className="text-muted-foreground mt-0.5">
-                Cleaning visit confirmed for <span className="font-semibold text-foreground">{formatDate(nextScheduledCleaningDate.toISOString())}</span>. SolarAssist certified technicians are dispatched to ensure maximum daily solar generation.
+                Cleaning visit confirmed for <span className="font-semibold text-foreground">{cleanRes.formattedDate}</span>. SolarAssist certified technicians are dispatched to ensure maximum daily solar generation.
               </p>
             </div>
           </div>
-          <Badge variant="secondary" className="shrink-0 font-medium">
-            Confirmed Visit
+          <Badge variant="secondary" className="shrink-0 font-medium capitalize">
+            {cleanRes.displayStatus}
           </Badge>
         </div>
       )}
@@ -428,8 +418,9 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
               <div>
                 <div className="text-muted-foreground">Next Planned Service</div>
                 <div className="font-semibold text-sm text-emerald-600 dark:text-emerald-400">
-                  {formatDate(nextScheduledCleaningDate.toISOString())}
+                  {cleanRes.formattedDate}
                 </div>
+                <div className="text-[10px] text-muted-foreground capitalize">{cleanRes.displayStatus}</div>
               </div>
             </div>
 

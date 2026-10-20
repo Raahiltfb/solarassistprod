@@ -31,6 +31,7 @@ import { ClientServiceRequestsSection } from "@/components/client-service-reques
 import { ClientEvidenceViewer } from "@/components/client-evidence-viewer";
 import { getSiteStatus } from "@/lib/status-utils";
 import { kWh, formatDateTime, formatDate } from "@/lib/utils";
+import { resolveSiteCleaning } from "@/lib/cleaning-schedule-sync";
 
 export default async function ClientPortfolioPage() {
   const sb = await createClient();
@@ -100,7 +101,67 @@ export default async function ClientPortfolioPage() {
     cleaningLogs = clnRes.data ?? [];
     workOrders = woRes.data ?? [];
     tickets = tktRes.data ?? [];
-    upcomingVisits = visRes.data ?? [];
+    
+    // Unified deduplicated map of upcoming cleanings across:
+    // 1. cleaning_visits (published/scheduled/planned/approved)
+    // 2. work_orders (type === 'cleaning', not cancelled, scheduled_date >= todayStr)
+    // 3. sites (next_cleaning_date >= todayStr)
+    const rawVisits = visRes.data ?? [];
+    const dedupeCleaningMap = new Map<string, any>();
+
+    // 1. First add canonical cleaning_visits
+    for (const v of rawVisits) {
+      const dateStr = v.scheduled_date;
+      if (!dateStr || dateStr < todayStr) continue;
+      const key = `${v.site_id}-${dateStr}`;
+      dedupeCleaningMap.set(key, {
+        id: v.id,
+        site_id: v.site_id,
+        scheduled_date: dateStr,
+        status: v.status || "scheduled",
+        sites: v.sites || (sitesMap.get(v.site_id) ? { name: sitesMap.get(v.site_id)!.name } : { name: "Solar Site" }),
+        source: "cleaning_visit",
+        acknowledged_at: v.acknowledged_at,
+      });
+    }
+
+    // 2. Add cleaning work orders if not already covered
+    for (const wo of workOrders) {
+      if (wo.type !== "cleaning" || wo.status === "cancelled" || !wo.scheduled_date || wo.scheduled_date < todayStr) continue;
+      const key = `${wo.site_id}-${wo.scheduled_date}`;
+      if (!dedupeCleaningMap.has(key)) {
+        dedupeCleaningMap.set(key, {
+          id: wo.id,
+          site_id: wo.site_id,
+          scheduled_date: wo.scheduled_date,
+          status: wo.status || "scheduled",
+          sites: sitesMap.get(wo.site_id) ? { name: sitesMap.get(wo.site_id)!.name } : { name: "Solar Site" },
+          source: "work_order",
+          acknowledged_at: wo.client_acknowledged_at,
+        });
+      }
+    }
+
+    // 3. Add sites with next_cleaning_date if not already covered
+    for (const s of sites) {
+      if (!s.next_cleaning_date || s.next_cleaning_date < todayStr) continue;
+      const key = `${s.id}-${s.next_cleaning_date}`;
+      if (!dedupeCleaningMap.has(key)) {
+        dedupeCleaningMap.set(key, {
+          id: `site-clean-${s.id}`,
+          site_id: s.id,
+          scheduled_date: s.next_cleaning_date,
+          status: s.cleaning_schedule_type || "scheduled",
+          sites: { name: s.name },
+          source: "site",
+          acknowledged_at: s.cleaning_schedule_acknowledged_at,
+        });
+      }
+    }
+
+    upcomingVisits = Array.from(dedupeCleaningMap.values()).sort(
+      (a, b) => new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime()
+    );
   }
 
   // Canonical upcoming cleaning map
@@ -189,9 +250,10 @@ export default async function ClientPortfolioPage() {
   const savingsResult = calculateFinancialSavings(lifetimeGenerationKwh, avgTariff);
   const todaySavingsResult = calculateFinancialSavings(todayGenerationKwh, avgTariff);
 
-  // Sanitized Service Timeline Events
-  const serviceEvents = sanitizeServiceEvents(alerts, workOrders, cleaningLogs, tickets);
-  const clientServiceRequests = formatClientServiceRequests(tickets, workOrders, sitesMap);
+  // Sanitized Service Timeline Events & Popups (including 2-day in advance scheduled cleanings and completions)
+  const serviceEvents = sanitizeServiceEvents(alerts, workOrders, cleaningLogs, tickets, upcomingVisits, sites);
+  // Structured Client Operational Log & Service Requests (including all site error alerts)
+  const clientServiceRequests = formatClientServiceRequests(tickets, workOrders, sitesMap, alerts);
 
   const portfolioName = customerOrg?.name || profile.organization || "Solar Portfolio";
   const allSystemsHealthy = attentionSitesCount === 0;
@@ -491,13 +553,7 @@ export default async function ClientPortfolioPage() {
 
             const siteSavings = calculateFinancialSavings(siteTodayYield, s.grid_tariff_inr_per_kwh);
             const isSiteNormal = siteStatus === "ONLINE";
-
-            const canonicalVisit = upcomingCleaningMap.get(s.id);
-            const nextCleaningStr = canonicalVisit
-              ? canonicalVisit.scheduled_date
-              : s.last_cleaned_on
-              ? new Date(new Date(s.last_cleaned_on).getTime() + (s.cleaning_cycle_days || 15) * 86400_000).toISOString().slice(0, 10)
-              : s.next_cleaning_date;
+            const cleanRes = resolveSiteCleaning(s, { visits: upcomingVisits, workOrders, todayStr });
 
             return (
               <Card key={s.id} className="overflow-hidden hover:shadow-md transition-shadow">
@@ -539,7 +595,7 @@ export default async function ClientPortfolioPage() {
                       Last Cleaned: <span className="font-medium text-foreground">{s.last_cleaned_on ? formatDate(s.last_cleaned_on) : "Never recorded"}</span>
                     </div>
                     <div>
-                      Next Planned: <span className="font-medium text-emerald-600 dark:text-emerald-400">{nextCleaningStr ? formatDate(nextCleaningStr) : "—"}</span>
+                      Next Planned: <span className="font-medium text-emerald-600 dark:text-emerald-400">{cleanRes.formattedDate}</span>
                     </div>
                   </div>
 

@@ -6,8 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, ArrowUpRight, Building2, Zap, ShieldCheck, Sun, Activity, Info, Coins, BarChart3, SprayCan } from "lucide-react";
 import { getSiteStatus } from "@/lib/status-utils";
-import { calculateFinancialSavings } from "@/lib/client-sanitizer";
+import { calculateFinancialSavings, sanitizeServiceEvents } from "@/lib/client-sanitizer";
 import { formatDate } from "@/lib/utils";
+import { resolveSiteCleaning } from "@/lib/cleaning-schedule-sync";
+import { ClientGlobalPopups } from "@/components/client-global-popups";
 
 export default async function ClientSitesListPage() {
   const sb = await createClient();
@@ -46,23 +48,27 @@ export default async function ClientSitesListPage() {
 
   let inverters: any[] = [];
   let upcomingVisits: any[] = [];
+  let workOrders: any[] = [];
+  let cleaningLogs: any[] = [];
+  let alerts: any[] = [];
   const todayStr = new Date().toISOString().slice(0, 10);
 
   if (siteIds.length > 0) {
-    const [invsRes, visRes] = await Promise.all([
+    const [invsRes, visRes, woRes, clnRes, altRes] = await Promise.all([
       serviceClient.from("inverters").select("*").in("site_id", siteIds),
-      serviceClient.from("cleaning_visits").select("site_id, scheduled_date").in("site_id", siteIds).gte("scheduled_date", todayStr).in("status", ["published", "scheduled", "planned", "approved"]).order("scheduled_date", { ascending: true }),
+      serviceClient.from("cleaning_visits").select("*, sites(name)").in("site_id", siteIds).gte("scheduled_date", todayStr).in("status", ["published", "scheduled", "planned", "approved"]).order("scheduled_date", { ascending: true }),
+      serviceClient.from("work_orders").select("*").in("site_id", siteIds).order("created_at", { ascending: false }).limit(20),
+      serviceClient.from("cleaning_logs").select("*").in("site_id", siteIds).order("performed_at", { ascending: false }).limit(10),
+      serviceClient.from("alerts").select("*").in("site_id", siteIds),
     ]);
     inverters = invsRes.data ?? [];
     upcomingVisits = visRes.data ?? [];
+    workOrders = woRes.data ?? [];
+    cleaningLogs = clnRes.data ?? [];
+    alerts = altRes.data ?? [];
   }
 
-  const upcomingVisitsMap = new Map<string, string>();
-  for (const v of upcomingVisits) {
-    if (!upcomingVisitsMap.has(v.site_id)) {
-      upcomingVisitsMap.set(v.site_id, v.scheduled_date);
-    }
-  }
+  const serviceEvents = sanitizeServiceEvents(alerts, workOrders, cleaningLogs, [], upcomingVisits, sites);
 
   const inverterIds = inverters.map((i) => i.id);
   let latestTelemetry: any[] = [];
@@ -89,6 +95,7 @@ export default async function ClientSitesListPage() {
 
   return (
     <div className="space-y-6" data-testid="client-sites-page">
+      <ClientGlobalPopups events={serviceEvents} />
       <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-4">
         <div>
           <div className="flex items-center gap-2">
@@ -135,13 +142,7 @@ export default async function ClientSitesListPage() {
           const todaySpecificYield = capacity > 0 ? (todayGeneration / capacity) : 0;
           const savingsResult = calculateFinancialSavings(todayGeneration, s.grid_tariff_inr_per_kwh);
           const isSiteNormal = siteStatus === "ONLINE";
-
-          const canonicalVisitDate = upcomingVisitsMap.get(s.id);
-          const nextCleaningStr = canonicalVisitDate
-            ? canonicalVisitDate
-            : s.last_cleaned_on
-            ? new Date(new Date(s.last_cleaned_on).getTime() + (s.cleaning_cycle_days || 15) * 86400_000).toISOString().slice(0, 10)
-            : s.next_cleaning_date;
+          const cleanRes = resolveSiteCleaning(s, { visits: upcomingVisits, workOrders, todayStr });
 
           return (
             <Card key={s.id} className="overflow-hidden hover:shadow-md transition-shadow flex flex-col justify-between">
@@ -194,7 +195,7 @@ export default async function ClientSitesListPage() {
                       Last Cleaned: <span className="font-medium text-foreground">{s.last_cleaned_on ? formatDate(s.last_cleaned_on) : "Never recorded"}</span>
                     </div>
                     <div>
-                      Next Cleaning: <span className="font-medium text-emerald-600 dark:text-emerald-400">{nextCleaningStr ? formatDate(nextCleaningStr) : "—"}</span>
+                      Next Cleaning: <span className="font-medium text-emerald-600 dark:text-emerald-400">{cleanRes.formattedDate}</span>
                     </div>
                   </div>
                 </CardContent>

@@ -20,16 +20,16 @@ export function ClientGlobalPopups({ events }: { events: any[] }) {
 
   useEffect(() => {
     setMounted(true);
-    // Filter out events that are pending and within 24 hours of execution
+    // Filter out events that are pending acknowledgment
     const unacknowledged = events.filter((e) => {
       if (e.actionableStatus !== "pending") return false;
       if (e.actionable === "cleaning_ack") return true;
       if (e.actionable === "cleaning_schedule_ack") {
         const schDateStr = e.actionableContext?.scheduled_date || e.timestamp;
-        const schTime = new Date(schDateStr).getTime();
-        const nowTime = Date.now();
-        const diffHours = (schTime - nowTime) / (1000 * 60 * 60);
-        return diffHours <= 24 && diffHours >= -24;
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const targetStr = (schDateStr || "").slice(0, 10);
+        // Show popup for any upcoming scheduled cleaning that client has not yet acknowledged
+        return targetStr >= todayStr;
       }
       return false;
     });
@@ -42,6 +42,14 @@ export function ClientGlobalPopups({ events }: { events: any[] }) {
 
   const currentEvent = pendingEvents[currentIndex];
   const isSchedule = currentEvent.actionable === "cleaning_schedule_ack";
+  const schDateStr = currentEvent.actionableContext?.scheduled_date || currentEvent.timestamp;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const targetStr = (schDateStr || "").slice(0, 10);
+  const diffDays = Math.round((new Date(targetStr + "T00:00:00").getTime() - new Date(todayStr + "T00:00:00").getTime()) / 86400000);
+
+  const noticeBadgeText = isSchedule
+    ? (diffDays <= 2 ? "Notice: 2 Days in Advance" : `Scheduled for ${targetStr}`)
+    : "Service Completed";
 
   async function handleAcknowledge() {
     setSubmitting(true);
@@ -49,7 +57,11 @@ export function ClientGlobalPopups({ events }: { events: any[] }) {
       const res = await fetch("/api/cleaning/acknowledge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ actionId: currentEvent.actionableId, isSchedule }),
+        body: JSON.stringify({
+          actionId: currentEvent.actionableId,
+          isSchedule,
+          entityType: currentEvent.actionableContext?.entityType,
+        }),
       });
 
       const json = await res.json();
@@ -57,7 +69,7 @@ export function ClientGlobalPopups({ events }: { events: any[] }) {
         throw new Error(json.error || "Failed to acknowledge");
       }
 
-      toast.success("Acknowledged successfully");
+      toast.success(isSchedule ? "Cleaning schedule acknowledged" : "Completed cleaning visit acknowledged");
       
       // Remove current acknowledged event from pending list immediately so popup disappears
       const nextPending = pendingEvents.filter((_, idx) => idx !== currentIndex);
@@ -73,46 +85,64 @@ export function ClientGlobalPopups({ events }: { events: any[] }) {
 
   return (
     <Dialog open={true} onOpenChange={() => {}}>
-      <DialogContent className="max-w-md bg-card border shadow-xl">
+      <DialogContent className="max-w-md bg-card border shadow-2xl">
         <DialogHeader>
+          <div className="flex items-center justify-between mb-1">
+            <span className={`text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+              isSchedule ? "bg-blue-500/10 text-blue-600 dark:text-blue-400" : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+            }`}>
+              {noticeBadgeText}
+            </span>
+            <span className="text-xs text-muted-foreground font-mono">
+              SolarAssist Care
+            </span>
+          </div>
           <DialogTitle className="flex items-center gap-2 text-xl font-display">
             {isSchedule ? <CalendarCheck className="h-6 w-6 text-blue-500" /> : <CheckCircle2 className="h-6 w-6 text-emerald-500" />}
-            {isSchedule ? "Upcoming Cleaning Scheduled" : "Cleaning Completed"}
+            {isSchedule ? "Solar Panel Cleaning Scheduled" : "Solar Panel Cleaning Completed"}
           </DialogTitle>
           <DialogDescription>
-            {isSchedule ? "Your site is scheduled for upcoming maintenance." : "Your site has been successfully cleaned."}
+            {isSchedule 
+              ? "Routine preventive panel washing is scheduled for your site. Power generation remains active during cleaning." 
+              : "Your solar modules have been washed and inspected by our certified crew."}
           </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4 text-sm mt-2">
-          <div className="bg-muted p-4 rounded-lg border border-border/50">
-            <div className="font-medium text-foreground text-base">{currentEvent.title}</div>
-            <div className="text-muted-foreground mt-2">{currentEvent.description}</div>
+          <div className="bg-muted/70 p-4 rounded-xl border border-border/60 space-y-2">
+            <div className="font-semibold text-foreground text-sm flex items-center justify-between">
+              <span>{currentEvent.title}</span>
+              {currentEvent.actionableContext?.site_name && (
+                <span className="text-xs text-muted-foreground font-normal">{currentEvent.actionableContext.site_name}</span>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground leading-relaxed">{currentEvent.description}</div>
             
             {isSchedule && currentEvent.actionableContext?.scheduled_date && (
-              <div className="mt-3 font-mono font-semibold text-blue-600 bg-blue-500/10 inline-block px-2 py-1 rounded">
-                Scheduled for: {currentEvent.actionableContext.scheduled_date}
+              <div className="mt-2 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1.5 rounded-lg flex items-center justify-between">
+                <span>Target Cleaning Date:</span>
+                <span className="font-mono font-bold">{currentEvent.actionableContext.scheduled_date}</span>
               </div>
             )}
             
             {!isSchedule && (
-              <div className="mt-3 text-xs text-muted-foreground font-mono">
+              <div className="mt-2 text-xs text-muted-foreground font-mono bg-background/50 px-2.5 py-1 rounded">
                 Completed on: {formatDateTime(currentEvent.timestamp)}
               </div>
             )}
           </div>
 
           {!isSchedule && currentEvent.actionableContext?.damage_observed && (
-            <div className="bg-amber-500/10 border border-amber-500/30 text-amber-700 p-4 rounded-lg">
-              <div className="flex items-center gap-2 font-semibold">
+            <div className="bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 p-4 rounded-xl">
+              <div className="flex items-center gap-2 font-semibold text-xs">
                 <AlertTriangle className="h-4 w-4" />
-                Damage Observation Report
+                Damage / Condition Observation Note
               </div>
-              <div className="mt-2 text-xs leading-relaxed">
-                {currentEvent.actionableContext.damage_type || "A potential issue was flagged during cleaning."}
+              <div className="mt-1.5 text-xs leading-relaxed">
+                {currentEvent.actionableContext.damage_type || "A potential surface or roof issue was recorded during the cleaning inspection."}
               </div>
               {currentEvent.actionableContext.remarks && (
-                <div className="mt-2 text-xs italic">
+                <div className="mt-2 text-xs italic bg-background/50 p-2 rounded border border-amber-500/20">
                   &quot;{currentEvent.actionableContext.remarks}&quot;
                 </div>
               )}
@@ -121,7 +151,7 @@ export function ClientGlobalPopups({ events }: { events: any[] }) {
 
           {!isSchedule && (
             <div>
-              <div className="font-semibold text-xs uppercase tracking-wider text-muted-foreground mb-2">Service Evidence</div>
+              <div className="font-semibold text-xs uppercase tracking-wider text-muted-foreground mb-2">Service Proof Evidence</div>
               <CleaningEvidenceLinks
                 safetyPhotoUrl={currentEvent.safety_photo_url}
                 beforePhotoUrl={currentEvent.before_photo_url}
@@ -134,8 +164,8 @@ export function ClientGlobalPopups({ events }: { events: any[] }) {
         </div>
 
         <DialogFooter className="mt-6">
-          <Button onClick={handleAcknowledge} disabled={submitting} className="w-full h-11 text-base font-semibold shadow-md">
-            {submitting ? "Processing..." : (isSchedule ? "Acknowledge Schedule" : "Acknowledge Cleaning")}
+          <Button onClick={handleAcknowledge} disabled={submitting} className="w-full h-11 text-sm font-semibold shadow-md">
+            {submitting ? "Processing..." : (isSchedule ? "Acknowledge Cleaning Schedule" : "Acknowledge Cleaning Completed")}
           </Button>
         </DialogFooter>
       </DialogContent>

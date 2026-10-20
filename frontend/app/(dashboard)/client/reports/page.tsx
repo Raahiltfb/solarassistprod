@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { ClientReportView, ReportSiteData, ReportCleaningLog, ReportIncident, ReportGenerationDay } from "@/components/client-report-view";
 import { calculateClientHealthScore } from "@/lib/client-health-score";
 import { expectedDailyGeneration } from "@/lib/integrations/solcast";
+import { resolveSiteCleaning } from "@/lib/cleaning-schedule-sync";
+import { sanitizeServiceEvents } from "@/lib/client-sanitizer";
+import { ClientGlobalPopups } from "@/components/client-global-popups";
 
 export default async function ClientReportsPage({
   searchParams,
@@ -59,36 +62,73 @@ export default async function ClientReportsPage({
   const availableMonths = ["October 2026", "September 2026", "August 2026", "Last 30 Days"];
   const selectedMonth = month && availableMonths.includes(month) ? month : "October 2026";
 
-  // Fetch canonical upcoming cleaning visits
+  // Fetch canonical upcoming cleaning visits, work orders, alerts, etc.
   const todayStr = new Date().toISOString().slice(0, 10);
-  let upcomingVisitsMap = new Map<string, string>();
-  if (siteIds.length > 0) {
-    const { data: visits } = await serviceClient
-      .from("cleaning_visits")
-      .select("site_id, scheduled_date")
-      .in("site_id", siteIds)
-      .gte("scheduled_date", todayStr)
-      .in("status", ["published", "scheduled", "planned", "approved"])
-      .order("scheduled_date", { ascending: true });
+  let upcomingVisits: any[] = [];
+  let workOrders: any[] = [];
+  let allAlerts: any[] = [];
+  let allCleaningLogs: any[] = [];
 
-    for (const v of visits ?? []) {
-      if (!upcomingVisitsMap.has(v.site_id)) {
-        upcomingVisitsMap.set(v.site_id, v.scheduled_date);
-      }
-    }
+  if (siteIds.length > 0) {
+    const [visRes, woRes, altRes, clnAllRes] = await Promise.all([
+      serviceClient
+        .from("cleaning_visits")
+        .select("*, sites(name)")
+        .in("site_id", siteIds)
+        .gte("scheduled_date", todayStr)
+        .in("status", ["published", "scheduled", "planned", "approved"])
+        .order("scheduled_date", { ascending: true }),
+      serviceClient
+        .from("work_orders")
+        .select("*")
+        .in("site_id", siteIds)
+        .order("created_at", { ascending: false })
+        .limit(20),
+      serviceClient
+        .from("alerts")
+        .select("*")
+        .in("site_id", siteIds),
+      serviceClient
+        .from("cleaning_logs")
+        .select("*")
+        .in("site_id", siteIds)
+        .order("performed_at", { ascending: false })
+        .limit(10),
+    ]);
+
+    upcomingVisits = visRes.data ?? [];
+    workOrders = woRes.data ?? [];
+    allAlerts = altRes.data ?? [];
+    allCleaningLogs = clnAllRes.data ?? [];
   }
 
-  // Format sites for report
-  const reportSites: ReportSiteData[] = sites.map((s) => ({
-    id: s.id,
-    name: s.name,
-    capacity_kwp: Number(s.capacity_kwp || 0),
-    location: s.location,
-    grid_tariff_inr_per_kwh: s.grid_tariff_inr_per_kwh,
-    last_cleaned_on: s.last_cleaned_on,
-    cleaning_cycle_days: s.cleaning_cycle_days || 30,
-    next_scheduled_cleaning: upcomingVisitsMap.get(s.id) || null,
-  }));
+  const serviceEvents = sanitizeServiceEvents(
+    allAlerts,
+    workOrders,
+    allCleaningLogs,
+    [],
+    upcomingVisits,
+    sites
+  );
+
+  // Format sites for report using single source of truth resolveSiteCleaning
+  const reportSites: ReportSiteData[] = sites.map((s) => {
+    const cleanRes = resolveSiteCleaning(s, {
+      visits: upcomingVisits,
+      workOrders,
+      todayStr,
+    });
+    return {
+      id: s.id,
+      name: s.name,
+      capacity_kwp: Number(s.capacity_kwp || 0),
+      location: s.location,
+      grid_tariff_inr_per_kwh: s.grid_tariff_inr_per_kwh,
+      last_cleaned_on: s.last_cleaned_on,
+      cleaning_cycle_days: s.cleaning_cycle_days || 30,
+      next_scheduled_cleaning: cleanRes.isScheduled ? cleanRes.scheduledDate : (cleanRes.displayDate || null),
+    };
+  });
 
   // Fetch inverters, telemetry, alerts, tickets, cleaning_logs for effective sites
   let inverters: any[] = [];
@@ -213,6 +253,7 @@ export default async function ClientReportsPage({
 
   return (
     <div className="space-y-6" data-testid="client-reports-page">
+      <ClientGlobalPopups events={serviceEvents} />
       <ClientReportView
         clientName={clientName}
         organizationName={organizationName}

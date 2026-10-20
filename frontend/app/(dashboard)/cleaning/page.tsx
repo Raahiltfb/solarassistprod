@@ -21,6 +21,7 @@ import { SiteRuleDialog } from "@/components/cleaning/site-rule-dialog";
 import { BulkRuleDialog } from "@/components/cleaning/bulk-rule-dialog";
 import { SubNav } from "@/components/sub-nav";
 import { CleaningEvidenceLinks } from "@/components/cleaning-evidence-links";
+import { syncScheduledCleaning } from "@/lib/cleaning-schedule-sync";
 
 export default function CleaningPage() {
   const [logs, setLogs] = useState<(CleaningLog & { sites?: { name: string; cleaning_cycle_days: number; last_cleaned_on: string | null } })[]>([]);
@@ -115,42 +116,38 @@ export default function CleaningPage() {
       return toast.error("Please select a target cleaning date.");
     }
 
-    const { error } = await sb
-      .from("sites")
-      .update({
-        next_cleaning_date: scheduleForm.next_date,
-        cleaning_schedule_type: "manual",
-        cleaning_schedule_notes: scheduleForm.schedule_notes || "Manually scheduled by Admin",
-      })
-      .eq("id", selectedSite.id);
+    try {
+      await syncScheduledCleaning(sb, {
+        siteId: selectedSite.id,
+        scheduledDate: scheduleForm.next_date,
+        scheduleType: "manual",
+        notes: scheduleForm.schedule_notes || "Manually scheduled by Admin",
+      });
 
-    if (error) {
-      return toast.error(error.message);
+      toast.success(`Cleaning date manually scheduled for ${selectedSite.name}`);
+      setOpenScheduleDialog(false);
+      setSelectedSite(null);
+      load();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save cleaning schedule");
     }
-
-    toast.success(`Cleaning date manually scheduled for ${selectedSite.name}`);
-    setOpenScheduleDialog(false);
-    setSelectedSite(null);
-    load();
   }
 
   // Handle Option B: Approve Suggested Schedule Date
   async function handleApproveSuggestedSchedule(site: Site, suggestedDate: string) {
-    const { error } = await sb
-      .from("sites")
-      .update({
-        next_cleaning_date: suggestedDate,
-        cleaning_schedule_type: "approved",
-        cleaning_schedule_notes: `Suggested cycle date approved by Admin on ${new Date().toISOString().split("T")[0]}`,
-      })
-      .eq("id", site.id);
+    try {
+      await syncScheduledCleaning(sb, {
+        siteId: site.id,
+        scheduledDate: suggestedDate,
+        scheduleType: "approved",
+        notes: `Suggested cycle date approved by Admin on ${new Date().toISOString().split("T")[0]}`,
+      });
 
-    if (error) {
-      return toast.error(error.message);
+      toast.success(`Suggested cleaning date approved for ${site.name}`);
+      load();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to approve cleaning schedule");
     }
-
-    toast.success(`Suggested cleaning date approved for ${site.name}`);
-    load();
   }
 
   // Create Service Request from Schedule
@@ -159,47 +156,27 @@ export default function CleaningPage() {
       return toast.error("Scheduled date is required.");
     }
 
-    // Duplicate check
-    const { data: existing } = await sb
-      .from("work_orders")
-      .select("id")
-      .eq("site_id", selectedSite.id)
-      .eq("scheduled_date", woForm.scheduled_date)
-      .eq("type", "cleaning")
-      .neq("status", "cancelled")
-      .maybeSingle();
-
-    if (existing) {
-      return toast.error(
-        `Cleaning already scheduled for this site on ${woForm.scheduled_date}. View scheduled cleaning or edit it instead.`
-      );
-    }
-
     const {
       data: { user },
     } = await sb.auth.getUser();
 
-    const { error } = await sb.from("work_orders").insert({
-      org_id: selectedSite.org_id,
-      site_id: selectedSite.id,
-      team_id: woForm.team_id || null,
-      created_by: user?.id || null,
-      title: `Panel Cleaning: ${selectedSite.name}`,
-      description: woForm.notes || `Scheduled solar panel module cleaning service request.`,
-      type: "cleaning",
-      status: "scheduled",
-      scheduled_date: woForm.scheduled_date,
-      estimated_duration_mins: 120,
-    });
+    try {
+      await syncScheduledCleaning(sb, {
+        siteId: selectedSite.id,
+        scheduledDate: woForm.scheduled_date,
+        scheduleType: "work_order",
+        notes: woForm.notes || `Scheduled solar panel module cleaning service request.`,
+        teamId: woForm.team_id || null,
+        userId: user?.id || null,
+      });
 
-    if (error) {
-      return toast.error(error.message);
+      toast.success(`Cleaning service request created for ${selectedSite.name}`);
+      setOpenWorkOrderDialog(false);
+      setSelectedSite(null);
+      load();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create cleaning request");
     }
-
-    toast.success(`Cleaning service request created for ${selectedSite.name}`);
-    setOpenWorkOrderDialog(false);
-    setSelectedSite(null);
-    load();
   }
 
   // Upload photo handler
