@@ -59,7 +59,7 @@ export default async function ClientSitesListPage() {
       serviceClient.from("cleaning_visits").select("*, sites(name)").in("site_id", siteIds).gte("scheduled_date", todayStr).in("status", ["published", "scheduled", "planned", "approved"]).order("scheduled_date", { ascending: true }),
       serviceClient.from("work_orders").select("*").in("site_id", siteIds).order("created_at", { ascending: false }).limit(20),
       serviceClient.from("cleaning_logs").select("*").in("site_id", siteIds).order("performed_at", { ascending: false }).limit(10),
-      serviceClient.from("alerts").select("*").in("site_id", siteIds),
+      serviceClient.from("alerts").select("*").in("site_id", siteIds).in("status", ["open", "acknowledged"]),
     ]);
     inverters = invsRes.data ?? [];
     upcomingVisits = visRes.data ?? [];

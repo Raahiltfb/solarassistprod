@@ -96,7 +96,7 @@ export default async function ClientPortfolioPage() {
   if (siteIds.length > 0) {
     const [invRes, altRes, clnRes, woRes, tktRes, visRes] = await Promise.all([
       serviceClient.from("inverters").select("*").in("site_id", siteIds),
-      serviceClient.from("alerts").select("*").in("site_id", siteIds),
+      serviceClient.from("alerts").select("*").in("site_id", siteIds).order("triggered_at", { ascending: false }).limit(100),
       serviceClient.from("cleaning_logs").select("*, sites(name)").in("site_id", siteIds).order("performed_at", { ascending: false }).limit(25),
       serviceClient.from("work_orders").select("*, tickets(before_photo_url, after_photo_url)").in("site_id", siteIds).order("created_at", { ascending: false }).limit(25),
       serviceClient.from("tickets").select("*").in("site_id", siteIds).order("created_at", { ascending: false }).limit(25),

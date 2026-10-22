@@ -6,12 +6,13 @@ export async function GET(request: Request) {
   try {
     const sb = await createClient();
 
-    // Fetch resolved / completed tickets or tickets pending verification
+    // Fetch recent resolved / completed tickets pending verification (bounded to 50 per sweep)
     const { data: tickets, error: ticketErr } = await sb
       .from("tickets")
       .select("*, inverters(*)")
       .in("status", ["resolved", "completed"])
-      .order("updated_at", { ascending: false });
+      .order("updated_at", { ascending: false })
+      .limit(50);
 
     if (ticketErr) throw ticketErr;
 

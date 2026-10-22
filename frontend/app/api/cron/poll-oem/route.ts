@@ -30,7 +30,8 @@ export async function GET(req: NextRequest) {
       },
       body: JSON.stringify({
         trigger_source: "vercel_cron"
-      })
+      }),
+      signal: AbortSignal.timeout(60000),
     });
 
     if (!res.ok) {

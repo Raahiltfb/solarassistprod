@@ -166,13 +166,17 @@ export async function POST(req: Request) {
         scheduler_rationale: a.scheduler_rationale,
       }));
 
-      const { error: assignErr } = await sb.from("cleaning_plan_assignments").insert(dbAssignments);
-      if (assignErr) {
-        return NextResponse.json({ error: assignErr.message }, { status: 500 });
+      const CHUNK_SIZE = 250;
+      for (let i = 0; i < dbAssignments.length; i += CHUNK_SIZE) {
+        const chunk = dbAssignments.slice(i, i + CHUNK_SIZE);
+        const { error: assignErr } = await sb.from("cleaning_plan_assignments").insert(chunk);
+        if (assignErr) {
+          return NextResponse.json({ error: assignErr.message }, { status: 500 });
+        }
       }
     }
 
-    // 6. Upsert Canonical `cleaning_visits`
+    // 6. Upsert Canonical `cleaning_visits` in safe batches of 250
     if (result.proposedVisits && result.proposedVisits.length > 0) {
       const cyclePeriod = `${year}-${String(month).padStart(2, "0")}`;
 
@@ -204,13 +208,17 @@ export async function POST(req: Request) {
         updated_at: new Date().toISOString(),
       }));
 
-      const { error: visitErr } = await sb
-        .from("cleaning_visits")
-        .upsert(dbVisits, { onConflict: "site_id,cycle_period,visit_sequence_in_month" });
+      const CHUNK_SIZE = 250;
+      for (let i = 0; i < dbVisits.length; i += CHUNK_SIZE) {
+        const chunk = dbVisits.slice(i, i + CHUNK_SIZE);
+        const { error: visitErr } = await sb
+          .from("cleaning_visits")
+          .upsert(chunk, { onConflict: "site_id,cycle_period,visit_sequence_in_month" });
 
-      if (visitErr) {
-        console.error("Error upserting cleaning_visits:", visitErr);
-        return NextResponse.json({ error: visitErr.message }, { status: 500 });
+        if (visitErr) {
+          console.error("Error upserting cleaning_visits chunk:", visitErr);
+          return NextResponse.json({ error: visitErr.message }, { status: 500 });
+        }
       }
     }
 
