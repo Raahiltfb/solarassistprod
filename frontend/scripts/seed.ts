@@ -137,15 +137,15 @@ async function main() {
 
   console.log("→ organizations");
   const [org1, org2] = await Promise.all([
-    sb.from("organizations").insert({ name: "SolarAssist O&M", slug: "solarassist", primary_color: "#f59e0b" }).select().single(),
+    sb.from("organizations").insert({ name: "Solar Assist O&M", slug: "solarassist", primary_color: "#f59e0b" }).select().single(),
     sb.from("organizations").insert({ name: "SunWave EPC", slug: "sunwave", primary_color: "#0ea5e9" }).select().single(),
   ]);
   const org1Id = org1.data!.id, org2Id = org2.data!.id;
 
   console.log("→ demo users");
   const superId = await upsertUser("super@solarassist.dev", "Solar@12345", "Sam Superadmin", "super_admin", null);
-  const admin1 = await upsertUser("admin@solarassist.dev", "Solar@12345", "SolarAssist Admin", "epc_admin", org1Id);
-  const tech1 = await upsertUser("tech@solarassist.dev", "Solar@12345", "SolarAssist Technician", "technician", org1Id);
+  const admin1 = await upsertUser("admin@solarassist.dev", "Solar@12345", "Solar Assist Admin", "epc_admin", org1Id);
+  const tech1 = await upsertUser("tech1@solarassist.dev", "Solar@12345", "Tech One (Test)", "technician", org1Id);
   void superId; void tech1;
 
   console.log("→ oem integrations");

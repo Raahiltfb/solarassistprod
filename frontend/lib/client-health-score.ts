@@ -142,7 +142,7 @@ export function calculateClientHealthScore(params: {
   } else if (underVerificationCount > 0) {
     incidentDetail = `Technician completed physical work; ${underVerificationCount} item(s) under active telemetry verification.`;
   } else if (uniqueIssues.size > 0) {
-    incidentDetail = `${uniqueIssues.size} operational item(s) currently being monitored or resolved by SolarAssist.`;
+    incidentDetail = `${uniqueIssues.size} operational item(s) currently being monitored or resolved by Solar Assist.`;
   }
 
   factors.push({
@@ -191,7 +191,7 @@ export function calculateClientHealthScore(params: {
   if (score < 70) {
     status = "SERVICE_ACTIVE";
     label = "Service Active";
-    summary = "SolarAssist technicians are actively addressing site performance.";
+    summary = "Solar Assist technicians are actively addressing site performance.";
   } else if (score < 90) {
     status = "ATTENTION";
     label = "Attention Needed";

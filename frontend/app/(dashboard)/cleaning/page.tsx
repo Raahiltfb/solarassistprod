@@ -231,33 +231,31 @@ export default function CleaningPage() {
 
   return (
     <div className="space-y-6 pb-12" data-testid="cleaning-page">
-      <SubNav hub="operations" />
+      <SubNav hub="cleaning" />
 
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">
-            Cleaning Management
+            Cleaning Operations Overview
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Option A manual scheduling, Option B suggested cycle calculations, service request dispatches, and compliance logs.
+            Fleet-wide preventive maintenance overview, monthly schedule tracking, and execution compliance.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            className="text-xs h-9 gap-1.5 border-primary/40 text-primary hover:bg-primary/10"
-            onClick={() => setBulkRuleOpen(true)}
-          >
-            <Settings className="h-4 w-4 text-primary" />
-            <span>Site Cleaning Policies</span>
+          <Button asChild variant="outline" className="text-xs h-9 gap-1.5 border-primary/40 text-primary hover:bg-primary/10">
+            <Link href="/cleaning/policies">
+              <Settings className="h-4 w-4 text-primary" />
+              <span>Site Cleaning Policies</span>
+            </Link>
           </Button>
 
           <Button asChild variant="outline" className="text-xs h-9 gap-1.5 border-muted-foreground/30 text-foreground">
             <Link href="/cleaning/planner">
               <Calendar className="h-4 w-4 text-amber-500" />
-              <span>Open Monthly Workforce Planner</span>
+              <span>Open Monthly Planner</span>
             </Link>
           </Button>
 
@@ -328,29 +326,72 @@ export default function CleaningPage() {
         </div>
       </div>
 
+      {/* High-Level Cleaning KPI Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <Card className="border shadow-sm">
+          <CardContent className="p-4 space-y-1">
+            <span className="text-[11px] font-bold uppercase text-muted-foreground">Fleet Assets</span>
+            <div className="text-2xl font-bold font-mono text-foreground">{sites.length} Sites</div>
+            <span className="text-xs text-muted-foreground">Operating solar plants</span>
+          </CardContent>
+        </Card>
+
+        <Card className="border shadow-sm bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200/50">
+          <CardContent className="p-4 space-y-1">
+            <span className="text-[11px] font-bold uppercase text-emerald-700 dark:text-emerald-400">Current Month Planned</span>
+            <div className="text-2xl font-bold font-mono text-emerald-800 dark:text-emerald-300">
+              {canonicalVisits.length} Visits
+            </div>
+            <span className="text-xs text-emerald-600/80 dark:text-emerald-400/80">
+              {canonicalVisits.filter((v: any) => v.status === "completed").length} completed
+            </span>
+          </CardContent>
+        </Card>
+
+        <Card className="border shadow-sm bg-blue-50/40 dark:bg-blue-950/20 border-blue-200/50">
+          <CardContent className="p-4 space-y-1">
+            <span className="text-[11px] font-bold uppercase text-blue-700 dark:text-blue-400">Field Crews</span>
+            <div className="text-2xl font-bold font-mono text-blue-800 dark:text-blue-300">5 Teams</div>
+            <span className="text-xs text-blue-600/80 dark:text-blue-400/80">10 Paired Technicians</span>
+          </CardContent>
+        </Card>
+
+        <Card className={`border shadow-sm ${rules.filter(r => !r.is_configured).length > 0 ? "bg-amber-50/50 border-amber-300 dark:bg-amber-950/20" : ""}`}>
+          <CardContent className="p-4 space-y-1">
+            <span className="text-[11px] font-bold uppercase text-amber-700 dark:text-amber-400">Policy Coverage</span>
+            <div className="text-2xl font-bold font-mono text-amber-800 dark:text-amber-300">
+              {rules.filter(r => r.is_configured).length} / {sites.length}
+            </div>
+            <span className="text-xs text-amber-600/80 dark:text-amber-400/80">
+              {sites.length - rules.filter(r => r.is_configured).length > 0 ? "Sites requiring rule configuration" : "100% Policy Configured"}
+            </span>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Main Tabs */}
       <Tabs defaultValue="canonical" className="space-y-6">
         <TabsList className="bg-muted p-1">
           <TabsTrigger value="canonical" className="text-xs font-semibold px-4">
-            Canonical Active Cycle Visits ({canonicalVisits.length})
+            Current Month Scheduled Visits ({canonicalVisits.length})
           </TabsTrigger>
           <TabsTrigger value="schedules" className="text-xs font-semibold px-4">
-            Site Policy Configurations ({sites.length})
+            Site Policy Quick View ({sites.length})
           </TabsTrigger>
           <TabsTrigger value="history" className="text-xs font-semibold px-4">
-            Execution Log History ({logs.length})
+            Recent Execution Logs ({logs.length})
           </TabsTrigger>
         </TabsList>
 
-        {/* Tab 0: Canonical Active Cycle Visits */}
+        {/* Tab 0: Current Month Scheduled Visits */}
         <TabsContent value="canonical" className="space-y-6">
           <Card className="border shadow-sm">
             <CardHeader className="p-6 pb-4">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <CardTitle className="text-lg font-bold">Canonical Active Cycle Visits</CardTitle>
+                  <CardTitle className="text-lg font-bold">Current Month Scheduled Visits</CardTitle>
                   <CardDescription className="text-sm mt-1">
-                    Single source of truth visit records for the active monthly cycle.
+                    Operational scheduled visits for the active monthly cycle.
                   </CardDescription>
                 </div>
                 <Button asChild variant="default" size="sm" className="text-xs gap-1.5">
@@ -426,7 +467,7 @@ export default function CleaningPage() {
                             {cv.status.replace("_", " ")}
                           </Badge>
                         </TableCell>
-                        <TableCell className="py-3.5 px-6 text-muted-foreground max-w-xs truncate" title={cv.planner_rationale || ""}>
+                        <TableCell className="py-3.5 px-6 text-muted-foreground max-w-sm break-words leading-tight" title={cv.planner_rationale || ""}>
                           {cv.planner_rationale || cv.constraint_notes || "—"}
                         </TableCell>
                       </TableRow>

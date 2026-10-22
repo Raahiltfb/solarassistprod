@@ -779,7 +779,7 @@ export function NeedsAttentionQueue({
                     🌐 Internet / WiFi / Datalogger Down (Client Scope - Non-Critical)
                   </SelectItem>
                   <SelectItem value="inverter_fault">
-                    ⚡ Inverter Hardware Fault / DC Trip (SolarAssist Scope - Critical)
+                    ⚡ Inverter Hardware Fault / DC Trip (Solar Assist Scope - Critical)
                   </SelectItem>
                   <SelectItem value="api_sync_error">
                     🔄 OEM Cloud API Polling Delay (Cloud Daemon Retry)

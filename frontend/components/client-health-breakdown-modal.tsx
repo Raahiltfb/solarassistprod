@@ -137,7 +137,7 @@ export function ClientHealthBreakdownModal({
             <div className="border-t pt-3 flex items-start gap-2 text-[11px] text-muted-foreground">
               <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
               <span>
-                SolarAssist continuously evaluates incoming telemetry and field service visits.
+                Solar Assist continuously evaluates incoming telemetry and field service visits.
                 Repairs are validated via automated post-service recovery checks before being marked resolved.
               </span>
             </div>

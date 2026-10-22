@@ -263,7 +263,7 @@ export default async function InverterDetailsPage({ params }: { params: Promise<
                       <TableCell className="font-mono text-xs font-semibold">{a.alarm_code || a.code}</TableCell>
                       <TableCell>
                         <div className="font-medium">{a.title}</div>
-                        {a.description && <div className="text-xs text-muted-foreground line-clamp-1">{a.description}</div>}
+                        {a.description && <div className="text-xs text-muted-foreground break-words leading-tight mt-0.5">{a.description}</div>}
                       </TableCell>
                       <TableCell>
                         <Badge variant={a.severity === "critical" ? "destructive" : a.severity === "high" ? "warning" : "secondary"} className="capitalize">
@@ -313,7 +313,7 @@ export default async function InverterDetailsPage({ params }: { params: Promise<
                           {t.status.replace("_", " ")}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm max-w-[200px] truncate">{t.technician_remarks || "—"}</TableCell>
+                      <TableCell className="text-sm max-w-[280px] break-words leading-tight">{t.technician_remarks || "—"}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{formatDateTime(t.created_at)}</TableCell>
                     </TableRow>
                   ))}

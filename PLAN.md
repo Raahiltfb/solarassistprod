@@ -1,11 +1,11 @@
-# SOLARASSIST MASTER DEVELOPMENT ROADMAP
+# SOLAR ASSIST MASTER DEVELOPMENT ROADMAP
 
 ## A. Product North Star
-The fundamental objective of SolarAssist is to become a **human-supervised O&M operating system**, not merely software that helps an O&M team run solar plants.
+The fundamental objective of Solar Assist is to become a **human-supervised O&M operating system**, not merely software that helps an O&M team run solar plants.
 
 The product principle is: **POWERFUL UNDERNEATH. SIMPLE ON TOP.**
 
-SolarAssist should automatically answer:
+Solar Assist should automatically answer:
 1. What is happening?
 2. Is anything wrong?
 3. What does it mean?
@@ -22,7 +22,7 @@ SolarAssist should automatically answer:
 Admins primarily supervise, review, approve, override, investigate, and handle exceptions. They do NOT manually stitch together operational actions.
 
 ## B. Current State
-SolarAssist currently combines telemetry aggregation, fault detection, alerts, tickets, field jobs/work orders, cleaning planning, workforce management, route planning, technician execution, client reporting, and multi-tenant access (RLS). 
+Solar Assist currently combines telemetry aggregation, fault detection, alerts, tickets, field jobs/work orders, cleaning planning, workforce management, route planning, technician execution, client reporting, and multi-tenant access (RLS). 
 
 However, much of the orchestration is manual:
 - **Alerts/Tickets**: Generated automatically, but converting tickets to jobs requires manual admin dispatch.
@@ -138,6 +138,8 @@ For each phase:
 - Deep financial / billing logic (Parked until Phase 9).
 - Predictive Machine Learning / AI Degradation Modeling (Long-term, parked).
 - Third-party ERP integrations (Parked).
+- Client-Initiated Cleaning Requests (Explicitly deferred to V2).
+- Client-Initiated Technical Issue Reporting (Explicitly deferred to V2).
 
 ## J. Change Log
 *(To be updated as phases are completed)*
@@ -148,3 +150,9 @@ For each phase:
 - **2026-10-06**: Completed Phase 5 (Technical Intelligence). Created DB schema for utility meters and meter readings (`0009_technical_intelligence.sql`), built automated string anomaly detection engine (`string-anomaly-engine.ts`) classifying transient vs sustained underperformance vs disconnected strings with 1-click ticket dispatching, multi-inverter comparative diagnostic engine (`inverter-diagnostic-engine.ts`) ranking yield, efficiency & thermal clipping, utility export meter vs inverter loss balance calculator (`meter-comparison-engine.ts`), and unified Technical Intelligence Control Hub (`/diagnostics`).
 - **2026-10-09**: Completed Phase 6 (Resolution / Verification Engine). Created migration `0010_verification_engine.sql` adding verification status & pre/post repair metrics, built automated telemetry verification engine (`verification-engine.ts`), automated resolution verification cron sweep API (`app/api/cron/verify-resolutions/route.ts`), UI verification status cards (`TelemetryVerificationCard`), and Needs Attention Queue integration for reopening failed repairs with priority escalation. Verified via unit tests (`test:phase6`).
 - **2026-10-16**: Completed and verified Phase 7 (Premium Client Experience). Overhauled client portal to executive premium standard with explainable health score breakdown (40/35/25 point distribution across inverters, operational incidents, and preventive cleaning), integrated Phase 6 telemetry verification states into incident communication, built 5-stage Service Request progress tracker with technician findings, photographic evidence lightbox modal with Before/After/Safety proofs, canonical upcoming cleaning visit schedules, recurring professional client reports with PDF export capability, and strict multi-tenant isolation. Verified via unit tests (`test:phase7`), TypeScript check, Next.js production build, and browser testing.
+- **2026-10-21**: Completed Approved Product Refinement:
+  1. Workstream 1: Cleaning & Operations Separation (top-level Cleaning navigation, dedicated Cleaning Overview, Policies, Visits/History, and Teams/Capacity views; Operations filtered to reactive technical work; shared Routes & Dispatch; 5 teams including Pune-isolated Team E with 10 total technicians).
+  2. Workstream 2: Client Portal Information Hierarchy & UX Refinement (reorganised around 5 customer questions, canonical cleaning visit dates, customer-friendly status/alarms, progressive disclosure).
+  3. Client Operational History UX Polish: Moved the extensive "System Operational Log & Service Care" section towards the end of the client portal (`#operational-history`), configured it to be collapsable and collapsed by default (showing only the single active/most recent record when collapsed), and kept Question 2 compact with instant zero-issue reassurance or single-active-issue card.
+  4. Client-initiated requests (cleaning & issue reporting) explicitly recorded as deferred to V2.
+

@@ -344,7 +344,7 @@ export function StringAnomalyDiagnosticSection({
                         anom.type.replace("_", " ")
                       )}
                     </div>
-                    <div className="text-[10px] text-muted-foreground line-clamp-1 max-w-[200px]">
+                    <div className="text-[10px] text-muted-foreground break-words leading-tight max-w-[280px]">
                       {anom.recommended_action}
                     </div>
                   </TableCell>

@@ -75,6 +75,30 @@ function isCompatibleRegion(loc1?: string, loc2?: string): boolean {
   return true;
 }
 
+export function isPuneLocation(location?: string | null): boolean {
+  if (!location) return false;
+  const l = location.toLowerCase();
+  return l.includes("pune") || l.includes("pimpri") || l.includes("chinchwad");
+}
+
+export function isPuneCluster(cluster: GeographicCluster): boolean {
+  return cluster.sites.some((s) => isPuneLocation(s.location));
+}
+
+export function isPuneTeam(team: TechnicianTeam): boolean {
+  const n = (team.name || "").toLowerCase();
+  const b = (team.base_address || "").toLowerCase();
+  return n.includes("pune") || b.includes("pune");
+}
+
+export function isTeamRegionPermitted(cluster: GeographicCluster, team: TechnicianTeam): boolean {
+  const isPune = isPuneCluster(cluster);
+  const isPuneTm = isPuneTeam(team);
+  if (isPune && !isPuneTm) return false;
+  if (!isPune && isPuneTm) return false;
+  return true;
+}
+
 function extractBuildingBaseName(name: string): string {
   return name
     .replace(/\s+society.*/i, "")
@@ -442,16 +466,19 @@ export function generateMonthlyCleaningPlan({
   const teamClusterWorkloadMap = new Map<string, number>();
 
   clusters.forEach((cluster) => {
+    const eligibleTeams = activeTeams.filter((t) => isTeamRegionPermitted(cluster, t));
+    const candidateTeams = eligibleTeams.length > 0 ? eligibleTeams : activeTeams;
+
     const histTeamId = cluster.sites.map((s) => previousTeamAssignments?.get(s.id)).find((id) => !!id);
-    const historicalTeam = activeTeams.find((t) => t.id === histTeamId);
+    const historicalTeam = candidateTeams.find((t) => t.id === histTeamId);
 
     if (historicalTeam) {
       cluster.owner_team_id = historicalTeam.id;
-    } else if (activeTeams.length > 0) {
-      let bestTeam = activeTeams[0];
+    } else if (candidateTeams.length > 0) {
+      let bestTeam = candidateTeams[0];
       let bestScore = -Infinity;
 
-      for (const t of activeTeams) {
+      for (const t of candidateTeams) {
         const dist = haversineDistanceKm(
           cluster.center_lat,
           cluster.center_lng,
@@ -504,7 +531,9 @@ export function generateMonthlyCleaningPlan({
   for (const site of configuredSites) {
     const rule = effectiveRuleMap.get(site.id)!;
     const cluster = clusterMap.get(site.id)!;
-    const preferredTeam = activeTeams.find((t) => t.id === cluster.owner_team_id) || activeTeams[0] || null;
+    const clusterEligibleTeams = activeTeams.filter((t) => isTeamRegionPermitted(cluster, t));
+    const fallbackTeam = clusterEligibleTeams[0] || activeTeams[0] || null;
+    const preferredTeam = clusterEligibleTeams.find((t) => t.id === cluster.owner_team_id) || fallbackTeam;
 
     const cleaningMins = rule.estimated_cleaning_mins || 90;
     const isMultiWing = cluster.sites.length > 1;
@@ -590,7 +619,9 @@ export function generateMonthlyCleaningPlan({
       cluster_name: cluster.cluster_name,
       required_visits_count: siteTargetDates.length,
       target_due_dates: siteTargetDates,
-      eligible_teams: activeTeams.map((t) => t.name),
+      eligible_teams: (activeTeams.filter((t) => isTeamRegionPermitted(cluster, t)).length > 0
+        ? activeTeams.filter((t) => isTeamRegionPermitted(cluster, t))
+        : activeTeams).map((t) => t.name),
     });
 
     siteTargetDates.forEach((targetDateStr, idx) => {
@@ -696,9 +727,11 @@ export function generateMonthlyCleaningPlan({
     let cycleScheduled = false;
 
     // Step 1: Try assigning the ENTIRE Location Service Cycle to a SINGLE date across available teams (preferred team first)
-    const teamsToTry = preferredTeam
-      ? [preferredTeam, ...activeTeams.filter((t) => t.id !== preferredTeam.id)]
-      : activeTeams;
+    const regionTeams = activeTeams.filter((t) => isTeamRegionPermitted(cluster, t));
+    const candidatePool = regionTeams.length > 0 ? regionTeams : activeTeams;
+    const teamsToTry = preferredTeam && candidatePool.some((t) => t.id === preferredTeam.id)
+      ? [preferredTeam, ...candidatePool.filter((t) => t.id !== preferredTeam.id)]
+      : candidatePool;
 
     if (totalCycleSingleDayWorkload <= planningCapacityMins) {
       for (const team of teamsToTry) {
@@ -920,7 +953,7 @@ export function generateMonthlyCleaningPlan({
         for (const candidateStr of allMonthDates) {
           if (visitIdx >= totalVisits) break;
 
-          for (const team of activeTeams) {
+          for (const team of candidatePool) {
             if (visitIdx >= totalVisits) break;
 
             const vItem = cycleVisits[visitIdx];
@@ -1051,7 +1084,9 @@ export function generateMonthlyCleaningPlan({
         if (rule.allowed_weekdays && rule.allowed_weekdays.length > 0 && !rule.allowed_weekdays.includes(isoWk)) continue;
         if (rule.blackout_dates && rule.blackout_dates.includes(dStr)) continue;
 
-        for (const team of activeTeams) {
+        const repairCandidateTeams = activeTeams.filter((t) => isTeamRegionPermitted(cluster, t));
+        const repairPool = repairCandidateTeams.length > 0 ? repairCandidateTeams : activeTeams;
+        for (const team of repairPool) {
           if (!isTeamPermittedOnCluster(dStr, cluster, team.id, locationDayTeamLockMap, effectiveRuleMap)) continue;
 
           const dayKey = `${team.id}:${dStr}`;

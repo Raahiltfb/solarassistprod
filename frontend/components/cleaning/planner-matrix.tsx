@@ -375,9 +375,9 @@ export function PlannerMatrix({
                           className="h-3 w-3 rounded-full shrink-0"
                           style={{ backgroundColor: team.color_code || "#3b82f6" }}
                         />
-                        <span className="text-foreground font-bold text-sm truncate">{team.name}</span>
+                        <span className="text-foreground font-bold text-sm break-words leading-tight">{team.name}</span>
                       </div>
-                      <div className="text-[11px] text-muted-foreground font-normal truncate">
+                      <div className="text-[11px] text-muted-foreground font-normal break-words leading-tight">
                         {team.base_address || "Base MMR"}
                       </div>
                     </td>
@@ -441,7 +441,7 @@ export function PlannerMatrix({
                             {isHovered && isBlockedTarget && (
                               <div className="w-full p-1 bg-red-600 text-white font-semibold text-[10px] rounded flex items-center justify-center gap-1 shadow-sm">
                                 <Ban className="h-3 w-3 shrink-0" />
-                                <span className="truncate">{validation.reason}</span>
+                                <span className="break-words leading-tight">{validation.reason}</span>
                               </div>
                             )}
 
@@ -460,7 +460,7 @@ export function PlannerMatrix({
                                   }`}
                                 >
                                   <div className="flex items-center justify-between gap-1">
-                                    <span className="font-bold text-sm text-foreground truncate" title={assign.sites?.name}>
+                                    <span className="font-bold text-sm text-foreground break-words leading-tight" title={assign.sites?.name}>
                                       {assign.sites?.name}
                                     </span>
                                     <GripVertical className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
@@ -485,7 +485,7 @@ export function PlannerMatrix({
                                   key={idx}
                                   className="w-full p-2 rounded-lg text-xs text-left shadow-sm border bg-purple-500/10 border-purple-500/30 text-purple-900 dark:text-purple-300"
                                 >
-                                  <div className="font-bold text-xs truncate" title={sr.sites?.name}>
+                                  <div className="font-bold text-xs break-words leading-tight" title={sr.sites?.name}>
                                     {sr.sites?.name}
                                   </div>
                                   <div className="text-[10px] mt-0.5 font-medium opacity-80">Service Request</div>

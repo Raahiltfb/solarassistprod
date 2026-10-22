@@ -126,7 +126,7 @@ export default function AlertsPage() {
                 </TableCell>
                 <TableCell className="max-w-xs">
                   <div className="font-medium text-sm">{a.title}</div>
-                  {a.description && <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{a.description}</div>}
+                  {a.description && <div className="text-xs text-muted-foreground mt-0.5 break-words leading-tight">{a.description}</div>}
                   {a.recommended_action && (
                     <div className="text-[11px] text-primary bg-primary/5 rounded border border-primary/10 px-2 py-0.5 mt-1.5 inline-block">
                       <b>Action:</b> {a.recommended_action}

@@ -627,7 +627,7 @@ function RoutePlannerContent() {
                     </TableCell>
 
                     <TableCell className="max-w-xs">
-                      <p className="font-medium text-sm truncate">{wo?.title}</p>
+                      <p className="font-medium text-sm break-words leading-snug">{wo?.title}</p>
                       <span className={`text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded border ${typeBadges[wo?.type as WorkOrderType]}`}>
                         {typeLabels[wo?.type as WorkOrderType]}
                       </span>

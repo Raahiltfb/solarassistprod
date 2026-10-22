@@ -93,7 +93,7 @@ export default async function DashboardPage() {
             Hello, {profile.full_name || "Technician"}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Role: SolarAssist Operations Technician
+            Role: Solar Assist Operations Technician
           </p>
         </div>
 

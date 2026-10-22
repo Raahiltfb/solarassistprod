@@ -190,7 +190,7 @@ async function runVerificationTests() {
     Boolean(gridLog.whatIsGoingOn) &&
     Boolean(gridLog.whatSaIsDoing) &&
     gridLog.whatIsGoingOn.includes("DISCOM") &&
-    gridLog.whatSaIsDoing.includes("SolarAssist automated safety controls"),
+    gridLog.whatSaIsDoing.includes("Solar Assist automated safety controls"),
     "Test 4b: Grid frequency fluctuation error contains semi-technical 'What is going on' and 'What SA is doing'",
     gridLog
   );
@@ -211,7 +211,7 @@ async function runVerificationTests() {
     stringLog !== undefined &&
     stringLog.macroCategory === "String Optimization" &&
     stringLog.whatIsGoingOn.includes("minor current or voltage variance") &&
-    stringLog.whatSaIsDoing.includes("SolarAssist algorithmic performance engine"),
+    stringLog.whatSaIsDoing.includes("Solar Assist algorithmic performance engine"),
     "Test 4d: String variance explains row current variation and algorithmic isolation by SA",
     stringLog
   );

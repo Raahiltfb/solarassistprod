@@ -174,7 +174,7 @@ export function FleetSiteMatrix({ sites, inverters }: FleetSiteMatrixProps) {
                           <Link href={`/sites/${site.id}`} className="text-foreground hover:text-primary font-semibold">
                             {site.name}
                           </Link>
-                          <div className="text-muted-foreground text-[11px] font-normal truncate max-w-xs">
+                          <div className="text-muted-foreground text-[11px] font-normal break-words leading-tight">
                             {site.location}
                           </div>
                         </div>

@@ -345,7 +345,7 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ id:
                           {cv.status.replace("_", " ")}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-muted-foreground max-w-xs truncate" title={cv.planner_rationale || ""}>
+                      <TableCell className="text-muted-foreground max-w-sm break-words leading-tight" title={cv.planner_rationale || ""}>
                         {cv.planner_rationale || cv.constraint_notes || "—"}
                       </TableCell>
                     </TableRow>

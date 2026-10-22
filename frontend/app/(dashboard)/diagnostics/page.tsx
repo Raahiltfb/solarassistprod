@@ -7,9 +7,9 @@ export const revalidate = 0;
 export default async function TechnicalIntelligencePage({
   searchParams
 }: {
-  searchParams: Promise<{ site_id?: string }>
+  searchParams: Promise<{ site_id?: string; tab?: string }>
 }) {
-  const { site_id } = await searchParams;
+  const { site_id, tab } = await searchParams;
   const sb = await createClient();
 
   // 1. Fetch user org, sites, and string metadata in parallel
@@ -87,6 +87,7 @@ export default async function TechnicalIntelligencePage({
     <DiagnosticsClientWrapper
       sites={siteList}
       initialSiteId={site_id || siteList[0]?.id}
+      initialPrimaryTab={tab === "site" || (Boolean(site_id) && tab !== "fleet") ? "site" : "fleet"}
       allInverters={allInverters}
       allStrings={allStrings}
       allTelemetry={allTelemetry}

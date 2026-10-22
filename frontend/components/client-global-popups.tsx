@@ -94,7 +94,7 @@ export function ClientGlobalPopups({ events }: { events: any[] }) {
               {noticeBadgeText}
             </span>
             <span className="text-xs text-muted-foreground font-mono">
-              SolarAssist Care
+              Solar Assist Care
             </span>
           </div>
           <DialogTitle className="flex items-center gap-2 text-xl font-display">

@@ -86,7 +86,7 @@ export function SiteHealthOverviewHeader({
           {/* Diagnostic Counters */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 text-xs bg-muted/40 p-3.5 rounded-xl border border-border/60 shrink-0 2xl:w-auto">
             <div className="min-w-0">
-              <span className="text-[10px] uppercase font-semibold text-muted-foreground block leading-tight truncate" title="Active Issues">
+              <span className="text-[10px] uppercase font-semibold text-muted-foreground block leading-tight">
                 Active Issues
               </span>
               <span className={`text-base font-bold font-mono mt-0.5 block ${summary.active_issues_count > 0 ? "text-amber-600 dark:text-amber-400" : "text-foreground"}`}>
@@ -95,7 +95,7 @@ export function SiteHealthOverviewHeader({
             </div>
 
             <div className="min-w-0">
-              <span className="text-[10px] uppercase font-semibold text-muted-foreground block leading-tight truncate" title="Inverters Impacted">
+              <span className="text-[10px] uppercase font-semibold text-muted-foreground block leading-tight">
                 Inverters Impacted
               </span>
               <span className="text-base font-bold font-mono text-foreground mt-0.5 block">
@@ -104,7 +104,7 @@ export function SiteHealthOverviewHeader({
             </div>
 
             <div className="min-w-0">
-              <span className="text-[10px] uppercase font-semibold text-muted-foreground block leading-tight truncate" title="Strings Affected">
+              <span className="text-[10px] uppercase font-semibold text-muted-foreground block leading-tight">
                 Strings Affected
               </span>
               <span className="text-base font-bold font-mono text-foreground mt-0.5 block">
@@ -113,7 +113,7 @@ export function SiteHealthOverviewHeader({
             </div>
 
             <div className="min-w-0">
-              <span className="text-[10px] uppercase font-semibold text-muted-foreground block leading-tight truncate" title="Estimated Revenue Risk">
+              <span className="text-[10px] uppercase font-semibold text-muted-foreground block leading-tight">
                 Revenue Risk
               </span>
               <span className="text-base font-bold font-mono text-amber-600 dark:text-amber-400 mt-0.5 block">

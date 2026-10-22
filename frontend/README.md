@@ -64,7 +64,7 @@ Creates 2 orgs, 5 sites, 20 inverters with 48h hourly telemetry, alerts, tickets
 | ---------- | ---------------------------- | ------------ |
 | Super      | super@solarassist.dev        | Solar@12345  |
 | EPC Admin  | admin@solarassist.dev        | Solar@12345  |
-| Technician | tech@solarassist.dev         | Solar@12345  |
+| Technician | tech1@solarassist.dev (1..10)| Solar@12345  |
 | Client     | client@solarassist.dev       | Solar@12345  |
 
 ## Run dev

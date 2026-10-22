@@ -20,7 +20,7 @@ export function getSanitizedInverterStatus(
     return {
       badgeText: "Attention Needed",
       badgeVariant: "warning",
-      message: `Solar Inverter (${serialNumber}) needs attention. SolarAssist is actively investigating this item.`,
+      message: `Solar Inverter (${serialNumber}) needs attention. Solar Assist is actively investigating this item.`,
     };
   }
 
@@ -29,7 +29,7 @@ export function getSanitizedInverterStatus(
     return {
       badgeText: "Service Check",
       badgeVariant: "warning",
-      message: `Solar Inverter (${serialNumber}) experienced a minor operational pause. SolarAssist is monitoring performance closely.`,
+      message: `Solar Inverter (${serialNumber}) experienced a minor operational pause. Solar Assist is monitoring performance closely.`,
     };
   }
 
@@ -123,9 +123,9 @@ export function getMacroTechnicalDescription(
   ) {
     return {
       title: "Inverter Safety Inspection Underway",
-      description: `Inverter operating parameter variation reached safety boundary at ${siteName}. SolarAssist automated O&M system has safely paused the unit and scheduled technical inspection.`,
+      description: `Inverter operating parameter variation reached safety boundary at ${siteName}. Solar Assist automated O&M system has safely paused the unit and scheduled technical inspection.`,
       whatIsGoingOn: `Inverter internal safety sensors detected an abnormal electrical boundary (such as insulation resistance, DC ground leakage, or phase balance) and safely paused the unit.`,
-      whatSaIsDoing: `SolarAssist automated O&M system safely paused power feeding, conducted remote diagnostics, and scheduled an on-site technician inspection to verify cables, terminals, and safe restart.`,
+      whatSaIsDoing: `Solar Assist automated O&M system safely paused power feeding, conducted remote diagnostics, and scheduled an on-site technician inspection to verify cables, terminals, and safe restart.`,
       category: "Inverter Service",
     };
   }
@@ -140,9 +140,9 @@ export function getMacroTechnicalDescription(
   ) {
     return {
       title: "String Performance Optimization Scheduled",
-      description: `String voltage or current variance detected across PV circuits at ${siteName}. SolarAssist has scheduled circuit inspection to maximize daily generation.`,
+      description: `String voltage or current variance detected across PV circuits at ${siteName}. Solar Assist has scheduled circuit inspection to maximize daily generation.`,
       whatIsGoingOn: `Telemetry sensors detected a minor current or voltage variance between parallel solar panel rows (strings), likely caused by localized roof shading, module dust accumulation, or connection resistance.`,
-      whatSaIsDoing: `SolarAssist algorithmic performance engine is analyzing daily string IV curves to isolate the affected circuit and has scheduled routine module washing and electrical terminal inspection.`,
+      whatSaIsDoing: `Solar Assist algorithmic performance engine is analyzing daily string IV curves to isolate the affected circuit and has scheduled routine module washing and electrical terminal inspection.`,
       category: "String Optimization",
     };
   }
@@ -160,9 +160,9 @@ export function getMacroTechnicalDescription(
   ) {
     return {
       title: "Data Gateway Connectivity Supervised",
-      description: `Site data gateway communication pause detected at ${siteName}. Inverters continue generating solar electricity normally; SolarAssist is checking local network link.`,
+      description: `Site data gateway communication pause detected at ${siteName}. Inverters continue generating solar electricity normally; Solar Assist is checking local network link.`,
       whatIsGoingOn: `The local communication module (data logger / Wi-Fi dongle) temporarily paused sending telemetry data. Your solar panels and inverters are continuing to generate solar electricity normally.`,
-      whatSaIsDoing: `SolarAssist automated systems are running diagnostic ping retries and supervising network re-establishment. All solar generation figures are buffered safely in equipment memory and will automatically sync once connectivity resumes.`,
+      whatSaIsDoing: `Solar Assist automated systems are running diagnostic ping retries and supervising network re-establishment. All solar generation figures are buffered safely in equipment memory and will automatically sync once connectivity resumes.`,
       category: "Connectivity & Gateway",
     };
   }
@@ -195,7 +195,7 @@ export function getMacroTechnicalDescription(
       title: "External Utility Grid Outage Monitored",
       description: `External electricity board (DISCOM) grid power is currently unavailable at ${siteName}. System will automatically resume export as soon as grid stabilizes.`,
       whatIsGoingOn: `The external power grid supplied by the local electricity board (DISCOM) experienced a temporary ${specificType.toLowerCase()} outside standard utility operating boundaries.`,
-      whatSaIsDoing: `SolarAssist automated safety controls safely paused inverter export to protect your on-site electrical assets from utility surges. Automated sensors are continuously monitoring the grid line and will reconnect solar power generation the moment utility parameters stabilize.`,
+      whatSaIsDoing: `Solar Assist automated safety controls safely paused inverter export to protect your on-site electrical assets from utility surges. Automated sensors are continuously monitoring the grid line and will reconnect solar power generation the moment utility parameters stabilize.`,
       category: "Grid Outage",
     };
   }
@@ -209,9 +209,9 @@ export function getMacroTechnicalDescription(
   ) {
     return {
       title: "Solar Yield Optimization Underway",
-      description: `Site generation at ${siteName} tracked slightly below ideal sunlight benchmark today. SolarAssist is supervising module washing and operational settings to maximize yield.`,
+      description: `Site generation at ${siteName} tracked slightly below ideal sunlight benchmark today. Solar Assist is supervising module washing and operational settings to maximize yield.`,
       whatIsGoingOn: `Daily solar production for this installation was lower than expected given regional sunlight levels, typically caused by seasonal soiling, cloudy spells, or temporary inverter clipping.`,
-      whatSaIsDoing: `SolarAssist is cross-referencing satellite irradiance readings, verifying panel washing intervals, and scheduling module cleaning to bring generation back up to peak benchmark.`,
+      whatSaIsDoing: `Solar Assist is cross-referencing satellite irradiance readings, verifying panel washing intervals, and scheduling module cleaning to bring generation back up to peak benchmark.`,
       category: "String Optimization",
     };
   }
@@ -227,7 +227,7 @@ export function getMacroTechnicalDescription(
       title: "Equipment Thermal Management Active",
       description: `Inverter enclosure cooling check scheduled at ${siteName} to prevent solar clipping and maintain peak summer yield.`,
       whatIsGoingOn: `Inverter internal operating temperature approached the upper design limit during peak sunshine hours.`,
-      whatSaIsDoing: `SolarAssist monitored fan cooling airflow cycles to prevent thermal throttling, protect electronic components, and maintain maximum solar generation.`,
+      whatSaIsDoing: `Solar Assist monitored fan cooling airflow cycles to prevent thermal throttling, protect electronic components, and maintain maximum solar generation.`,
       category: "Inverter Service",
     };
   }
@@ -235,9 +235,9 @@ export function getMacroTechnicalDescription(
   // Default reassuring
   return {
     title: "System Performance Optimization Active",
-    description: `SolarAssist identified an operational item at ${siteName}. Our 24/7 O&M team is supervising resolution.`,
+    description: `Solar Assist identified an operational item at ${siteName}. Our 24/7 O&M team is supervising resolution.`,
     whatIsGoingOn: `A minor operational variance was identified during continuous system monitoring at ${siteName}.`,
-    whatSaIsDoing: `SolarAssist 24/7 engineering team and automated telemetry supervisory system are tracking the item and supervising resolution.`,
+    whatSaIsDoing: `Solar Assist 24/7 engineering team and automated telemetry supervisory system are tracking the item and supervising resolution.`,
     category: "Inverter Service",
   };
 }
@@ -293,7 +293,7 @@ export function sanitizeServiceEvents(
           id: `alert-ver-${a.id}`,
           type: "verifying",
           title: "Technician Completed Work • Telemetry Verifying",
-          description: `Field technician completed on-site service at ${siteName}. SolarAssist automated telemetry engine is verifying power generation recovery.`,
+          description: `Field technician completed on-site service at ${siteName}. Solar Assist automated telemetry engine is verifying power generation recovery.`,
           timestamp: linkedTicket?.resolved_at || a.triggered_at,
           verificationStatus: "under_verification",
           technicianFindings: linkedTicket?.verification_notes || linkedTicket?.post_repair_metric,
@@ -303,7 +303,7 @@ export function sanitizeServiceEvents(
           id: `alert-reopen-${a.id}`,
           type: "reopened",
           title: "Follow-Up Service Scheduled",
-          description: `Telemetry verification detected persistent variance at ${siteName}. SolarAssist has automatically escalated this item for follow-up technician inspection.`,
+          description: `Telemetry verification detected persistent variance at ${siteName}. Solar Assist has automatically escalated this item for follow-up technician inspection.`,
           timestamp: linkedTicket?.reopened_at || a.triggered_at,
           verificationStatus: "verification_failed",
           technicianFindings: linkedTicket?.pre_repair_metric,
@@ -352,8 +352,8 @@ export function sanitizeServiceEvents(
 
       let title = "Technician Visit Completed";
       let desc = isCleaning
-        ? `SolarAssist technician visited ${siteName} and completed panel cleaning.`
-        : `SolarAssist technician visited ${siteName} and completed maintenance service.`;
+        ? `Solar Assist technician visited ${siteName} and completed panel cleaning.`
+        : `Solar Assist technician visited ${siteName} and completed maintenance service.`;
 
       if (verStatus === "under_verification") {
         title = "Technician Service Completed • Telemetry Verifying";
@@ -398,9 +398,9 @@ export function sanitizeServiceEvents(
         title: isCleaning ? "Solar Panel Cleaning Scheduled" : "Technician Visit Dispatched",
         description: isCleaning
           ? (isWithin2Days 
-              ? `SolarAssist has scheduled routine solar panel cleaning for ${siteName} on ${wo.scheduled_date} (2 days advance notice).`
-              : `SolarAssist has scheduled routine solar panel cleaning for ${siteName} on ${wo.scheduled_date}.`)
-          : `SolarAssist certified field engineer dispatched to ${siteName} for equipment inspection.`,
+              ? `Solar Assist has scheduled routine solar panel cleaning for ${siteName} on ${wo.scheduled_date} (2 days advance notice).`
+              : `Solar Assist has scheduled routine solar panel cleaning for ${siteName} on ${wo.scheduled_date}.`)
+          : `Solar Assist certified field engineer dispatched to ${siteName} for equipment inspection.`,
         timestamp: wo.scheduled_date || wo.created_at,
         actionable: isEligibleForPrompt ? "cleaning_schedule_ack" : undefined,
         actionableId: isEligibleForPrompt ? wo.id : undefined,
@@ -422,7 +422,7 @@ export function sanitizeServiceEvents(
         id: `visit-cmp-${v.id}`,
         type: "technician_visit",
         title: "Solar Panel Cleaning Completed",
-        description: `SolarAssist certified cleaning crew completed module washing at ${siteName} on ${v.scheduled_date || "schedule"}.`,
+        description: `Solar Assist certified cleaning crew completed module washing at ${siteName} on ${v.scheduled_date || "schedule"}.`,
         timestamp: v.completed_at || v.scheduled_date || new Date().toISOString(),
         actionable: isPendingAck ? "cleaning_ack" : undefined,
         actionableId: isPendingAck ? v.id : undefined,
@@ -441,8 +441,8 @@ export function sanitizeServiceEvents(
         type: "technician_visit",
         title: "Solar Panel Cleaning Scheduled",
         description: isWithin2Days
-          ? `SolarAssist has scheduled routine solar panel cleaning for ${siteName} on ${v.scheduled_date} (2 days advance notice).`
-          : `SolarAssist has scheduled routine solar panel cleaning for ${siteName} on ${v.scheduled_date}.`,
+          ? `Solar Assist has scheduled routine solar panel cleaning for ${siteName} on ${v.scheduled_date} (2 days advance notice).`
+          : `Solar Assist has scheduled routine solar panel cleaning for ${siteName} on ${v.scheduled_date}.`,
         timestamp: v.scheduled_date,
         actionable: isEligibleForPrompt ? "cleaning_schedule_ack" : undefined,
         actionableId: isEligibleForPrompt ? v.id : undefined,
@@ -509,8 +509,8 @@ export function sanitizeServiceEvents(
       type: "technician_visit",
       title: "Solar Panel Cleaning Scheduled",
       description: isWithin2Days
-        ? `SolarAssist has scheduled routine solar panel cleaning for ${siteName} on ${s.next_cleaning_date} (2 days advance notice).`
-        : `SolarAssist has scheduled routine solar panel cleaning for ${siteName} on ${s.next_cleaning_date}.`,
+        ? `Solar Assist has scheduled routine solar panel cleaning for ${siteName} on ${s.next_cleaning_date} (2 days advance notice).`
+        : `Solar Assist has scheduled routine solar panel cleaning for ${siteName} on ${s.next_cleaning_date}.`,
       timestamp: s.next_cleaning_date,
       actionable: isEligibleForPrompt ? "cleaning_schedule_ack" : undefined,
       actionableId: s.id,
@@ -600,7 +600,7 @@ export function formatClientServiceRequests(
       status = "on_site";
       statusLabel = "Technician On Site";
       statusBadgeVariant = "warning";
-      explanation = "SolarAssist field technician has checked in on site and is actively conducting inspections.";
+      explanation = "Solar Assist field technician has checked in on site and is actively conducting inspections.";
     } else if (linkedWo?.status === "scheduled" || linkedWo?.status === "en_route" || ticket.assignee_id) {
       status = "dispatched";
       statusLabel = "Technician Dispatched";

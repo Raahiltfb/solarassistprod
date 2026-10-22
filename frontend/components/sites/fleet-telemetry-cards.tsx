@@ -166,30 +166,31 @@ export function FleetTelemetryCards({ sites }: FleetTelemetryCardsProps) {
               className="overflow-hidden hover:shadow-md transition-shadow"
               data-testid={`site-card-${s.id}`}
             >
-              <CardHeader className="pb-3 border-b flex flex-row items-start justify-between gap-4">
-                <div>
+              <CardHeader className="pb-3 border-b space-y-2 bg-muted/15">
+                <div className="flex items-start justify-between gap-3">
                   <Link
                     href={`/sites/${s.id}`}
-                    className="font-semibold text-lg hover:text-primary transition-colors line-clamp-1"
+                    className="font-semibold text-lg hover:text-primary transition-colors leading-snug break-words flex-1 min-w-0"
                   >
                     {s.name}
                   </Link>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                    <MapPin className="h-3.5 w-3.5" /> {s.location}
-                  </p>
+                  <Badge
+                    variant={
+                      s.siteStatus === "ONLINE"
+                        ? "success"
+                        : s.siteStatus === "PARTIALLY ONLINE"
+                        ? "warning"
+                        : "destructive"
+                    }
+                    className="capitalize shrink-0 whitespace-nowrap"
+                  >
+                    {s.siteStatus.toLowerCase()}
+                  </Badge>
                 </div>
-                <Badge
-                  variant={
-                    s.siteStatus === "ONLINE"
-                      ? "success"
-                      : s.siteStatus === "PARTIALLY ONLINE"
-                      ? "warning"
-                      : "destructive"
-                  }
-                  className="capitalize shrink-0"
-                >
-                  {s.siteStatus.toLowerCase()}
-                </Badge>
+                <p className="text-xs text-muted-foreground flex items-start gap-1 leading-normal break-words">
+                  <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground/80 mt-0.5" />
+                  <span className="break-words">{s.location}</span>
+                </p>
               </CardHeader>
               <CardContent className="pt-4 space-y-4 text-sm">
                 <div className="grid grid-cols-2 gap-x-4 gap-y-3">

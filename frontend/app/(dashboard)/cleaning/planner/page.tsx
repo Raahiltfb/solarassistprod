@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { createClient } from "@/lib/supabase/client";
+import { SubNav } from "@/components/sub-nav";
 import {
   Site,
   SiteCleaningRule,
@@ -400,17 +401,14 @@ export default function CleaningPlannerPage() {
 
   return (
     <div className="space-y-6 pb-12" data-testid="cleaning-planner-page">
+      <SubNav hub="cleaning" />
+
       {/* Header & Multi-Month Selector Strip */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-xs">
-              <Link href="/cleaning">
-                <ArrowLeft className="h-4 w-4 mr-1" /> Back to Cleaning
-              </Link>
-            </Button>
             <h1 className="text-2xl lg:text-3xl font-display font-bold tracking-tight text-foreground">
-              {monthName} {year} Cleaning
+              {monthName} {year} Monthly Cleaning Planner
             </h1>
           </div>
           <p className="text-xs text-muted-foreground">
@@ -674,7 +672,7 @@ export default function CleaningPlannerPage() {
                     {Object.entries(bottleneckCounts).map(([reason, count]) => (
                       <div key={reason} className="p-2.5 bg-muted/40 rounded-lg border text-center space-y-0.5">
                         <div
-                          className="text-[10px] uppercase font-semibold text-muted-foreground truncate"
+                          className="text-[10px] uppercase font-semibold text-muted-foreground break-words leading-tight"
                           title={
                             reason === "admin_cleared"
                               ? "Visits removed from schedule and returned to unscheduled pool"
@@ -698,7 +696,7 @@ export default function CleaningPlannerPage() {
                     <div className="divide-y max-h-60 overflow-y-auto text-xs">
                       {unscheduledVisits.map((v) => (
                         <div key={v.id} className="p-2.5 grid grid-cols-12 gap-2 items-center hover:bg-muted/20">
-                          <div className="col-span-3 font-medium truncate text-foreground">
+                          <div className="col-span-3 font-medium break-words leading-tight text-foreground">
                             {(v as any).sites?.name || v.site_id}
                           </div>
                           <div className="col-span-2 font-mono text-muted-foreground">
@@ -709,7 +707,7 @@ export default function CleaningPlannerPage() {
                               {v.unscheduled_reason ? v.unscheduled_reason.replace(/_/g, " ") : "other"}
                             </Badge>
                           </div>
-                          <div className="col-span-4 text-muted-foreground truncate" title={v.planner_rationale || ""}>
+                          <div className="col-span-4 text-muted-foreground break-words leading-tight" title={v.planner_rationale || ""}>
                             {v.planner_rationale || (v.unscheduled_reason === "admin_cleared" ? "Visits removed from schedule and returned to unscheduled pool." : "Capacity constraint exceeded.")}
                           </div>
                         </div>

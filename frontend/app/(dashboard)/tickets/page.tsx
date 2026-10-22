@@ -123,7 +123,7 @@ export default function TicketsPage() {
           <TableBody>
             {filtered.map((t) => (
               <TableRow key={t.id} data-testid={`ticket-row-${t.id}`}>
-                <TableCell className="max-w-md truncate">
+                <TableCell className="max-w-md break-words leading-snug">
                   <Link href={`/tickets/${t.id}`} className="font-semibold text-primary hover:underline">
                     {t.title}
                   </Link>

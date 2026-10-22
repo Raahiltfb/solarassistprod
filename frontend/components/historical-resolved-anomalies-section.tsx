@@ -86,7 +86,7 @@ export function HistoricalResolvedAnomaliesSection({
                     <span className="text-muted-foreground text-[10px] block">/ {rec.expected_current_a} A exp</span>
                   </TableCell>
                   <TableCell className="text-muted-foreground max-w-[220px]">
-                    <div className="line-clamp-1">{rec.resolution_summary}</div>
+                    <div className="break-words leading-tight text-xs">{rec.resolution_summary}</div>
                     {rec.ticket_id && (
                       <span className="text-[10px] font-mono text-primary block">Ticket: #{rec.ticket_id.slice(0, 8)}</span>
                     )}

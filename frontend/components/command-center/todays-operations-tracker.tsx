@@ -155,12 +155,12 @@ export function TodaysOperationsTracker({
                         <h4 className="font-semibold text-sm text-foreground leading-tight">{techName}</h4>
                         <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-0.5">
                           <MapPin className="h-3 w-3 shrink-0" />
-                          <span className="truncate">{baseLoc}</span>
+                          <span className="break-words leading-tight">{baseLoc}</span>
                         </div>
                       </div>
                     </div>
 
-                    <Badge variant={statusVariant} className="text-[10px] px-2 py-0.5 shrink-0">
+                    <Badge variant={statusVariant} className="text-[10px] px-2 py-0.5 shrink-0 whitespace-nowrap">
                       {statusLabel}
                     </Badge>
                   </div>
@@ -177,9 +177,9 @@ export function TodaysOperationsTracker({
 
                     {/* Current Active Work Order preview if any */}
                     {inProgressStop && (
-                      <div className="flex items-center gap-2 text-xs bg-amber-500/10 text-amber-700 dark:text-amber-300 p-2 rounded-lg font-medium">
-                        <Clock className="h-3.5 w-3.5 shrink-0 animate-pulse" />
-                        <span className="truncate">
+                      <div className="flex items-start gap-2 text-xs bg-amber-500/10 text-amber-700 dark:text-amber-300 p-2 rounded-lg font-medium">
+                        <Clock className="h-3.5 w-3.5 shrink-0 animate-pulse mt-0.5" />
+                        <span className="break-words leading-tight">
                           Current: {inProgressStop.work_orders?.sites?.name || "Site"} ({inProgressStop.work_orders?.title})
                         </span>
                       </div>

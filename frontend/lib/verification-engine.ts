@@ -1,5 +1,5 @@
 /**
- * SolarAssist Phase 6: Resolution & Telemetry Verification Engine
+ * Solar Assist Phase 6: Resolution & Telemetry Verification Engine
  *
  * Automatically verifies whether physical field interventions (fuse replacement,
  * array cleaning, inverter reboot) have actually resolved the underlying technical fault

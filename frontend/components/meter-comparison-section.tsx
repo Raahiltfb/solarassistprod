@@ -183,7 +183,7 @@ export function MeterComparisonSection({
                 {result.status.replace("_", " ")}
               </Badge>
             </div>
-            <div className="text-xs text-muted-foreground line-clamp-1">{result.notes}</div>
+            <div className="text-xs text-muted-foreground break-words leading-tight">{result.notes}</div>
           </CardContent>
         </Card>
       </div>
@@ -297,7 +297,7 @@ export function MeterComparisonSection({
                   <TableCell className="text-right font-mono text-muted-foreground">
                     {r.peak_demand_kw ? `${r.peak_demand_kw} kW` : "—"}
                   </TableCell>
-                  <TableCell className="text-muted-foreground max-w-[250px] truncate">{r.notes || "—"}</TableCell>
+                  <TableCell className="text-muted-foreground max-w-[280px] break-words leading-tight">{r.notes || "—"}</TableCell>
                 </TableRow>
               ))}
               {meterReadings.length === 0 && (

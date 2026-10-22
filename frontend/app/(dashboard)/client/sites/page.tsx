@@ -147,18 +147,34 @@ export default async function ClientSitesListPage() {
           return (
             <Card key={s.id} className="overflow-hidden hover:shadow-md transition-shadow flex flex-col justify-between">
               <div>
-                <CardHeader className="pb-3 border-b flex flex-row items-start justify-between">
-                  <div>
-                    <Link href={`/client/sites/${s.id}`} className="font-semibold text-lg hover:text-primary transition-colors line-clamp-1">
-                      {s.name}
+                <CardHeader className="pb-3 border-b space-y-2 bg-muted/15">
+                  <div className="flex items-start justify-between gap-2.5">
+                    <Link href={`/client/sites/${s.id}`} className="hover:underline flex-1 min-w-0">
+                      <CardTitle className="font-semibold text-lg hover:text-primary transition-colors leading-snug break-words">
+                        {s.name}
+                      </CardTitle>
                     </Link>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                      <MapPin className="h-3.5 w-3.5" /> {s.location}
-                    </p>
+                    <div className="shrink-0">
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap border ${
+                          isSiteNormal
+                            ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25"
+                            : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/25"
+                        }`}
+                      >
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                            isSiteNormal ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
+                          }`}
+                        />
+                        <span>{isSiteNormal ? "Operating Normally" : "Attention Needed"}</span>
+                      </span>
+                    </div>
                   </div>
-                  <Badge variant={isSiteNormal ? "success" : "warning"}>
-                    {isSiteNormal ? "Operating Normally" : "Attention Needed"}
-                  </Badge>
+                  <p className="text-xs text-muted-foreground flex items-start gap-1 leading-normal break-words">
+                    <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground/80 mt-0.5" />
+                    <span className="break-words">{s.location}</span>
+                  </p>
                 </CardHeader>
                 <CardContent className="pt-4 space-y-4 text-xs">
                   <div className="grid grid-cols-2 gap-x-4 gap-y-3">

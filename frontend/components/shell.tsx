@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { LayoutDashboard, Activity, Building2, Bell, Ticket, SprayCan, Wrench, Navigation, BarChart3, Users, Settings, LogOut, User as UserIcon } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { ROLE_LABELS } from "@/lib/permissions";
 import type { Profile } from "@/lib/types";
 
@@ -53,7 +54,14 @@ const NAV = [
     label: "Operations",
     icon: Wrench,
     roles: ["super_admin", "epc_admin"],
-    subPaths: ["/cleaning", "/operations/routes", "/workforce", "/tickets"],
+    subPaths: ["/tickets", "/operations/routes", "/workforce"],
+  },
+  {
+    href: "/cleaning",
+    label: "Cleaning",
+    icon: SprayCan,
+    roles: ["super_admin", "epc_admin"],
+    subPaths: ["/cleaning/planner", "/cleaning/visits", "/cleaning/teams", "/cleaning/policies"],
   },
   {
     href: "/sites",
@@ -125,7 +133,8 @@ export function Shell({ profile, children }: { profile: Profile; children: React
     <div className="min-h-screen flex bg-background">
       <aside className="hidden md:flex w-60 shrink-0 border-r bg-card flex-col" data-testid="sidebar">
         <div className="flex items-center justify-center px-4 h-20 border-b">
-          <img src="/logo-full.png" alt="Solar Assist Logo" className="h-[74px] w-[74px] object-contain" />
+          <img src="/logo-full.png" alt="Solar Assist Logo" className="dark:hidden h-[74px] w-[74px] object-contain" />
+          <img src="/logo-full-dark-trans.png" alt="Solar Assist Logo" className="hidden dark:block h-[74px] w-[74px] object-contain" />
         </div>
         <nav className="flex-1 p-3 space-y-1">
           {items.map((it) => {
@@ -158,13 +167,15 @@ export function Shell({ profile, children }: { profile: Profile; children: React
         {/* Mobile Header */}
         <header className="h-16 md:h-20 border-b bg-card/80 backdrop-blur flex items-center px-4 md:px-6 sticky top-0 z-30">
           <div className="md:hidden flex items-center gap-2">
-            <img src="/logo-full.png" alt="Solar Assist Logo" className="h-10 w-10 object-contain" />
+            <img src="/logo-icon.png" alt="Solar Assist Logo" className="dark:hidden h-10 w-10 object-contain" />
+            <img src="/logo-icon-dark-trans.png" alt="Solar Assist Logo" className="hidden dark:block h-10 w-10 object-contain" />
           </div>
 
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <span className="text-[11px] sm:text-xs px-2.5 py-0.5 sm:py-1 rounded-full bg-primary/10 text-primary font-semibold">
               {ROLE_LABELS[profile.role]}
             </span>
+            <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-10 w-10 p-0 sm:w-auto sm:px-2 gap-2" data-testid="user-menu">
@@ -176,8 +187,8 @@ export function Shell({ profile, children }: { profile: Profile; children: React
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
-                  <div className="font-medium truncate">{profile.full_name || profile.email}</div>
-                  <div className="text-xs text-muted-foreground truncate">{profile.email}</div>
+                  <div className="font-medium break-words leading-tight">{profile.full_name || profile.email}</div>
+                  <div className="text-xs text-muted-foreground break-all mt-0.5">{profile.email}</div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
@@ -220,7 +231,7 @@ export function Shell({ profile, children }: { profile: Profile; children: React
                 )}
               >
                 <it.icon className={cn("h-5 w-5 shrink-0", Active ? "text-primary stroke-[2.5]" : "text-muted-foreground")} />
-                <span className="truncate w-full text-center leading-none">{it.label}</span>
+                <span className="w-full text-center text-[10px] sm:text-[11px] leading-tight whitespace-nowrap">{it.label}</span>
               </Link>
             );
           })}

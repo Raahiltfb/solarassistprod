@@ -194,13 +194,14 @@ export function ClientReportView({
               {selectedSite ? selectedSite.name : organizationName || clientName}
             </h1>
             <p className="text-xs text-muted-foreground print:text-gray-600">
-              Prepared by SolarAssist Supervised O&M Operating System for {clientName}
+              Prepared by Solar Assist Supervised O&M Operating System for {clientName}
             </p>
           </div>
 
           <div className="text-right space-y-1">
             <div className="flex items-center justify-end gap-2">
-              <img src="/logo-full.png" alt="Solar Assist" className="h-8 w-auto object-contain" />
+              <img src="/logo-full.png" alt="Solar Assist" className="dark:hidden h-8 w-auto object-contain print:block" />
+              <img src="/logo-full-dark-trans.png" alt="Solar Assist" className="hidden dark:block h-8 w-auto object-contain print:hidden" />
             </div>
             <div className="text-[11px] text-muted-foreground print:text-gray-500">
               Generated: {formatDate(new Date().toISOString())}
@@ -443,7 +444,7 @@ export function ClientReportView({
         {/* Certificate / Sign-off Footer */}
         <div className="pt-6 border-t flex flex-wrap items-center justify-between gap-4 text-xs text-muted-foreground">
           <div className="space-y-1">
-            <div className="font-semibold text-foreground print:text-black">SolarAssist O&M Supervised Operations</div>
+            <div className="font-semibold text-foreground print:text-black">Solar Assist O&M Supervised Operations</div>
             <div>Continuous automated telemetry ingestion, string diagnostics, and proactive field servicing.</div>
           </div>
 

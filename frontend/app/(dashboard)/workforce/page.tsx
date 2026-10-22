@@ -263,11 +263,11 @@ export default function WorkforcePage() {
                               <div className="h-7 w-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
                                 {m.profiles?.full_name?.charAt(0) || "T"}
                               </div>
-                              <div className="truncate">
-                                <div className="font-semibold text-foreground truncate">
+                              <div className="min-w-0 flex-1">
+                                <div className="font-semibold text-foreground break-words leading-tight">
                                   {m.profiles?.full_name || "Technician"}
                                 </div>
-                                <div className="text-[10px] text-muted-foreground truncate">
+                                <div className="text-[10px] text-muted-foreground break-words">
                                   {m.profiles?.base_address || "Field Tech"}
                                 </div>
                               </div>

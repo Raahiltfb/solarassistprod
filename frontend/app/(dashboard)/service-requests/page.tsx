@@ -598,9 +598,9 @@ function ServiceRequestsContent() {
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-semibold">Service Requests &amp; Field Tasks</h1>
+          <h1 className="text-3xl font-display font-semibold">Technical Service Requests</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Dispatch, route, and manage operational service requests across solar assets.
+            Reactive technical maintenance, inspections, and alarm investigations. Preventive cleanings are managed under the <Link href="/cleaning" className="text-primary underline font-medium">Cleaning Workspace</Link>.
           </p>
         </div>
 
@@ -889,8 +889,7 @@ function ServiceRequestsContent() {
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Task Types</SelectItem>
-                <SelectItem value="cleaning">Cleaning</SelectItem>
+                <SelectItem value="all">All Technical Types</SelectItem>
                 <SelectItem value="maintenance">Maintenance</SelectItem>
                 <SelectItem value="inspection">Inspection</SelectItem>
                 <SelectItem value="alarm_investigation">Alarm Investigation</SelectItem>
@@ -950,7 +949,7 @@ function ServiceRequestsContent() {
                   <TableCell className="max-w-xs">
                     <Link
                       href={`/service-requests/${wo.id}`}
-                      className="font-semibold text-primary hover:underline block truncate"
+                      className="font-semibold text-primary hover:underline block break-words leading-snug"
                     >
                       {wo.title}
                     </Link>

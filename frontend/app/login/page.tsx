@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { ShieldCheck, HardHat, Building2, Crown, ArrowRight, Sparkles, UserCheck } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const DEMO_PERSONAS = [
   {
@@ -120,7 +121,7 @@ export default function LoginPage() {
 
         <div className="relative z-10 flex flex-col justify-between p-10 w-full">
           <div className="flex items-center gap-3">
-            <img src="/logo-full.png" alt="Solar Assist Logo" className="h-12 w-auto object-contain brightness-200" />
+            <img src="/logo-full-dark-trans.png" alt="Solar Assist Logo" className="h-12 w-auto object-contain" />
           </div>
 
           <div className="space-y-6 max-w-md">
@@ -165,15 +166,19 @@ export default function LoginPage() {
 
       {/* Right Login & Persona Selection Panel */}
       <div className="relative flex items-center justify-center p-6 lg:p-12 overflow-y-auto">
+        <div className="absolute top-4 right-4 z-10">
+          <ThemeToggle />
+        </div>
         <div className="w-full max-w-xl space-y-6">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl lg:text-3xl font-display font-bold text-foreground">Sign In to SolarAssist</h2>
+              <h2 className="text-2xl lg:text-3xl font-display font-bold text-foreground">Sign In to Solar Assist</h2>
               <p className="text-xs text-muted-foreground mt-1">
                 Select a user persona below or enter an email for instant passwordless sign in.
               </p>
             </div>
-            <img src="/logo-full.png" alt="Solar Assist Logo" className="h-10 w-auto object-contain shrink-0" />
+            <img src="/logo-icon.png" alt="Solar Assist Logo" className="dark:hidden h-10 w-auto object-contain shrink-0" />
+            <img src="/logo-icon-dark-trans.png" alt="Solar Assist Logo" className="hidden dark:block h-10 w-auto object-contain shrink-0" />
           </div>
 
           {/* Persona Click-to-Login Cards */}
@@ -210,14 +215,14 @@ export default function LoginPage() {
                         </Badge>
                       </div>
 
-                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                      <p className="text-xs text-muted-foreground leading-relaxed">
                         {persona.description}
                       </p>
                     </div>
 
                     <div className="mt-3 pt-2 border-t flex items-center justify-between text-xs font-mono text-muted-foreground group-hover:text-foreground">
-                      <span className="truncate max-w-[170px]">{persona.email}</span>
-                      <span className="text-primary font-sans font-semibold flex items-center gap-1">
+                      <span className="break-all">{persona.email}</span>
+                      <span className="text-primary font-sans font-semibold flex items-center gap-1 shrink-0 ml-2">
                         {isCurrentLogging ? "Signing in..." : "Login"} <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
                       </span>
                     </div>

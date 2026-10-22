@@ -3,19 +3,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Wrench, SprayCan, Navigation, Users, Ticket, Building2, Bell, Settings, ShieldCheck } from "lucide-react";
+import { Wrench, SprayCan, Navigation, Users, Ticket, Building2, Bell, Settings, ShieldCheck, LayoutDashboard, Calendar, CheckCircle2 } from "lucide-react";
 
 interface SubNavProps {
-  hub: "operations" | "assets" | "configuration";
+  hub: "operations" | "cleaning" | "assets" | "configuration";
 }
 
 const HUB_TABS = {
+  cleaning: [
+    { href: "/cleaning", label: "Overview", icon: LayoutDashboard },
+    { href: "/cleaning/planner", label: "Monthly Planner", icon: Calendar },
+    { href: "/cleaning/visits", label: "Visits & History", icon: CheckCircle2 },
+    { href: "/cleaning/teams", label: "Teams & Capacity", icon: Users },
+    { href: "/cleaning/policies", label: "Site Policies", icon: Settings },
+  ],
   operations: [
-    { href: "/service-requests", label: "Service Requests", icon: Wrench },
-    { href: "/cleaning", label: "Cleaning Schedule", icon: SprayCan },
+    { href: "/service-requests", label: "Technical Work Orders", icon: Wrench },
+    { href: "/tickets", label: "Incidents & Tickets", icon: Ticket },
     { href: "/operations/routes", label: "Routes & Dispatch", icon: Navigation },
-    { href: "/workforce", label: "Workforce", icon: Users },
-    { href: "/tickets", label: "Incidents Queue", icon: Ticket },
+    { href: "/workforce", label: "Technician Directory", icon: Users },
   ],
   assets: [
     { href: "/sites", label: "Fleet Sites", icon: Building2 },
@@ -35,7 +41,7 @@ export function SubNav({ hub }: SubNavProps) {
     <div className="border-b mb-6 bg-card/30 -mx-4 px-4 md:-mx-6 md:px-6 -mt-2 pt-2">
       <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
         {tabs.map((tab) => {
-          const isActive = pathname === tab.href || (tab.href !== "/service-requests" && tab.href !== "/sites" && tab.href !== "/settings" && pathname.startsWith(tab.href + "/"));
+          const isActive = pathname === tab.href || (tab.href !== "/service-requests" && tab.href !== "/cleaning" && tab.href !== "/sites" && tab.href !== "/settings" && pathname.startsWith(tab.href + "/"));
           const Icon = tab.icon;
 
           return (

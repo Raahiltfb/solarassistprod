@@ -47,7 +47,7 @@ export function hasPermission(role: Role | undefined, permission: Permission): b
 
 export const ROLE_LABELS: Record<Role, string> = {
   super_admin: "Super Admin",
-  epc_admin: "SolarAssist Admin",
-  technician: "SolarAssist Technician",
+  epc_admin: "Solar Assist Admin",
+  technician: "Solar Assist Technician",
   client: "Client",
 };
