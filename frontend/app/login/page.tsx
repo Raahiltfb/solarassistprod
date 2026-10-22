@@ -177,8 +177,8 @@ export default function LoginPage() {
                 Select a user persona below or enter an email for instant passwordless sign in.
               </p>
             </div>
-            <img src="/logo-icon.png" alt="Solar Assist Logo" className="dark:hidden h-10 w-auto object-contain shrink-0" />
-            <img src="/logo-icon-dark-trans.png" alt="Solar Assist Logo" className="hidden dark:block h-10 w-auto object-contain shrink-0" />
+            <img src="/logo-icon.png" alt="Solar Assist Logo" className="dark:hidden h-10 w-10 object-contain shrink-0" />
+            <img src="/logo-icon-dark-trans.png" alt="Solar Assist Logo" className="hidden dark:block h-10 w-10 object-contain shrink-0" />
           </div>
 
           {/* Persona Click-to-Login Cards */}

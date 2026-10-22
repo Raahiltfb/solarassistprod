@@ -133,8 +133,10 @@ export function Shell({ profile, children }: { profile: Profile; children: React
     <div className="min-h-screen flex bg-background">
       <aside className="hidden md:flex w-60 shrink-0 border-r bg-card flex-col" data-testid="sidebar">
         <div className="flex items-center justify-center px-4 h-20 border-b">
-          <img src="/logo-full.png" alt="Solar Assist Logo" className="dark:hidden h-[74px] w-[74px] object-contain" />
-          <img src="/logo-full-dark-trans.png" alt="Solar Assist Logo" className="hidden dark:block h-[74px] w-[74px] object-contain" />
+          <Link href="/dashboard" className="flex items-center justify-center transition-opacity hover:opacity-90">
+            <img src="/logo-full.png" alt="Solar Assist Logo" className="dark:hidden h-[74px] w-[74px] object-contain" />
+            <img src="/logo-full-dark-trans.png" alt="Solar Assist Logo" className="hidden dark:block h-[74px] w-[74px] object-contain" />
+          </Link>
         </div>
         <nav className="flex-1 p-3 space-y-1">
           {items.map((it) => {
@@ -166,10 +168,10 @@ export function Shell({ profile, children }: { profile: Profile; children: React
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile Header */}
         <header className="h-16 md:h-20 border-b bg-card/80 backdrop-blur flex items-center px-4 md:px-6 sticky top-0 z-30">
-          <div className="md:hidden flex items-center gap-2">
+          <Link href="/dashboard" className="md:hidden flex items-center gap-2 transition-opacity hover:opacity-90">
             <img src="/logo-icon.png" alt="Solar Assist Logo" className="dark:hidden h-10 w-10 object-contain" />
             <img src="/logo-icon-dark-trans.png" alt="Solar Assist Logo" className="hidden dark:block h-10 w-10 object-contain" />
-          </div>
+          </Link>
 
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <span className="text-[11px] sm:text-xs px-2.5 py-0.5 sm:py-1 rounded-full bg-primary/10 text-primary font-semibold">
