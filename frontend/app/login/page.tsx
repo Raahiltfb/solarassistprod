@@ -98,10 +98,10 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-background">
       {/* Left Branding Panel */}
-      <div className="hidden lg:flex relative bg-slate-950 text-white overflow-hidden border-r border-slate-900">
-        {/* Subtle radial emerald & cyan glow + ambient grid */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(16,185,129,0.22),transparent_55%),radial-gradient(ellipse_at_bottom_right,rgba(6,182,212,0.12),transparent_55%)] pointer-events-none" />
-        <div className="absolute inset-0 bg-grid opacity-35 pointer-events-none" />
+      <div className="hidden lg:flex relative bg-slate-950 text-white overflow-hidden border-r border-slate-900/80">
+        {/* Subtle radial emerald & cyan glow + ambient grid across entire left side */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(16,185,129,0.22),transparent_60%),radial-gradient(ellipse_at_bottom_right,rgba(6,182,212,0.14),transparent_60%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-grid opacity-50 pointer-events-none" />
 
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           {/* Prominently sized single top-left logo */}
@@ -109,7 +109,7 @@ export default function LoginPage() {
             <img
               src="/logo-full-dark-trans.png"
               alt="Solar Assist"
-              className="h-14 w-auto object-contain drop-shadow-sm"
+              className="h-20 sm:h-24 w-auto object-contain drop-shadow-md"
             />
           </div>
 
@@ -149,11 +149,12 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right Sign-in Panel with harmonious dark theme backdrop & ambient styling */}
-      <div className="relative flex items-center justify-center p-6 sm:p-12 overflow-hidden bg-background">
+      {/* Right Sign-in Panel with harmonious rich background & visible grid lines */}
+      <div className="relative flex items-center justify-center p-6 sm:p-12 overflow-hidden bg-slate-50/50 dark:bg-slate-900/60">
         {/* Harmonious ambient glow in dark mode across the right panel */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(16,185,129,0.06),transparent_60%),radial-gradient(ellipse_at_top_right,rgba(6,182,212,0.04),transparent_60%)] dark:block hidden pointer-events-none" />
-        <div className="absolute inset-0 bg-grid opacity-15 dark:block hidden pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.12),transparent_65%),radial-gradient(ellipse_at_bottom_left,rgba(14,165,233,0.08),transparent_65%)] pointer-events-none" />
+        {/* Visible ambient grid lines on the right side of the screen */}
+        <div className="absolute inset-0 bg-grid opacity-35 dark:opacity-40 pointer-events-none" />
 
         {/* Ambient Theme Toggle on top right corner */}
         <div className="absolute top-6 right-6 z-10">
