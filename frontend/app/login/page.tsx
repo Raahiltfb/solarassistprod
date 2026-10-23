@@ -96,7 +96,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-background">
+    <div className="min-h-screen grid lg:grid-cols-2 bg-background dark:bg-slate-950">
       {/* Left Branding Panel */}
       <div className="hidden lg:flex relative bg-slate-950 text-white overflow-hidden border-r border-slate-900/80">
         {/* Subtle radial emerald & cyan glow + ambient grid across entire left side */}
@@ -149,12 +149,12 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right Sign-in Panel with harmonious rich background & visible grid lines */}
-      <div className="relative flex items-center justify-center p-6 sm:p-12 overflow-hidden bg-slate-50/50 dark:bg-slate-900/60">
-        {/* Harmonious ambient glow in dark mode across the right panel */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.12),transparent_65%),radial-gradient(ellipse_at_bottom_left,rgba(14,165,233,0.08),transparent_65%)] pointer-events-none" />
+      {/* Right Sign-in Panel: Uniform slate-950 in dark mode, light green emerald ambient hue & crisp grid in light mode */}
+      <div className="relative flex items-center justify-center p-6 sm:p-12 overflow-hidden bg-emerald-50/25 dark:bg-slate-950">
+        {/* Light Mode: Light green ambient hue; Dark Mode: Matching atmospheric radial glow */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.14),transparent_65%),radial-gradient(ellipse_at_bottom_left,rgba(52,211,153,0.08),transparent_65%)] dark:bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.18),transparent_65%),radial-gradient(ellipse_at_bottom_left,rgba(6,182,212,0.10),transparent_65%)] pointer-events-none" />
         {/* Visible ambient grid lines on the right side of the screen */}
-        <div className="absolute inset-0 bg-grid opacity-35 dark:opacity-40 pointer-events-none" />
+        <div className="absolute inset-0 bg-grid opacity-60 dark:opacity-45 pointer-events-none" />
 
         {/* Ambient Theme Toggle on top right corner */}
         <div className="absolute top-6 right-6 z-10">
