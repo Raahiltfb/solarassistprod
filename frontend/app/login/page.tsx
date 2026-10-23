@@ -96,13 +96,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-background dark:bg-slate-950">
-      {/* Left Branding Panel */}
-      <div className="hidden lg:flex relative bg-slate-950 text-white overflow-hidden border-r border-slate-200 dark:border-none">
-        {/* Subtle radial emerald & cyan glow + ambient grid across entire left side */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(16,185,129,0.22),transparent_60%),radial-gradient(ellipse_at_bottom_right,rgba(6,182,212,0.14),transparent_60%)] pointer-events-none" />
-        <div className="absolute inset-0 bg-grid opacity-50 pointer-events-none" />
+    <div className="min-h-screen grid lg:grid-cols-2 bg-background dark:bg-slate-950 relative overflow-hidden">
+      {/* Seamless full-screen ambient grid & radial glow for perfect uniform grid lines across both columns */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(16,185,129,0.20),transparent_60%),radial-gradient(ellipse_at_bottom_right,rgba(6,182,212,0.12),transparent_60%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-grid opacity-50 dark:opacity-40 pointer-events-none" />
 
+      {/* Left Branding Panel */}
+      <div className="hidden lg:flex relative text-white">
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           {/* Prominently sized single top-left logo */}
           <div className="flex items-center">
@@ -149,13 +149,8 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right Sign-in Panel: Uniform slate-950 in dark mode, light green emerald ambient hue & crisp grid in light mode */}
-      <div className="relative flex items-center justify-center p-6 sm:p-12 overflow-hidden bg-emerald-50/25 dark:bg-slate-950">
-        {/* Light Mode: Light green ambient hue; Dark Mode: Matching atmospheric radial glow */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.14),transparent_65%),radial-gradient(ellipse_at_bottom_left,rgba(52,211,153,0.08),transparent_65%)] dark:bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.18),transparent_65%),radial-gradient(ellipse_at_bottom_left,rgba(6,182,212,0.10),transparent_65%)] pointer-events-none" />
-        {/* Visible ambient grid lines on the right side of the screen */}
-        <div className="absolute inset-0 bg-grid opacity-60 dark:opacity-45 pointer-events-none" />
-
+      {/* Right Sign-in Panel: Cleanly positioned over the unified full-screen ambient grid */}
+      <div className="relative flex items-center justify-center p-6 sm:p-12 bg-emerald-50/20 dark:bg-transparent">
         {/* Ambient Theme Toggle on top right corner */}
         <div className="absolute top-6 right-6 z-10">
           <ThemeToggle />
