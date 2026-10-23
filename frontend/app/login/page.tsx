@@ -105,6 +105,8 @@ export default function LoginPage() {
       <div className="hidden lg:flex relative bg-slate-950 dark:bg-transparent text-white border-r border-slate-900/80 dark:border-none">
         {/* Emerald radiance in light mode */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(16,185,129,0.25),transparent_60%),radial-gradient(ellipse_at_bottom_right,rgba(6,182,212,0.15),transparent_60%)] dark:hidden pointer-events-none" />
+        {/* Ambient grid lines on left panel in light mode */}
+        <div className="absolute inset-0 bg-grid opacity-50 dark:hidden pointer-events-none" />
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           {/* Prominently sized single top-left logo */}
           <div className="flex items-center">
