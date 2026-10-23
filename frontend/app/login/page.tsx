@@ -98,7 +98,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-background dark:bg-slate-950">
       {/* Left Branding Panel */}
-      <div className="hidden lg:flex relative bg-slate-950 text-white overflow-hidden border-r border-slate-900/80">
+      <div className="hidden lg:flex relative bg-slate-950 text-white overflow-hidden border-r border-slate-200 dark:border-none">
         {/* Subtle radial emerald & cyan glow + ambient grid across entire left side */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(16,185,129,0.22),transparent_60%),radial-gradient(ellipse_at_bottom_right,rgba(6,182,212,0.14),transparent_60%)] pointer-events-none" />
         <div className="absolute inset-0 bg-grid opacity-50 pointer-events-none" />
@@ -162,9 +162,9 @@ export default function LoginPage() {
         </div>
 
         <div className="w-full max-w-sm space-y-6 relative z-10">
-          {/* Centered Heading */}
+          {/* Centered Heading with signature emerald green */}
           <div className="text-center">
-            <h2 className="text-2xl font-display font-bold text-foreground tracking-tight">
+            <h2 className="text-2xl font-display font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
               Sign In to Solar Assist
             </h2>
           </div>
