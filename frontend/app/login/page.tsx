@@ -10,24 +10,44 @@ import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const LOGIN_OPTIONS = [
-  { group: "Operations Team", options: [
-    { label: "EPC Ops Manager (admin@solarassist.dev)", email: "admin@solarassist.dev" },
-    { label: "Field Technician (tech1@solarassist.dev)", email: "tech1@solarassist.dev" },
-    { label: "Super Admin (super@solarassist.dev)", email: "super@solarassist.dev" },
-  ]},
-  { group: "Client Portals", options: [
-    { label: "Cilantro CHS (client@cilantro.com)", email: "client@cilantro.com" },
-    { label: "Alcove Society (client@alcove.com)", email: "client@alcove.com" },
-    { label: "Manavsthal Tower (client@manavsthal.com)", email: "client@manavsthal.com" },
-    { label: "Dosti Jade CHS (client@dostijade.com)", email: "client@dostijade.com" },
-    { label: "BWSSB Bangalore (client@bwssb.com)", email: "client@bwssb.com" },
-    { label: "Belmac Panvel (client@belmac.com)", email: "client@belmac.com" },
-    { label: "Regalia CHS (client@regalia.com)", email: "client@regalia.com" },
-    { label: "Maitri Anand CHS (client@maitrianand.com)", email: "client@maitrianand.com" },
-    { label: "Sophistica Solar (client@sophistica.com)", email: "client@sophistica.com" },
-    { label: "Patwardhan Hospital (client@patwardhan.com)", email: "client@patwardhan.com" },
-    { label: "Ivy By Courtyard (client@ivy.com)", email: "client@ivy.com" },
-  ]}
+  {
+    group: "Administrative",
+    options: [
+      { label: "Admin (admin@solarassist.dev)", email: "admin@solarassist.dev" },
+      { label: "Super Admin (super@solarassist.dev)", email: "super@solarassist.dev" },
+    ],
+  },
+  {
+    group: "Field Technicians (10 Field Technicians)",
+    options: [
+      { label: "Tech 1 · Team A (tech1@solarassist.dev)", email: "tech1@solarassist.dev" },
+      { label: "Tech 2 · Team A (tech2@solarassist.dev)", email: "tech2@solarassist.dev" },
+      { label: "Tech 3 · Team B (tech3@solarassist.dev)", email: "tech3@solarassist.dev" },
+      { label: "Tech 4 · Team B (tech4@solarassist.dev)", email: "tech4@solarassist.dev" },
+      { label: "Tech 5 · Team C (tech5@solarassist.dev)", email: "tech5@solarassist.dev" },
+      { label: "Tech 6 · Team C (tech6@solarassist.dev)", email: "tech6@solarassist.dev" },
+      { label: "Tech 7 · Team D (tech7@solarassist.dev)", email: "tech7@solarassist.dev" },
+      { label: "Tech 8 · Team D (tech8@solarassist.dev)", email: "tech8@solarassist.dev" },
+      { label: "Tech 9 · Team E Pune (tech9@solarassist.dev)", email: "tech9@solarassist.dev" },
+      { label: "Tech 10 · Team E Pune (tech10@solarassist.dev)", email: "tech10@solarassist.dev" },
+    ],
+  },
+  {
+    group: "Client Portals (All 11 Client Accounts)",
+    options: [
+      { label: "Cilantro CHS (client@cilantro.com)", email: "client@cilantro.com" },
+      { label: "Alcove Society (client@alcove.com)", email: "client@alcove.com" },
+      { label: "Manavsthal Tower (client@manavsthal.com)", email: "client@manavsthal.com" },
+      { label: "Dosti Jade CHS (client@dostijade.com)", email: "client@dostijade.com" },
+      { label: "BWSSB Bangalore (client@bwssb.com)", email: "client@bwssb.com" },
+      { label: "Belmac Panvel (client@belmac.com)", email: "client@belmac.com" },
+      { label: "Regalia CHS (client@regalia.com)", email: "client@regalia.com" },
+      { label: "Maitri Anand CHS (client@maitrianand.com)", email: "client@maitrianand.com" },
+      { label: "Sophistica Solar (client@sophistica.com)", email: "client@sophistica.com" },
+      { label: "Patwardhan Hospital (client@patwardhan.com)", email: "client@patwardhan.com" },
+      { label: "Ivy By Courtyard (client@ivy.com)", email: "client@ivy.com" },
+    ],
+  },
 ];
 
 export default function LoginPage() {
@@ -78,18 +98,18 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-background">
       {/* Left Branding Panel */}
-      <div className="hidden lg:flex relative bg-slate-950 text-white overflow-hidden">
-        {/* Subtle radial emerald glow & crisp dark grid */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(16,185,129,0.18),transparent_55%),radial-gradient(ellipse_at_bottom_right,rgba(6,182,212,0.10),transparent_55%)] pointer-events-none" />
-        <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
+      <div className="hidden lg:flex relative bg-slate-950 text-white overflow-hidden border-r border-slate-900">
+        {/* Subtle radial emerald & cyan glow + ambient grid */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(16,185,129,0.22),transparent_55%),radial-gradient(ellipse_at_bottom_right,rgba(6,182,212,0.12),transparent_55%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-grid opacity-35 pointer-events-none" />
 
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
-          {/* Consistent single top-left logo */}
+          {/* Prominently sized single top-left logo */}
           <div className="flex items-center">
             <img
               src="/logo-full-dark-trans.png"
               alt="Solar Assist"
-              className="h-10 w-auto object-contain"
+              className="h-14 w-auto object-contain drop-shadow-sm"
             />
           </div>
 
@@ -103,47 +123,52 @@ export default function LoginPage() {
               </span>
             </h1>
 
-            <p className="text-slate-400 text-base leading-relaxed">
-              The unified O&amp;M platform for EPCs. Automated monitoring, reactive intelligence, and field dispatching.
+            <p className="text-slate-300 text-base leading-relaxed">
+              The unified solar asset management software, powered by intelligent monitoring, proactive maintenance, and coordinated field operations.
             </p>
 
             <div className="grid grid-cols-3 gap-6 pt-4 border-t border-slate-800/80">
               <div>
                 <div className="text-2xl font-semibold text-emerald-400">10+ <span className="text-slate-400 text-sm">MW</span></div>
-                <div className="text-xs text-slate-500 uppercase tracking-wider mt-0.5">Under management</div>
+                <div className="text-xs text-slate-400 uppercase tracking-wider mt-0.5">Under management</div>
               </div>
 
               <div>
                 <div className="text-2xl font-semibold text-emerald-400">98.7%</div>
-                <div className="text-xs text-slate-500 uppercase tracking-wider mt-0.5">Avg PR uptime</div>
+                <div className="text-xs text-slate-400 uppercase tracking-wider mt-0.5">Avg PR uptime</div>
               </div>
 
               <div>
                 <div className="text-2xl font-semibold text-emerald-400">&lt; 4h</div>
-                <div className="text-xs text-slate-500 uppercase tracking-wider mt-0.5">Alert → resolve</div>
+                <div className="text-xs text-slate-400 uppercase tracking-wider mt-0.5">Alert → resolve</div>
               </div>
             </div>
           </div>
 
-          <p className="text-xs text-slate-600">&copy; {new Date().getFullYear()} Solar Assist Private Limited.</p>
+          <p className="text-xs text-slate-500">&copy; {new Date().getFullYear()} Solar Assist Private Limited.</p>
         </div>
       </div>
 
-      {/* Right Sign-in Panel */}
-      <div className="relative flex items-center justify-center p-6 sm:p-12">
-        {/* Subtle ambient Theme Toggle on top right corner */}
+      {/* Right Sign-in Panel with harmonious dark theme backdrop & ambient styling */}
+      <div className="relative flex items-center justify-center p-6 sm:p-12 overflow-hidden bg-background">
+        {/* Harmonious ambient glow in dark mode across the right panel */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(16,185,129,0.06),transparent_60%),radial-gradient(ellipse_at_top_right,rgba(6,182,212,0.04),transparent_60%)] dark:block hidden pointer-events-none" />
+        <div className="absolute inset-0 bg-grid opacity-15 dark:block hidden pointer-events-none" />
+
+        {/* Ambient Theme Toggle on top right corner */}
         <div className="absolute top-6 right-6 z-10">
           <ThemeToggle />
         </div>
 
-        <div className="w-full max-w-sm space-y-6">
-          <div className="space-y-2">
+        <div className="w-full max-w-sm space-y-6 relative z-10">
+          {/* Centered Heading */}
+          <div className="text-center">
             <h2 className="text-2xl font-display font-bold text-foreground tracking-tight">
               Sign In to Solar Assist
             </h2>
           </div>
 
-          <Card className="border shadow-sm bg-card">
+          <Card className="border shadow-lg bg-card/95 backdrop-blur-sm">
             <CardContent className="pt-6">
               <form onSubmit={onSubmit} className="space-y-4">
                 <div className="space-y-2">
