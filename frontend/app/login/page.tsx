@@ -154,7 +154,11 @@ export default function LoginPage() {
       </div>
 
       {/* Right Sign-in Panel: Cleanly positioned over the unified full-screen ambient grid */}
-      <div className="relative flex items-center justify-center p-6 sm:p-12 bg-emerald-50/20 dark:bg-transparent">
+      <div className="relative flex items-center justify-center p-6 sm:p-12 bg-emerald-50/30 dark:bg-transparent">
+        {/* Light Mode only: Rich light green ambient hue and enhanced visible grid lines */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.18),transparent_65%),radial-gradient(ellipse_at_bottom_left,rgba(52,211,153,0.12),transparent_65%)] dark:hidden pointer-events-none" />
+        <div className="absolute inset-0 bg-grid opacity-75 dark:hidden pointer-events-none" />
+
         {/* Ambient Theme Toggle on top right corner */}
         <div className="absolute top-6 right-6 z-10">
           <ThemeToggle />
