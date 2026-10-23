@@ -1,17 +1,32 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { verifyTicketResolution } from "@/lib/verification-engine";
 
-export async function GET(request: Request) {
+export async function GET(req: NextRequest) {
   try {
+    const authHeader = req.headers.get("authorization");
+    const secret = req.nextUrl.searchParams.get("secret");
+    const cronSecret = process.env.CRON_SECRET;
+
+    const isAuthorized =
+      !cronSecret ||
+      secret === cronSecret ||
+      authHeader === `Bearer ${cronSecret}`;
+
+    if (!isAuthorized) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
+
     const sb = await createClient();
 
-    // Fetch recent resolved / completed tickets pending verification (bounded to 50 per sweep)
+    // Fetch resolved / completed tickets pending verification or currently under verification.
+    // Order by updated_at ASC to ensure FIFO processing and prevent older tickets from being starved.
     const { data: tickets, error: ticketErr } = await sb
       .from("tickets")
       .select("*, inverters(*)")
       .in("status", ["resolved", "completed"])
-      .order("updated_at", { ascending: false })
+      .in("verification_status", ["pending", "under_verification"])
+      .order("updated_at", { ascending: true })
       .limit(50);
 
     if (ticketErr) throw ticketErr;
@@ -26,19 +41,30 @@ export async function GET(request: Request) {
       let peerTel: any[] = [];
 
       if (invId) {
-        // Fetch recent post-repair string telemetry
-        const { data: stData } = await sb
-          .from("string_telemetry")
-          .select("*")
-          .order("timestamp", { ascending: false })
-          .limit(20);
+        // Fetch string IDs belonging to this inverter
+        const { data: invStrings } = await sb
+          .from("strings")
+          .select("id")
+          .eq("inverter_id", invId);
 
-        postRepairTel = (stData || []).filter((t: any) => {
-          if (!t.timestamp || !ticket.resolved_at) return true;
-          return new Date(t.timestamp).getTime() >= new Date(ticket.resolved_at).getTime() - 15 * 60 * 1000;
-        });
+        const strIds = (invStrings || []).map((s: any) => s.id);
 
-        peerTel = (stData || []).filter((t: any) => (t.current_a || 0) > 0.5);
+        if (strIds.length > 0) {
+          // Fetch recent post-repair string telemetry for this specific inverter's strings
+          const { data: stData } = await sb
+            .from("string_telemetry")
+            .select("*")
+            .in("string_id", strIds)
+            .order("timestamp", { ascending: false })
+            .limit(40);
+
+          postRepairTel = (stData || []).filter((t: any) => {
+            if (!t.timestamp || !ticket.resolved_at) return true;
+            return new Date(t.timestamp).getTime() >= new Date(ticket.resolved_at).getTime() - 15 * 60 * 1000;
+          });
+
+          peerTel = (stData || []).filter((t: any) => (t.current_a || 0) > 0.5);
+        }
       }
 
       const evalResult = verifyTicketResolution({
