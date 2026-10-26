@@ -65,12 +65,16 @@
   html { font-family: var(--font-sans); }
 }
 
-/* Subtle ambient grid for dashboard hero areas */
+/* Crisp ambient grid for dashboard hero & landing areas */
 .bg-grid {
-  background-image: linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px),
-                    linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px);
-  background-size: 64px 64px;
-  mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, #000 50%, transparent 100%);
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+:root:not(.dark) .bg-grid {
+  background-image: linear-gradient(to right, rgba(16, 185, 129, 0.12) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(16, 185, 129, 0.12) 1px, transparent 1px);
 }
 
 /* Chart overrides */

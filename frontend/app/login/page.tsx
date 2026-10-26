@@ -5,79 +5,63 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ShieldCheck, HardHat, Building2, Crown, ArrowRight, Sparkles, UserCheck } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-const DEMO_PERSONAS = [
+const LOGIN_OPTIONS = [
   {
-    role: "epc_admin",
-    name: "EPC Ops Manager",
-    email: "admin@solarassist.dev",
-    description: "Full O&M Command Center & fleet operations",
-    icon: ShieldCheck,
-    badge: "Admin",
-    badgeColor: "bg-blue-500/10 text-blue-600 border-blue-500/30",
+    group: "Administrative",
+    options: [
+      { label: "Admin (admin@solarassist.dev)", email: "admin@solarassist.dev" },
+      { label: "Super Admin (super@solarassist.dev)", email: "super@solarassist.dev" },
+    ],
   },
   {
-    role: "technician",
-    name: "Field Technician",
-    email: "tech1@solarassist.dev",
-    description: "Daily jobs, check-ins, cleaning & field evidence",
-    icon: HardHat,
-    badge: "Technician",
-    badgeColor: "bg-amber-500/10 text-amber-600 border-amber-500/30",
+    group: "Field Technicians (10 Field Technicians)",
+    options: [
+      { label: "Tech 1 · Team A (tech1@solarassist.dev)", email: "tech1@solarassist.dev" },
+      { label: "Tech 2 · Team A (tech2@solarassist.dev)", email: "tech2@solarassist.dev" },
+      { label: "Tech 3 · Team B (tech3@solarassist.dev)", email: "tech3@solarassist.dev" },
+      { label: "Tech 4 · Team B (tech4@solarassist.dev)", email: "tech4@solarassist.dev" },
+      { label: "Tech 5 · Team C (tech5@solarassist.dev)", email: "tech5@solarassist.dev" },
+      { label: "Tech 6 · Team C (tech6@solarassist.dev)", email: "tech6@solarassist.dev" },
+      { label: "Tech 7 · Team D (tech7@solarassist.dev)", email: "tech7@solarassist.dev" },
+      { label: "Tech 8 · Team D (tech8@solarassist.dev)", email: "tech8@solarassist.dev" },
+      { label: "Tech 9 · Team E Pune (tech9@solarassist.dev)", email: "tech9@solarassist.dev" },
+      { label: "Tech 10 · Team E Pune (tech10@solarassist.dev)", email: "tech10@solarassist.dev" },
+    ],
   },
   {
-    role: "client",
-    name: "Client / Asset Owner",
-    email: "client@cilantro.com",
-    description: "Cilantro CHS client dashboard & solar metrics",
-    icon: Building2,
-    badge: "Client Portal",
-    badgeColor: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
+    group: "Client Portals (All 11 Client Accounts)",
+    options: [
+      { label: "Cilantro CHS (client@cilantro.com)", email: "client@cilantro.com" },
+      { label: "Alcove Society (client@alcove.com)", email: "client@alcove.com" },
+      { label: "Manavsthal Tower (client@manavsthal.com)", email: "client@manavsthal.com" },
+      { label: "Dosti Jade CHS (client@dostijade.com)", email: "client@dostijade.com" },
+      { label: "BWSSB Bangalore (client@bwssb.com)", email: "client@bwssb.com" },
+      { label: "Belmac Panvel (client@belmac.com)", email: "client@belmac.com" },
+      { label: "Regalia CHS (client@regalia.com)", email: "client@regalia.com" },
+      { label: "Maitri Anand CHS (client@maitrianand.com)", email: "client@maitrianand.com" },
+      { label: "Sophistica Solar (client@sophistica.com)", email: "client@sophistica.com" },
+      { label: "Patwardhan Hospital (client@patwardhan.com)", email: "client@patwardhan.com" },
+      { label: "Ivy By Courtyard (client@ivy.com)", email: "client@ivy.com" },
+    ],
   },
-  {
-    role: "super_admin",
-    name: "Super Admin",
-    email: "super@solarassist.dev",
-    description: "System administration & global telemetry",
-    icon: Crown,
-    badge: "Super Admin",
-    badgeColor: "bg-purple-500/10 text-purple-600 border-purple-500/30",
-  },
-];
-
-const CLIENT_OPTIONS = [
-  { name: "Cilantro CHS Representative", email: "client@cilantro.com" },
-  { name: "Alcove Society Representative", email: "client@alcove.com" },
-  { name: "Manavsthal Tower Representative", email: "client@manavsthal.com" },
-  { name: "Dosti Jade CHS Representative", email: "client@dostijade.com" },
-  { name: "BWSSB Bangalore Representative", email: "client@bwssb.com" },
-  { name: "Belmac Panvel Representative", email: "client@belmac.com" },
-  { name: "Regalia CHS Representative", email: "client@regalia.com" },
-  { name: "Maitri Anand CHS Representative", email: "client@maitrianand.com" },
-  { name: "Sophistica Solar Representative", email: "client@sophistica.com" },
-  { name: "Patwardhan Hospital Representative", email: "client@patwardhan.com" },
-  { name: "Ivy By Courtyard Representative", email: "client@ivy.com" },
 ];
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState("admin@solarassist.dev");
   const [loading, setLoading] = useState(false);
-  const [activeLoggingEmail, setActiveLoggingEmail] = useState<string | null>(null);
 
   async function handleLogin(targetEmail: string) {
     if (!targetEmail) {
-      toast.error("Please enter an email address");
+      toast.error("Please select or enter an email address");
       return;
     }
 
     setLoading(true);
-    setActiveLoggingEmail(targetEmail);
 
     try {
       const res = await fetch("/api/auth/quick-login", {
@@ -91,7 +75,6 @@ export default function LoginPage() {
       if (!res.ok || !data.success) {
         toast.error(data.error || "Login failed");
         setLoading(false);
-        setActiveLoggingEmail(null);
         return;
       }
 
@@ -104,7 +87,6 @@ export default function LoginPage() {
     } catch (err: any) {
       toast.error(err?.message || "Server error during sign in");
       setLoading(false);
-      setActiveLoggingEmail(null);
     }
   }
 
@@ -114,48 +96,55 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-background">
-      {/* Left Branding Panel */}
-      <div className="hidden lg:flex relative bg-[radial-gradient(ellipse_at_top_left,hsl(150_70%_45%/0.18),transparent_60%),radial-gradient(ellipse_at_bottom_right,hsl(200_80%_50%/0.12),transparent_60%)] bg-slate-950 text-white">
-        <div className="absolute inset-0 bg-grid opacity-20" />
+    <div className="min-h-screen grid lg:grid-cols-2 bg-background dark:bg-slate-950 relative overflow-hidden">
+      {/* Seamless full-screen ambient grid & radial glow for perfect uniform grid lines across both columns */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(16,185,129,0.20),transparent_60%),radial-gradient(ellipse_at_bottom_right,rgba(6,182,212,0.12),transparent_60%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-grid opacity-50 dark:opacity-40 pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col justify-between p-10 w-full">
-          <div className="flex items-center gap-3">
-            <img src="/logo-full-dark-trans.png" alt="Solar Assist Logo" className="h-12 w-auto object-contain" />
+      {/* Left Branding Panel: Rich dark branding panel with emerald radiance in light mode; transparent in dark mode */}
+      <div className="hidden lg:flex relative bg-slate-950 dark:bg-transparent text-white border-r border-slate-900/80 dark:border-none">
+        {/* Emerald radiance in light mode */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(16,185,129,0.25),transparent_60%),radial-gradient(ellipse_at_bottom_right,rgba(6,182,212,0.15),transparent_60%)] dark:hidden pointer-events-none" />
+        {/* Ambient grid lines on left panel in light mode */}
+        <div className="absolute inset-0 bg-grid opacity-50 dark:hidden pointer-events-none" />
+        <div className="relative z-10 flex flex-col justify-between p-12 w-full">
+          {/* Prominently sized single top-left logo */}
+          <div className="flex items-center">
+            <img
+              src="/logo-full-dark-trans.png"
+              alt="Solar Assist"
+              className="h-20 sm:h-24 w-auto object-contain drop-shadow-md"
+            />
           </div>
 
-          <div className="space-y-6 max-w-md">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-
-            </div>
-
-            <h1 className="text-4xl xl:text-5xl font-display font-semibold leading-tight">
+          <div className="space-y-6 max-w-lg">
+            <h1 className="text-4xl xl:text-5xl font-display font-semibold leading-tight tracking-tight">
               Every kilowatt.
               <br />
               Every site.{" "}
-              <span className="text-primary">
+              <span className="text-emerald-400">
                 One platform.
               </span>
             </h1>
 
             <p className="text-slate-300 text-base leading-relaxed">
-              The unified O&amp;M platform for EPCs. Instant passwordless demo access for all roles: Admins, Technicians, and Clients.
+              The unified solar asset management software, powered by intelligent monitoring, proactive maintenance, and coordinated field operations.
             </p>
 
-            <div className="grid grid-cols-3 gap-6 pt-6">
+            <div className="grid grid-cols-3 gap-6 pt-4 border-t border-slate-800/80">
               <div>
-                <div className="text-2xl font-semibold text-primary">10+ <span className="text-slate-400 text-base">MW</span></div>
-                <div className="text-xs text-slate-400 uppercase tracking-wider">Under management</div>
+                <div className="text-2xl font-semibold text-emerald-400">10+ <span className="text-slate-400 text-sm">MW</span></div>
+                <div className="text-xs text-slate-400 uppercase tracking-wider mt-0.5">Under management</div>
               </div>
 
               <div>
-                <div className="text-2xl font-semibold text-primary">98.7%</div>
-                <div className="text-xs text-slate-400 uppercase tracking-wider">Avg PR uptime</div>
+                <div className="text-2xl font-semibold text-emerald-400">98.7%</div>
+                <div className="text-xs text-slate-400 uppercase tracking-wider mt-0.5">Avg PR uptime</div>
               </div>
 
               <div>
-                <div className="text-2xl font-semibold text-primary">&lt; 4h</div>
-                <div className="text-xs text-slate-400 uppercase tracking-wider">Alert → resolve</div>
+                <div className="text-2xl font-semibold text-emerald-400">&lt; 4h</div>
+                <div className="text-xs text-slate-400 uppercase tracking-wider mt-0.5">Alert → resolve</div>
               </div>
             </div>
           </div>
@@ -164,143 +153,73 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right Login & Persona Selection Panel */}
-      <div className="relative flex items-center justify-center p-6 lg:p-12 overflow-y-auto">
-        <div className="absolute top-4 right-4 z-10">
+      {/* Right Sign-in Panel: Cleanly positioned over the unified full-screen ambient grid */}
+      <div className="relative flex items-center justify-center p-6 sm:p-12 bg-emerald-50/30 dark:bg-transparent">
+        {/* Light Mode only: Rich light green ambient hue and enhanced visible grid lines */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.18),transparent_65%),radial-gradient(ellipse_at_bottom_left,rgba(52,211,153,0.12),transparent_65%)] dark:hidden pointer-events-none" />
+        <div className="absolute inset-0 bg-grid opacity-75 dark:hidden pointer-events-none" />
+
+        {/* Ambient Theme Toggle on top right corner */}
+        <div className="absolute top-6 right-6 z-10">
           <ThemeToggle />
         </div>
-        <div className="w-full max-w-xl space-y-6">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-2xl lg:text-3xl font-display font-bold text-foreground">Sign In to Solar Assist</h2>
-              <p className="text-xs text-muted-foreground mt-1">
-                Select a user persona below or enter an email for instant passwordless sign in.
-              </p>
-            </div>
-            <img src="/logo-icon.png" alt="Solar Assist Logo" className="dark:hidden h-10 w-10 object-contain shrink-0" />
-            <img src="/logo-icon-dark-trans.png" alt="Solar Assist Logo" className="hidden dark:block h-10 w-10 object-contain shrink-0" />
+
+        <div className="w-full max-w-sm space-y-6 relative z-10">
+          {/* Centered Heading with signature emerald green */}
+          <div className="text-center">
+            <h2 className="text-2xl font-display font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
+              Sign In to Solar Assist
+            </h2>
           </div>
 
-          {/* Persona Click-to-Login Cards */}
-          <div className="space-y-3">
-            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              1-Click Demo Login (Select Persona)
-            </Label>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {DEMO_PERSONAS.map((persona) => {
-                const Icon = persona.icon;
-                const isCurrentLogging = activeLoggingEmail === persona.email;
-
-                return (
-                  <button
-                    key={persona.email}
-                    type="button"
-                    onClick={() => handleLogin(persona.email)}
-                    disabled={loading}
-                    className="group relative text-left p-4 rounded-xl border bg-card hover:bg-accent/40 hover:border-primary/40 transition-all duration-200 shadow-sm hover:shadow-md flex flex-col justify-between"
-                  >
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="p-2 rounded-lg bg-muted group-hover:bg-primary/10 transition-colors">
-                            <Icon className="h-5 w-5 text-primary" />
-                          </div>
-                          <span className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                            {persona.name}
-                          </span>
-                        </div>
-                        <Badge variant="outline" className={`text-[10px] ${persona.badgeColor}`}>
-                          {persona.badge}
-                        </Badge>
-                      </div>
-
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        {persona.description}
-                      </p>
-                    </div>
-
-                    <div className="mt-3 pt-2 border-t flex items-center justify-between text-xs font-mono text-muted-foreground group-hover:text-foreground">
-                      <span className="break-all">{persona.email}</span>
-                      <span className="text-primary font-sans font-semibold flex items-center gap-1 shrink-0 ml-2">
-                        {isCurrentLogging ? "Signing in..." : "Login"} <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Client Organization Quick Switcher */}
-          <div className="p-4 bg-muted/40 rounded-xl border space-y-2">
-            <Label htmlFor="client-select" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-              <Building2 className="h-3.5 w-3.5 text-primary" /> Quick Client Account Switcher
-            </Label>
-            <div className="flex gap-2">
-              <select
-                id="client-select"
-                className="w-full h-9 px-3 text-xs bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                onChange={(e) => {
-                  if (e.target.value) handleLogin(e.target.value);
-                }}
-                defaultValue=""
-                disabled={loading}
-              >
-                <option value="" disabled>-- Select Client Organization Persona --</option>
-                {CLIENT_OPTIONS.map((c) => (
-                  <option key={c.email} value={c.email}>
-                    {c.name} ({c.email})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="relative flex items-center justify-center">
-            <div className="border-t w-full" />
-            <span className="bg-background px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground shrink-0">
-              Or Sign In With Custom Email
-            </span>
-            <div className="border-t w-full" />
-          </div>
-
-          {/* Passwordless Custom Email Form */}
-          <Card className="border shadow-sm">
+          <Card className="border shadow-lg bg-card/95 backdrop-blur-sm">
             <CardContent className="pt-6">
               <form onSubmit={onSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-xs font-medium">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="e.g. user@solarassist.dev"
+                  <Label htmlFor="login-email" className="text-xs font-medium text-foreground">
+                    Email
+                  </Label>
+                  <select
+                    id="login-email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    required
-                    data-testid="login-email"
-                    className="h-10 text-sm"
+                    disabled={loading}
+                    data-testid="login-email-select"
+                    className="w-full h-10 px-3 text-sm bg-background text-foreground border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary transition-colors cursor-pointer"
+                  >
+                    {LOGIN_OPTIONS.map((grp) => (
+                      <optgroup key={grp.group} label={grp.group}>
+                        {grp.options.map((opt) => (
+                          <option key={opt.email} value={opt.email}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="login-password" className="text-xs font-medium text-muted-foreground">
+                    Password
+                  </Label>
+                  <Input
+                    id="login-password"
+                    type="password"
+                    value="••••••••••••"
+                    disabled
+                    readOnly
+                    className="h-10 text-sm bg-muted/50 cursor-not-allowed select-none text-muted-foreground"
                   />
-                  <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                    <UserCheck className="h-3 w-3 text-emerald-500" /> Password not required. Clicking sign in will instantly authenticate your account.
-                  </p>
                 </div>
 
                 <Button
                   type="submit"
-                  className="w-full h-10 gap-2 font-medium"
+                  className="w-full h-10 font-semibold text-sm transition-all shadow-sm"
                   disabled={loading}
                   data-testid="login-submit"
                 >
-                  {loading ? (
-                    <span>Signing in...</span>
-                  ) : (
-                    <>
-                      <span>Instant Passwordless Sign In</span>
-                      <ArrowRight className="h-4 w-4" />
-                    </>
-                  )}
+                  {loading ? "Signing in..." : "Sign In"}
                 </Button>
               </form>
             </CardContent>
