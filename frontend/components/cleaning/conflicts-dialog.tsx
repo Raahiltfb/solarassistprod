@@ -105,6 +105,8 @@ export function ConflictsDialog({
         cat = "Monthly visit limit";
       } else if (notesLower.includes("batching") || notesLower.includes("group")) {
         cat = "Physical-location batching";
+      } else if (notesLower.includes("unknown cleaning history") || notesLower.includes("unconfigured")) {
+        cat = "Missing configuration";
       }
 
       conflicts.push({

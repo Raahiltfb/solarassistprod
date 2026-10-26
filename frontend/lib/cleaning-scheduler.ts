@@ -364,6 +364,14 @@ export function validateAssignmentConstraint(
     }
   }
 
+  // 5. Unknown Prior Cleaning History Warning (Explicit flag for admin review, non-blocking)
+  if (!site.last_cleaned_on && (!priorCleaningDateStr || priorCleaningDateStr === scheduledDateStr)) {
+    return {
+      state: "warning",
+      notes: "WARNING: Unknown cleaning history. Baseline scheduled from start of period; verify physical service logs.",
+    };
+  }
+
   return { state: "valid", notes: null };
 }
 
@@ -798,6 +806,9 @@ export function generateMonthlyCleaningPlan({
               const constraintValidation = constraintValidations[idx];
 
               let rationale = `Location Cycle batched for ${team.name} on single date ${candidateStr}. Target due: ${vItem.targetDateStr}.`;
+              if (!vItem.site.last_cleaned_on) {
+                rationale += " (Note: Prior cleaning history unrecorded; preventive baseline scheduled).";
+              }
 
               assignments.push({
                 site_id: vItem.site.id,

@@ -35,12 +35,13 @@ export function verifyTestEnvironmentSafety(customUrl?: string): TestEnvironment
     );
   }
 
-  // Check 3: Allowed targets are local mock/embedded databases or explicitly isolated test projects
+  // Check 3: Allowed targets are local mock/embedded databases or explicitly isolated test/staging projects
   const isLocal = targetUrl.startsWith("http://127.0.0.1") || 
                   targetUrl.startsWith("http://localhost") ||
                   targetUrl.startsWith("mock://");
 
-  const isIsolatedTestProject = targetUrl.includes("test") || isLocal;
+  const STAGING_PROJECT_REF = "xpjzuquqehjamqsqshwq";
+  const isIsolatedTestProject = targetUrl.includes("test") || targetUrl.includes(STAGING_PROJECT_REF) || isLocal;
 
   if (!isIsolatedTestProject) {
     throw new Error(
