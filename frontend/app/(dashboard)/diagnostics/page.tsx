@@ -12,11 +12,10 @@ export default async function TechnicalIntelligencePage({
   const { site_id, tab } = await searchParams;
   const sb = await createClient();
 
-  // 1. Fetch user org, sites, and string metadata in parallel
-  const [profileRes, sitesRes, stringsRes] = await Promise.all([
+  // 1. Fetch user org and sites in parallel
+  const [profileRes, sitesRes] = await Promise.all([
     sb.from("profiles").select("org_id, role").single(),
     sb.from("sites").select("*").order("name"),
-    sb.from("strings").select("id, inverter_id, string_index, capacity_kw, status").order("string_index"),
   ]);
 
   const profile = profileRes.data;
@@ -37,18 +36,47 @@ export default async function TechnicalIntelligencePage({
   }
 
   const siteIds = siteList.map((s) => s.id);
-  const allStrings = stringsRes.data ?? [];
+  const CHUNK_SIZE = 50;
 
-  // 2. Fetch inverters, tickets, telemetry, and fleet-wide string telemetry in parallel
-  const [invertersRes, ticketsRes, telemetryRes, fleetStringTelemetryRes] = await Promise.all([
-    sb.from("inverters").select("*").in("site_id", siteIds),
-    sb.from("tickets").select("*").in("site_id", siteIds).eq("status", "resolved"),
+  // Safe chunked query helper for large site lists
+  async function fetchChunkedIn<T>(table: string, column: string, ids: string[], select = "*", applyFilter?: (q: any) => any): Promise<T[]> {
+    if (ids.length === 0) return [];
+    if (ids.length <= CHUNK_SIZE) {
+      let q = sb.from(table).select(select).in(column, ids);
+      if (applyFilter) q = applyFilter(q);
+      const { data } = await q;
+      return (data ?? []) as T[];
+    }
+    const chunks: string[][] = [];
+    for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+      chunks.push(ids.slice(i, i + CHUNK_SIZE));
+    }
+    const chunkResults = await Promise.all(
+      chunks.map(async (c) => {
+        let q = sb.from(table).select(select).in(column, c);
+        if (applyFilter) q = applyFilter(q);
+        const { data } = await q;
+        return (data ?? []) as T[];
+      })
+    );
+    return chunkResults.flat();
+  }
+
+  // 2. Fetch inverters, tickets, telemetry, and fleet-wide string telemetry in parallel with safe chunking
+  const [allInverters, allResolvedTickets, telemetryRes, fleetStringTelemetryRes] = await Promise.all([
+    fetchChunkedIn<any>("inverters", "site_id", siteIds),
+    fetchChunkedIn<any>("tickets", "site_id", siteIds, "*", (q) => q.eq("status", "resolved").order("created_at", { ascending: false }).limit(100)),
     sb.from("telemetry").select("*").order("timestamp", { ascending: false }).limit(500),
     sb.from("string_telemetry").select("string_id, timestamp, voltage_v, current_a, power_kw, status").order("timestamp", { ascending: false }).limit(3000),
   ]);
 
-  const allInverters = invertersRes.data ?? [];
-  const allResolvedTickets = ticketsRes.data ?? [];
+  const allInverterIds = allInverters.map((i) => i.id);
+  const allStrings = await fetchChunkedIn<any>(
+    "strings", 
+    "inverter_id", 
+    allInverterIds, 
+    "id, inverter_id, string_index, capacity_kw, status"
+  );
   const allTelemetry = telemetryRes.data ?? [];
   const fleetStringTelemetry = fleetStringTelemetryRes.data ?? [];
 

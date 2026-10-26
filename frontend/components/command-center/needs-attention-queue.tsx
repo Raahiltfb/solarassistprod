@@ -618,6 +618,14 @@ export function NeedsAttentionQueue({
           </div>
         ) : (
           <div className="space-y-3">
+            {incidents.length >= 100 && (
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/60 border text-xs text-muted-foreground">
+                <span>Displaying top 100 highest-priority active items. Additional resolved or lower-priority items can be viewed in Operations.</span>
+                <Link href="/operations" className="text-primary font-semibold hover:underline flex items-center gap-1 shrink-0 ml-2">
+                  View All Operations <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
+            )}
             {filteredIncidents.map((item) => (
               <div
                 key={item.id}

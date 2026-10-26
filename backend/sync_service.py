@@ -442,6 +442,7 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                 string_map = {s["string_index"]: s["id"] for s in existing_strings}
                 
                 # String Telemetry sync (100% Dynamic & Safe Pruning)
+                string_telemetry_batch = []
                 for st in string_telemetries:
                     string_id = string_map.get(st.string_index)
                     
@@ -471,23 +472,25 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                         }], headers_override={"Prefer": "return=representation"})
                         string_id = res_str[0]["id"]
                         string_map[st.string_index] = string_id
-                        logger.info(f"Dynamically created physical String Index {st.string_index} for Inverter {inv_id}")
-                        
-                    # Sync string telemetry (upsert gracefully)
+                    # Accumulate string telemetry for batch upsert
+                    string_telemetry_batch.append({
+                        "string_id": string_id,
+                        "timestamp": telemetry.timestamp,
+                        "voltage_v": st.voltage_v,
+                        "current_a": st.current_a,
+                        "power_kw": st.power_kw,
+                        "status": st.status
+                    })
+
+                # Batch upsert all active string telemetry for this inverter in one HTTP request
+                if string_telemetry_batch:
                     supabase_post(
                         "string_telemetry", 
-                        [{
-                            "string_id": string_id,
-                            "timestamp": telemetry.timestamp,
-                            "voltage_v": st.voltage_v,
-                            "current_a": st.current_a,
-                            "power_kw": st.power_kw,
-                            "status": st.status
-                        }],
+                        string_telemetry_batch,
                         headers_override={"Prefer": "resolution=ignore-duplicates"},
                         params={"on_conflict": "string_id,timestamp"}
                     )
-                    metrics["string_telemetry_inserted_count"] += 1
+                    metrics["string_telemetry_inserted_count"] += len(string_telemetry_batch)
                 
                 # Update dynamic string count in inverters table
                 dynamic_string_count = len(string_map)

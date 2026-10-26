@@ -20,8 +20,8 @@ export function AlarmIntelligenceCard({ code, oem = "solis", customIntelligence 
     intel.severity === "critical"
       ? "bg-red-500/10 text-red-600 border-red-500/20 dark:text-red-400"
       : intel.severity === "high"
-      ? "bg-orange-500/10 text-orange-600 border-orange-500/20 dark:text-orange-400"
-      : "bg-yellow-500/10 text-yellow-600 border-yellow-500/20 dark:text-yellow-400";
+        ? "bg-orange-500/10 text-orange-600 border-orange-500/20 dark:text-orange-400"
+        : "bg-yellow-500/10 text-yellow-600 border-yellow-500/20 dark:text-yellow-400";
 
   return (
     <Card className="border shadow-sm">

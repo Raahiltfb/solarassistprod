@@ -230,11 +230,16 @@ export default async function DashboardPage() {
     sb
       .from("tickets")
       .select("*, sites(name), alerts:alerts!tickets_alert_id_fkey(id, code, title)")
-      .order("created_at", { ascending: false }),
+      .in("status", ["open", "investigating", "scheduled", "in_progress", "reopened"])
+      .order("priority", { ascending: true }) // p1, p2, p3, p4
+      .order("created_at", { ascending: false })
+      .limit(100),
     sb
       .from("work_orders")
       .select("*, sites(name), profiles!work_orders_technician_id_fkey(full_name)")
-      .order("created_at", { ascending: false }),
+      .in("status", ["draft", "scheduled", "en_route", "in_progress"])
+      .order("created_at", { ascending: false })
+      .limit(100),
     sb
       .from("daily_routes")
       .select("*, profiles!daily_routes_technician_id_fkey(full_name, base_address), route_stops(*, work_orders(*, sites(name)))")
