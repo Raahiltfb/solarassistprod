@@ -11,13 +11,17 @@ import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
+import { verifyTestEnvironmentSafety } from "./scale-test-guard";
 
-const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const URL = process.env.TEST_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const KEY = process.env.TEST_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY!;
 if (!URL || !KEY) {
-  console.error("Missing Supabase env vars. Ensure .env.local is loaded (try `npx dotenv-cli -e .env.local -- yarn seed`).");
+  console.error("Missing Supabase env vars. Ensure .env.test.local is loaded (try `npx dotenv-cli -e .env.test.local -- yarn seed`).");
   process.exit(1);
 }
+// Enforce safety guard before initializing client
+verifyTestEnvironmentSafety(URL);
+
 const sb = createClient(URL, KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 
 async function applySchema() {
