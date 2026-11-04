@@ -253,6 +253,14 @@ function ServiceRequestsContent() {
       });
 
       if (error) {
+        if (
+          error.code === "23505" ||
+          error.message?.includes("idx_work_orders_active_ticket_unique") ||
+          error.message?.includes("duplicate key")
+        ) {
+          toast.warning("An active work order is already assigned to this ticket. Please complete or cancel the existing active work order before dispatching a new one.");
+          return;
+        }
         toast.error(error.message);
         return;
       }

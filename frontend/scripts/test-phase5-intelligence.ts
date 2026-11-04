@@ -52,7 +52,7 @@ async function runPhase5Tests() {
     const normalTimestamps = ["2026-10-06T10:00:00Z", "2026-10-06T10:30:00Z", "2026-10-06T11:00:00Z", "2026-10-06T11:30:00Z"];
     const anomTimestamps = ["2026-10-06T12:00:00Z", "2026-10-06T12:15:00Z", "2026-10-06T12:30:00Z", "2026-10-06T12:45:00Z"];
     const telemetry: any[] = [];
-    
+
     for (const ts of normalTimestamps) {
       telemetry.push(
         { string_id: "str-1", timestamp: ts, voltage_v: 650, current_a: 5.1, power_kw: 3.3 },

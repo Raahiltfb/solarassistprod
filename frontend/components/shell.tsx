@@ -121,9 +121,12 @@ export function Shell({ profile, children }: { profile: Profile; children: React
   const router = useRouter();
 
   async function signOut() {
+    document.cookie = "user-role=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    try {
+      localStorage.removeItem("user-role");
+    } catch (e) {}
     await createClient().auth.signOut();
-    router.replace("/login");
-    router.refresh();
+    window.location.href = "/login";
   }
 
   const items = NAV.filter((n) => n.roles.includes(profile.role));

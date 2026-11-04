@@ -2,32 +2,32 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { createClient as createSbClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = "https://ylnmjvgnjootrkywbcsj.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlsbm1qdmduam9vdHJreXdiY3NqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjk1ODcsImV4cCI6MjA5MzY0NTU4N30.d9VUDRLSsruy7QSXf6GigVaIijkmmSdhP8nObWatB_8";
-const SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlsbm1qdmduam9vdHJreXdiY3NqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2OTU4NywiZXhwIjoyMDkzNjQ1NTg3fQ.955II1P09pciz-r3YQE7ZNWfzcEnkfr0W2oAS5hMGfE";
+const STAGING_URL = "https://xpjzuquqehjamqsqshwq.supabase.co";
+const STAGING_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhwanp1cXVxZWhqYW1xc3FzaHdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5OTI3MzYsImV4cCI6MjA5MzY0NTU4N30.pfWb62_WTMBu0K1V2cu25-Iu6tARTYq2hiawHY0Dnfk";
 
 function getSupabaseUrl(): string {
   const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, "");
-  if (envUrl && envUrl.startsWith("https://")) {
-    return envUrl;
+  const target = (envUrl && envUrl.startsWith("https://")) ? envUrl : STAGING_URL;
+  if (process.env.NODE_ENV === "test" && target.includes("ylnmjvgnjootrkywbcsj")) {
+    throw new Error("CRITICAL SAFETY VIOLATION: Test execution against production Supabase (ylnmjvgnjootrkywbcsj) is prohibited.");
   }
-  return SUPABASE_URL;
+  return target;
 }
 
 function getSupabaseAnonKey(): string {
   const envKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim().replace(/^["']|["']$/g, "");
-  if (envKey && envKey.startsWith("eyJhbGci")) {
+  if (envKey && envKey.length > 20) {
     return envKey;
   }
-  return SUPABASE_ANON_KEY;
+  return STAGING_ANON_KEY;
 }
 
 function getSupabaseServiceKey(): string {
-  const envKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim().replace(/^["']|["']$/g, "");
-  if (envKey && envKey.startsWith("eyJhbGci")) {
+  const envKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.TEST_SUPABASE_SERVICE_ROLE_KEY)?.trim().replace(/^["']|["']$/g, "");
+  if (envKey && envKey.length > 20) {
     return envKey;
   }
-  return SUPABASE_SERVICE_ROLE_KEY;
+  return "";
 }
 
 export async function createClient() {

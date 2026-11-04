@@ -1,0 +1,173 @@
+{
+  "$schema": "SolarAssist Alarm Intelligence Schema V1",
+  "oem": "growatt",
+  "source_document": "Growatt MAX 100-125KTL3-X LV Installation & Operation Manual, Section 7 (Troubleshooting & Error Codes)",
+  "documentation_verified": true,
+  "mappings": {
+    "ERROR_102": {
+      "code": "ERROR_102",
+      "oem_code": "Error 102 (PV Isolation Low)",
+      "title": "Isolation Fault (ISO-F)",
+      "description": "Ground isolation resistance of the PV array is below the safe operational threshold.",
+      "oem_definition": "PV Isolation Low (Error 102). Inverter detected PV array impedance to earth ground is below the permissible safety threshold.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "pv",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Damaged DC cable jacket or rodent chewing",
+        "Moisture in string junction box or MC4 connectors",
+        "Degraded backsheet on solar modules",
+        "Inadequate array bonding or ground fault"
+      ],
+      "recommended_action": "Perform string insulation resistance testing per Growatt service manual. Inspect DC cable runs and replace faulty connectors.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Safety & Isolation",
+          "instruction": "Switch off AC breaker and DC isolators. Follow electrical lockout/tagout protocol."
+        },
+        {
+          "step": 2,
+          "phase": "Visual Inspection",
+          "instruction": "Inspect DC cabling along cable trays and conduit entries for physical abrasions or water intrusion."
+        },
+        {
+          "step": 3,
+          "phase": "Measurements",
+          "instruction": "Disconnect individual strings and use a 1000V insulation resistance tester to pinpoint the grounded string."
+        },
+        {
+          "step": 4,
+          "phase": "Verification",
+          "instruction": "Replace damaged section/connector, re-measure insulation (>1M ohm), and restore inverter power."
+        }
+      ]
+    },
+    "ERROR_106": {
+      "code": "ERROR_106",
+      "oem_code": "Error 106 (AC Voltage Out of Range)",
+      "title": "Grid Overvoltage",
+      "description": "Grid AC voltage exceeded the upper operating threshold configured on the inverter.",
+      "oem_definition": "AC Voltage Out of Range (Error 106). Inverter disconnected from the grid because utility line voltage exceeds grid compliance window.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Grid supply overvoltage from local utility substation",
+        "High impedance on AC feeder cable during peak solar feed-in",
+        "Incorrect inverter grid standard parameter settings"
+      ],
+      "recommended_action": "Monitor utility grid voltage. If persistent, check AC cable gauge and transformer tap settings.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Measurements",
+          "instruction": "Measure AC line-to-line and line-to-neutral voltages at the inverter AC terminals."
+        },
+        {
+          "step": 2,
+          "phase": "Verification",
+          "instruction": "Verify inverter automatically reconnects when utility voltage returns within nominal limits."
+        }
+      ]
+    },
+    "ERROR_108": {
+      "code": "ERROR_108",
+      "oem_code": "Error 108 (Inverter Over Temperature)",
+      "title": "Inverter Overtemperature",
+      "description": "Inverter internal heatsink or ambient temperature exceeded thermal safety cutoff limits.",
+      "oem_definition": "Inverter Over Temperature (Error 108). Internal thermal sensors tripped thermal protection derating or shutdown.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "inverter",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Cooling fan blockage, failure, or dust accumulation",
+        "Direct solar exposure on inverter chassis without sunshade",
+        "Insufficient ventilation clearance around heatsink fins"
+      ],
+      "recommended_action": "Inspect external cooling fans, clean heatsink fins with compressed air, and ensure ventilation clearance.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Safety & Isolation",
+          "instruction": "Allow inverter heatsink to cool down before servicing."
+        },
+        {
+          "step": 2,
+          "phase": "Visual Inspection",
+          "instruction": "Inspect external fans for foreign debris, dust build-up, or mechanical binding."
+        },
+        {
+          "step": 3,
+          "phase": "Measurements",
+          "instruction": "Verify fan supply voltage and test fan rotation in maintenance mode."
+        },
+        {
+          "step": 4,
+          "phase": "Verification",
+          "instruction": "Power on inverter and verify temperature stabilization below 65°C under high load."
+        }
+      ]
+    },
+    "ERROR_101": {
+      "code": "ERROR_101",
+      "oem_code": "Error 101 (Grid Frequency Out of Range)",
+      "title": "Grid Frequency Deviation",
+      "description": "Grid AC frequency deviated outside acceptable operational boundaries (47.5 Hz - 52.0 Hz).",
+      "oem_definition": "Grid Frequency Out of Range (Error 101). Inverter tripped due to utility frequency instability.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Utility grid disturbance or load-shedding transient",
+        "Diesel generator synchronization failure during islanding"
+      ],
+      "recommended_action": "Log frequency event and monitor grid stability.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Measurements",
+          "instruction": "Measure grid frequency with calibrated power quality analyzer."
+        }
+      ]
+    },
+    "ERROR_103": {
+      "code": "ERROR_103",
+      "oem_code": "Error 103 (Residual Current Fault)",
+      "title": "Residual Current Trip (GFCI)",
+      "description": "Inverter ground fault current interrupter detected residual leakage current > 300mA.",
+      "oem_definition": "Residual Current Fault (Error 103). Excessive DC/AC leakage current to ground.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "pv",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Moisture in module junction box",
+        "High parasitic capacitance to ground during morning dew",
+        "Damaged grounding connection"
+      ],
+      "recommended_action": "Check grounding conductor and test leakage current across strings.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Measurements",
+          "instruction": "Measure DC leakage current with AC/DC clamp meter."
+        }
+      ]
+    }
+  }
+}

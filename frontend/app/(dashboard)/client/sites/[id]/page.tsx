@@ -85,7 +85,7 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
     serviceClient.from("inverters").select("*").eq("site_id", site.id),
     serviceClient.from("alerts").select("*").eq("site_id", site.id),
     serviceClient.from("cleaning_logs").select("*").eq("site_id", site.id).order("performed_at", { ascending: false }),
-    serviceClient.from("work_orders").select("*, tickets(before_photo_url, after_photo_url)").eq("site_id", site.id).order("created_at", { ascending: false }),
+    serviceClient.from("work_orders").select("*, tickets(id, status, title)").eq("site_id", site.id).order("created_at", { ascending: false }),
     serviceClient.from("tickets").select("*").eq("site_id", site.id).order("created_at", { ascending: false }),
     serviceClient.from("cleaning_visits").select("*, sites(name)").eq("site_id", site.id).gte("scheduled_date", todayStr).in("status", ["published", "scheduled", "planned", "approved"]).order("scheduled_date", { ascending: true }),
   ]);

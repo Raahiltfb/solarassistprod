@@ -36,9 +36,11 @@ export async function runScaleBenchmarks() {
   process.env.ISOLATED_TEST_ENV = "true";
 
   console.log("========================================================================");
-  console.log("SOLAR ASSIST PHASE 8: SCALE & HARDENING COMPREHENSIVE BENCHMARK SUITE");
-  console.log("Isolated Test Environment: mock://isolated-in-memory-test-db");
-  console.log("Target Tiers: 100 Sites, 500 Sites, 1,000+ Sites");
+  console.log("SOLAR ASSIST PHASE 8: IN-MEMORY ALGORITHMIC & SIMULATED NETWORK BENCHMARKS");
+  console.log("Environment: mock://isolated-in-memory-test-db (NO LIVE DATABASE CALLS)");
+  console.log("Scope: Tests algorithm scaling, in-memory CPU costs, and simulated REST network models.");
+  console.log("NOTE: For live staging database benchmarks, refer to staging-load-harness.ts");
+  console.log("Target In-Memory Tiers: 100 Sites, 500 Sites, 1,000 Sites");
   console.log("========================================================================\n");
 
   const results: BenchmarkResult[] = [];
@@ -175,7 +177,7 @@ export async function runScaleBenchmarks() {
 
   // Final Summary Table
   console.log("========================================================================");
-  console.log("PHASE 8 SCALE & HARDENING: VERIFIED BENCHMARK RESULTS SUMMARY");
+  console.log("PHASE 8: IN-MEMORY & SIMULATED BENCHMARK RESULTS (NOT LIVE DATABASE)");
   console.log("========================================================================");
   console.table(
     results.map((r) => ({

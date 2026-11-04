@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { verifyTicketResolution } from "@/lib/verification-engine";
 
 export async function GET(req: NextRequest) {
@@ -17,16 +17,31 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     }
 
-    const sb = await createClient();
+    const sb = createServiceClient();
 
     // Fetch resolved / completed tickets pending verification or currently under verification.
-    // Order by updated_at ASC to ensure FIFO processing and prevent older tickets from being starved.
+    // Order by created_at ASC to ensure FIFO processing and prevent older tickets from being starved.
     const { data: tickets, error: ticketErr } = await sb
       .from("tickets")
-      .select("*, inverters(*)")
-      .in("status", ["resolved", "completed"])
+      .select(`
+        *,
+        alerts (
+          id,
+          code,
+          title,
+          inverter_id,
+          inverters (
+            id,
+            status,
+            last_seen_at,
+            serial_number,
+            model
+          )
+        )
+      `)
+      .eq("status", "resolved")
       .in("verification_status", ["pending", "under_verification"])
-      .order("updated_at", { ascending: true })
+      .order("created_at", { ascending: true })
       .limit(50);
 
     if (ticketErr) throw ticketErr;
@@ -34,8 +49,9 @@ export async function GET(req: NextRequest) {
     const results = [];
 
     for (const ticket of tickets || []) {
-      const inv = ticket.inverters;
-      const invId = ticket.inverter_id;
+      const alert = Array.isArray(ticket.alerts) ? ticket.alerts[0] : ticket.alerts;
+      const inv = alert?.inverters || null;
+      const invId = alert?.inverter_id || ticket.inverter_id || null;
 
       let postRepairTel: any[] = [];
       let peerTel: any[] = [];
@@ -74,7 +90,7 @@ export async function GET(req: NextRequest) {
           description: ticket.description,
           status: ticket.status,
           priority: ticket.priority,
-          resolved_at: ticket.resolved_at || ticket.updated_at,
+          resolved_at: ticket.resolved_at || ticket.created_at,
           created_at: ticket.created_at,
           reopened_count: ticket.reopened_count || 0,
           verification_status: ticket.verification_status,

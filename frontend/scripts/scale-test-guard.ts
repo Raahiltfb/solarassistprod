@@ -4,10 +4,11 @@
  * Enforces strict isolation rules:
  * 1. Prohibits execution against the production Supabase database.
  * 2. Requires explicit ISOLATED_TEST_ENV=true flag.
- * 3. Enforces synthetic labeling on all generated records.
+ * 3. Enforces target project reference validation for staging.
  */
 
 const PRODUCTION_PROJECT_REF = "ylnmjvgnjootrkywbcsj";
+export const STAGING_PROJECT_REF = "xpjzuquqehjamqsqshwq";
 
 export interface TestEnvironmentConfig {
   isIsolated: boolean;
@@ -15,7 +16,7 @@ export interface TestEnvironmentConfig {
   isMockServer: boolean;
 }
 
-export function verifyTestEnvironmentSafety(customUrl?: string): TestEnvironmentConfig {
+export function verifyTestEnvironmentSafety(customUrl?: string, requireStagingRef = false): TestEnvironmentConfig {
   const targetUrl = customUrl || process.env.TEST_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const isIsolatedEnv = process.env.ISOLATED_TEST_ENV === "true";
 
@@ -23,7 +24,7 @@ export function verifyTestEnvironmentSafety(customUrl?: string): TestEnvironment
   if (!isIsolatedEnv) {
     throw new Error(
       "CRITICAL SAFETY VIOLATION: ISOLATED_TEST_ENV is not set to 'true'. " +
-      "Scale tests are strictly forbidden from running without explicit isolated test environment confirmation."
+      "Scale tests and seeding are strictly forbidden from running without explicit isolated test environment confirmation."
     );
   }
 
@@ -40,12 +41,19 @@ export function verifyTestEnvironmentSafety(customUrl?: string): TestEnvironment
                   targetUrl.startsWith("http://localhost") ||
                   targetUrl.startsWith("mock://");
 
-  const STAGING_PROJECT_REF = "xpjzuquqehjamqsqshwq";
-  const isIsolatedTestProject = targetUrl.includes("test") || targetUrl.includes(STAGING_PROJECT_REF) || isLocal;
+  const hasStagingRef = targetUrl.includes(STAGING_PROJECT_REF);
+  const isIsolatedTestProject = targetUrl.includes("test") || hasStagingRef || isLocal;
 
   if (!isIsolatedTestProject) {
     throw new Error(
       `CRITICAL SAFETY VIOLATION: Target URL (${targetUrl}) is not recognized as an isolated test project or local mock.`
+    );
+  }
+
+  // Check 4: If staging ref is explicitly required (e.g. for staging seed)
+  if (requireStagingRef && !hasStagingRef && !isLocal) {
+    throw new Error(
+      `CRITICAL SAFETY VIOLATION: Target URL (${targetUrl}) must specifically match staging project ${STAGING_PROJECT_REF}.`
     );
   }
 

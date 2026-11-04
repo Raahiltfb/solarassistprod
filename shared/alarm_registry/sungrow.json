@@ -1,0 +1,180 @@
+{
+  "$schema": "SolarAssist Alarm Intelligence Schema V1",
+  "oem": "sungrow",
+  "source_document": "Sungrow String Inverter User Manual (SG110CX/SG125HV), Section 10.2 (Troubleshooting & Fault Codes)",
+  "documentation_verified": true,
+  "mappings": {
+    "FAULT_39": {
+      "code": "FAULT_39",
+      "oem_code": "Fault 39 (Low Insulation Resistance)",
+      "title": "Isolation Fault (ISO-F)",
+      "description": "Ground isolation resistance of the PV array is below the safe operational threshold.",
+      "oem_definition": "Low Insulation Resistance (Fault 39). Inverter impedance measurement detected earth insulation resistance lower than safety standard.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "pv",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "PV array DC cable insulation mechanical damage",
+        "Water ingress in DC string combiner or module connectors",
+        "DC positive or negative conductor pinched against ground structure"
+      ],
+      "recommended_action": "Check PV string insulation resistance to earth per Sungrow manual. Locate and eliminate ground fault on DC side.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Safety & Isolation",
+          "instruction": "Disconnect AC and DC power to the inverter. Ensure DC switch is in OFF position."
+        },
+        {
+          "step": 2,
+          "phase": "Visual Inspection",
+          "instruction": "Inspect DC cables entering inverter gland plate and check for chafing against sharp enclosure edges."
+        },
+        {
+          "step": 3,
+          "phase": "Measurements",
+          "instruction": "Test positive-to-ground and negative-to-ground insulation resistance on each string with megohmmeter."
+        },
+        {
+          "step": 4,
+          "phase": "Verification",
+          "instruction": "Fix isolated string, re-connect DC inputs, and verify Fault 39 auto-clears on reboot."
+        }
+      ]
+    },
+    "FAULT_15": {
+      "code": "FAULT_15",
+      "oem_code": "Fault 15 (Grid Overvoltage)",
+      "title": "Grid Overvoltage",
+      "description": "Grid AC voltage exceeded the upper operating threshold configured on the inverter.",
+      "oem_definition": "Grid Overvoltage (Fault 15). Utility grid AC voltage is consistently higher than upper trip limit.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Grid supply voltage elevated by utility substation tap setting",
+        "AC line resistance too high, causing voltage rise under full solar export"
+      ],
+      "recommended_action": "Measure grid voltage. If grid voltage is normal, inspect AC wiring connections.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Measurements",
+          "instruction": "Check AC terminal voltage across phases using a true-RMS multimeter."
+        },
+        {
+          "step": 2,
+          "phase": "Verification",
+          "instruction": "Confirm inverter resumes grid-tied operation once voltage stabilizes within range."
+        }
+      ]
+    },
+    "FAULT_37": {
+      "code": "FAULT_37",
+      "oem_code": "Fault 37 (Excessive Ambient/Internal Temperature)",
+      "title": "Inverter Overtemperature",
+      "description": "Inverter internal heatsink or ambient temperature exceeded thermal safety cutoff limits.",
+      "oem_definition": "Excessive Ambient/Internal Temperature (Fault 37). Temperature sensor inside inverter chassis tripped over-temperature threshold.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "inverter",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Inverter cooling fan blocked or seized",
+        "Air intake/outlet vents obstructed by vegetation, bird nests, or debris",
+        "Ambient temperature exceeding 60°C in direct unshaded sunlight"
+      ],
+      "recommended_action": "Clear air intake and exhaust vents. Verify fan operation and clean heatsink fins.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Safety & Isolation",
+          "instruction": "Wait for inverter to cool. Keep hands away from hot heatsink surfaces."
+        },
+        {
+          "step": 2,
+          "phase": "Visual Inspection",
+          "instruction": "Clean external air filters and inspect cooling fans for dust accumulation."
+        },
+        {
+          "step": 3,
+          "phase": "Measurements",
+          "instruction": "Use Sungrow iSolarCloud app to read internal temperature sensor channels."
+        },
+        {
+          "step": 4,
+          "phase": "Verification",
+          "instruction": "Verify cooling fan spins up and temperature drops to normal operating range."
+        }
+      ]
+    },
+    "FAULT_10": {
+      "code": "FAULT_10",
+      "oem_code": "Fault 10 (Grid Overfrequency)",
+      "title": "Grid Frequency Deviation",
+      "description": "Grid frequency exceeded maximum permissible frequency threshold.",
+      "oem_definition": "Grid Overfrequency (Fault 10). Frequency higher than grid protection limit.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Grid frequency fluctuation during sudden utility load loss",
+        "Microgrid frequency surge"
+      ],
+      "recommended_action": "Monitor grid frequency status.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Measurements",
+          "instruction": "Verify grid frequency via utility meter or power logger."
+        }
+      ]
+    },
+    "FAULT_43": {
+      "code": "FAULT_43",
+      "oem_code": "Fault 43 (String Reverse Polarity)",
+      "title": "String Reverse Polarity",
+      "description": "One or more DC strings are connected with reversed positive and negative polarity.",
+      "oem_definition": "String Reverse Polarity (Fault 43). Inverter detected negative DC voltage on string input.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "pv",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Improper wiring termination during module installation or cable crimping",
+        "Crossed MC4 connector labeling"
+      ],
+      "recommended_action": "De-energize inverter DC disconnect immediately. Use DC voltmeter to identify and correct reversed string.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Safety & Isolation",
+          "instruction": "Open DC isolator under zero load conditions."
+        },
+        {
+          "step": 2,
+          "phase": "Measurements",
+          "instruction": "Measure Voc of each string input. Confirm positive polarity on positive lead."
+        },
+        {
+          "step": 3,
+          "phase": "Verification",
+          "instruction": "Correct wiring, re-plug MC4 connector, and verify polarity before switching on DC."
+        }
+      ]
+    }
+  }
+}

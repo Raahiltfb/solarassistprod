@@ -26,7 +26,6 @@ export async function POST(req: Request) {
     let title = "[DEMO SIMULATION] Inverter Isolation Fault & Critical Shutdown";
     let severity: "critical" | "high" | "medium" | "low" = "critical";
     let description = "Simulated sudden inverter shutdown due to low isolation resistance on DC bus.";
-    let requiresTechnician = true;
 
     if (scenario === "string_underperformance") {
       code = "SUNGROW_STR_03";
@@ -38,7 +37,6 @@ export async function POST(req: Request) {
       title = "[DEMO SIMULATION] Ambiguous Telemetry Anomaly (Sensor Drift)";
       severity = "medium";
       description = "Simulated ambiguous voltage telemetry mismatch across phase R and phase S.";
-      requiresTechnician = false;
     } else if (scenario === "grid_failure") {
       code = "GRID_OUTAGE_01";
       title = "[DEMO SIMULATION] External Grid Failure (DISCOM Downtime)";
@@ -87,7 +85,6 @@ export async function POST(req: Request) {
         title,
         severity,
         description,
-        requires_technician: requiresTechnician,
         status: "open",
         triggered_at: new Date().toISOString(),
       })

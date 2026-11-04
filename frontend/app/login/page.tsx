@@ -18,6 +18,22 @@ const LOGIN_OPTIONS = [
     ],
   },
   {
+    group: "EPC A (200 Sites)",
+    options: [
+      { label: "EPC A Admin (admin@epca-solar.dev)", email: "admin@epca-solar.dev" },
+      { label: "EPC A Technician (tech-epca-1@epca-solar.dev)", email: "tech-epca-1@epca-solar.dev" },
+      { label: "EPC A Client (client-epca-1@epca-solar.dev)", email: "client-epca-1@epca-solar.dev" },
+    ],
+  },
+  {
+    group: "EPC B (200 Sites)",
+    options: [
+      { label: "EPC B Admin (admin@epcb-solar.dev)", email: "admin@epcb-solar.dev" },
+      { label: "EPC B Technician (tech-epcb-1@epcb-solar.dev)", email: "tech-epcb-1@epcb-solar.dev" },
+      { label: "EPC B Client (client-epcb-1@epcb-solar.dev)", email: "client-epcb-1@epcb-solar.dev" },
+    ],
+  },
+  {
     group: "Field Technicians (10 Field Technicians)",
     options: [
       { label: "Tech 1 · Team A (tech1@solarassist.dev)", email: "tech1@solarassist.dev" },
@@ -54,6 +70,13 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("admin@solarassist.dev");
   const [loading, setLoading] = useState(false);
+
+  // Ensure clean session state when landing on login page
+  useState(() => {
+    if (typeof document !== "undefined") {
+      document.cookie = "user-role=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    }
+  });
 
   async function handleLogin(targetEmail: string) {
     if (!targetEmail) {
@@ -221,6 +244,69 @@ export default function LoginPage() {
                 >
                   {loading ? "Signing in..." : "Sign In"}
                 </Button>
+
+                <div className="pt-3 border-t border-border/50">
+                  <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 text-center">
+                    Quick Operational Roles
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      id="quick-login-sa"
+                      disabled={loading}
+                      className="text-xs h-8"
+                      onClick={() => handleLogin("admin@solarassist.dev")}
+                    >
+                      Solar Assist Fleet
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      id="quick-login-epca"
+                      disabled={loading}
+                      className="text-xs h-8 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/10"
+                      onClick={() => handleLogin("admin@epca-solar.dev")}
+                    >
+                      EPC A (200 Sites)
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      id="quick-login-epcb"
+                      disabled={loading}
+                      className="text-xs h-8 text-blue-500 border-blue-500/30 hover:bg-blue-500/10"
+                      onClick={() => handleLogin("admin@epcb-solar.dev")}
+                    >
+                      EPC B (200 Sites)
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      id="quick-login-tech"
+                      disabled={loading}
+                      className="text-xs h-8 text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
+                      onClick={() => handleLogin("tech-epca-1@epca-solar.dev")}
+                    >
+                      Technician (EPC A)
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      id="quick-login-client"
+                      disabled={loading}
+                      className="col-span-2 text-xs h-8 text-purple-500 border-purple-500/30 hover:bg-purple-500/10"
+                      onClick={() => handleLogin("client-epca-1@epca-solar.dev")}
+                    >
+                      Client Portal (EPC A)
+                    </Button>
+                  </div>
+                </div>
               </form>
             </CardContent>
           </Card>

@@ -36,9 +36,9 @@ export default async function ClientSitesListPage() {
   let sitesQuery = serviceClient.from("sites").select("*").order("name");
   if (profile.role === "client") {
     if (profile.org_id) {
-      sitesQuery = sitesQuery.or(`client_id.eq.${profile.id},client_org_id.eq.${profile.org_id}`);
+      sitesQuery = sitesQuery.or(`client_id.eq.${profile.id},client_org_id.eq.${profile.org_id},org_id.eq.${profile.org_id}`).limit(50);
     } else {
-      sitesQuery = sitesQuery.eq("client_id", profile.id);
+      sitesQuery = sitesQuery.eq("client_id", profile.id).limit(50);
     }
   }
   const { data: sitesRes } = await sitesQuery;

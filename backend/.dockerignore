@@ -1,0 +1,9 @@
+# Ignore environment, backup, and credential files
+.env
+.env*
+*.backup
+*.bak
+.venv
+__pycache__
+*.pyc
+

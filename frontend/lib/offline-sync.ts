@@ -33,14 +33,28 @@ export function saveOfflineQueue(queue: QueuedOfflineAction[]): void {
 
 export function enqueueOfflineAction(
   type: QueuedOfflineAction["type"],
-  payload: any
+  payload: any,
+  clientActionId?: string
 ): QueuedOfflineAction {
   const queue = getOfflineQueue();
+  const actionId = clientActionId || payload?.client_action_id || `action-${crypto.randomUUID()}`;
+
+  const existingIndex = queue.findIndex((a) => a.id === actionId);
+  if (existingIndex >= 0) {
+    queue[existingIndex] = {
+      ...queue[existingIndex],
+      timestamp: new Date().toISOString(),
+      payload: { ...queue[existingIndex].payload, ...payload, client_action_id: actionId },
+    };
+    saveOfflineQueue(queue);
+    return queue[existingIndex];
+  }
+
   const action: QueuedOfflineAction = {
-    id: `action-${crypto.randomUUID()}`,
+    id: actionId,
     type,
     timestamp: new Date().toISOString(),
-    payload,
+    payload: { ...payload, client_action_id: actionId },
   };
   queue.push(action);
   saveOfflineQueue(queue);
@@ -204,25 +218,41 @@ export async function processOfflineQueue(sb: SupabaseClient): Promise<{
 
         const completedAtIso = p.completedAt || new Date().toISOString();
 
-        const { data: logData, error: logErr } = await sb
-          .from("cleaning_logs")
-          .insert({
-            site_id: p.site_id,
-            work_order_id: p.work_order_id || null,
-            performed_by: p.performed_by || null,
-            performed_at: completedAtIso,
-            remarks: p.remarks || null,
-            safety_photo_url: safetyUrl,
-            before_photo_url: beforeUrl,
-            after_photo_url: afterUrl,
-            damage_observed: Boolean(p.damageObserved),
-            damage_type: p.damageObserved ? p.damageType : null,
-            damage_photo_url: damageUrl,
-          })
-          .select()
-          .single();
+        let executionLogId: string | null = null;
+        if (p.work_order_id) {
+          const { data: existingLog } = await sb
+            .from("cleaning_logs")
+            .select("id")
+            .eq("work_order_id", p.work_order_id)
+            .limit(1)
+            .maybeSingle();
+          if (existingLog) {
+            executionLogId = existingLog.id;
+          }
+        }
 
-        if (logErr) throw logErr;
+        if (!executionLogId) {
+          const { data: logData, error: logErr } = await sb
+            .from("cleaning_logs")
+            .insert({
+              site_id: p.site_id,
+              work_order_id: p.work_order_id || null,
+              performed_by: p.performed_by || null,
+              performed_at: completedAtIso,
+              remarks: p.remarks || null,
+              safety_photo_url: safetyUrl,
+              before_photo_url: beforeUrl,
+              after_photo_url: afterUrl,
+              damage_observed: Boolean(p.damageObserved),
+              damage_type: p.damageObserved ? p.damageType : null,
+              damage_photo_url: damageUrl,
+            })
+            .select()
+            .single();
+
+          if (logErr) throw logErr;
+          executionLogId = logData.id;
+        }
 
         await sb
           .from("sites")
@@ -243,7 +273,7 @@ export async function processOfflineQueue(sb: SupabaseClient): Promise<{
             .from("cleaning_visits")
             .update({
               status: "completed",
-              execution_log_id: logData.id,
+              execution_log_id: executionLogId,
               completed_at: completedAtIso,
               updated_at: completedAtIso,
             })

@@ -163,24 +163,55 @@ export async function processAlertAutomation(
       .select()
       .single();
 
-    if (ticketErr || !newTicket) {
-      return {
-        alert_id: alertId,
-        ticket_id: null,
-        work_order_id: null,
-        decision_class: decision.decision_class,
-        confidence_pct: decision.confidence_pct,
-        reasoning: decision.reasoning,
-        action: "skipped",
-        reason: `Failed to create ticket: ${ticketErr?.message}`,
-      };
+    if (ticketErr) {
+      // Concurrency protection: Handle PostgreSQL unique_violation (23505) gracefully
+      if (
+        ticketErr.code === "23505" ||
+        ticketErr.message?.includes("idx_tickets_active_alert_unique") ||
+        ticketErr.message?.includes("duplicate key")
+      ) {
+        const { data: racedTicket } = await sb
+          .from("tickets")
+          .select("*")
+          .eq("alert_id", alert.id)
+          .in("status", ["open", "in_progress", "on_hold"])
+          .maybeSingle();
+
+        if (racedTicket) {
+          activeTicket = racedTicket;
+          ticketId = racedTicket.id;
+          isNewTicket = false;
+        } else {
+          return {
+            alert_id: alertId,
+            ticket_id: null,
+            work_order_id: null,
+            decision_class: decision.decision_class,
+            confidence_pct: decision.confidence_pct,
+            reasoning: decision.reasoning,
+            action: "skipped",
+            reason: `Unique violation caught but active ticket could not be resolved: ${ticketErr.message}`,
+          };
+        }
+      } else {
+        return {
+          alert_id: alertId,
+          ticket_id: null,
+          work_order_id: null,
+          decision_class: decision.decision_class,
+          confidence_pct: decision.confidence_pct,
+          reasoning: decision.reasoning,
+          action: "skipped",
+          reason: `Failed to create ticket: ${ticketErr?.message}`,
+        };
+      }
+    } else if (newTicket) {
+      ticketId = newTicket.id;
+      isNewTicket = true;
+
+      // Link ticket to alert
+      await sb.from("alerts").update({ ticket_id: ticketId }).eq("id", alert.id);
     }
-
-    ticketId = newTicket.id;
-    isNewTicket = true;
-
-    // Link ticket to alert
-    await sb.from("alerts").update({ ticket_id: ticketId }).eq("id", alert.id);
   }
 
   // If automated job creation is not enabled for this decision class (e.g. INVESTIGATE or ESCALATE), return
@@ -197,74 +228,152 @@ export async function processAlertAutomation(
   }
 
   // 5. Idempotent Work Order Lookup / Creation
-  let activeWO: any = null;
-  const { data: existingWO } = await sb
-    .from("work_orders")
-    .select("*")
-    .eq("ticket_id", ticketId)
-    .in("status", ["draft", "scheduled", "en_route", "in_progress"])
-    .maybeSingle();
+  const todayStr = new Date().toISOString().split("T")[0];
+  const woStatus = "scheduled";
 
-  if (existingWO) {
-    activeWO = existingWO;
-  }
+  const woDesc =
+    `Automated Job Dispatch [${decision.decision_class}]\n` +
+    `Decision Reasoning: ${decision.reasoning}\n` +
+    `Recommended Tech: ${decision.recommended_technician_name || "Unassigned"}\n\n` +
+    (intelligence
+      ? `OEM Definition: ${intelligence.oem_definition}\nRecommended Action: ${intelligence.recommended_action}`
+      : `Field task for alert code ${alert.code}. ${alert.description || ""}`);
 
-  let workOrderId = activeWO?.id || null;
-  let isNewWO = false;
+  const dispatchRes = await dispatchWorkOrderSafely(
+    {
+      org_id: alert.org_id,
+      site_id: alert.site_id,
+      ticket_id: ticketId!,
+      technician_id: decision.recommended_technician_id || null,
+      title: `[${decision.decision_class}] ${alert.title}`,
+      description: woDesc,
+      type: "alarm_investigation",
+      status: woStatus,
+      scheduled_date: todayStr,
+      estimated_duration_mins: priority === "p1" ? 120 : 60,
+    },
+    sb
+  );
 
-  if (!activeWO) {
-    const todayStr = new Date().toISOString().split("T")[0];
-    const woStatus = decision.decision_class === "DISPATCH_IMMEDIATELY" ? "scheduled" : "scheduled";
-
-    const woDesc =
-      `Automated Job Dispatch [${decision.decision_class}]\n` +
-      `Decision Reasoning: ${decision.reasoning}\n` +
-      `Recommended Tech: ${decision.recommended_technician_name || "Unassigned"}\n\n` +
-      (intelligence
-        ? `OEM Definition: ${intelligence.oem_definition}\nRecommended Action: ${intelligence.recommended_action}`
-        : `Field task for alert code ${alert.code}. ${alert.description || ""}`);
-
-    const { data: newWO, error: woErr } = await sb
-      .from("work_orders")
-      .insert({
-        org_id: alert.org_id,
-        site_id: alert.site_id,
-        ticket_id: ticketId,
-        technician_id: decision.recommended_technician_id || null,
-        title: `[${decision.decision_class}] ${alert.title}`,
-        description: woDesc,
-        type: "alarm_investigation",
-        status: woStatus,
-        scheduled_date: todayStr,
-        estimated_duration_mins: priority === "p1" ? 120 : 60,
-      })
-      .select()
-      .single();
-
-    if (woErr || !newWO) {
-      return {
-        alert_id: alertId,
-        ticket_id: ticketId,
-        work_order_id: null,
-        decision_class: decision.decision_class,
-        confidence_pct: decision.confidence_pct,
-        reasoning: decision.reasoning,
-        action: isNewTicket ? "created" : "reused",
-        reason: `Failed to create service request: ${woErr?.message}`,
-      };
-    }
-
-    workOrderId = newWO.id;
-    isNewWO = true;
+  if (dispatchRes.error || !dispatchRes.work_order) {
+    return {
+      alert_id: alertId,
+      ticket_id: ticketId,
+      work_order_id: null,
+      decision_class: decision.decision_class,
+      confidence_pct: decision.confidence_pct,
+      reasoning: decision.reasoning,
+      action: isNewTicket ? "created" : "reused",
+      reason: `Failed to create service request: ${dispatchRes.error}`,
+    };
   }
 
   return {
     alert_id: alertId,
     ticket_id: ticketId,
-    work_order_id: workOrderId,
+    work_order_id: dispatchRes.work_order.id,
     decision_class: decision.decision_class,
     confidence_pct: decision.confidence_pct,
     reasoning: decision.reasoning,
-    action: isNewTicket || isNewWO ? "created" : "reused",
+    action: isNewTicket || dispatchRes.action === "created" ? "created" : "reused",
   };
 }
+
+export interface DispatchWorkOrderParams {
+  org_id: string;
+  site_id: string;
+  ticket_id: string;
+  technician_id?: string | null;
+  title: string;
+  description?: string | null;
+  type?: string;
+  status?: string;
+  scheduled_date?: string | null;
+  estimated_duration_mins?: number;
+}
+
+export interface DispatchWorkOrderResult {
+  work_order: any;
+  action: "created" | "reused";
+  error?: string;
+}
+
+/**
+ * Concurrency-safe, idempotent work order dispatcher.
+ * Handles PostgreSQL unique_violation (23505) on idx_work_orders_active_ticket_unique gracefully,
+ * ensuring competing dispatch requests return the existing canonical active work order without duplicate creation.
+ */
+export async function dispatchWorkOrderSafely(
+  params: DispatchWorkOrderParams,
+  clientOverride?: any
+): Promise<DispatchWorkOrderResult> {
+  const sb = clientOverride || (await createClient());
+
+  // 1. Check existing active work order for this ticket
+  const { data: existingWO } = await sb
+    .from("work_orders")
+    .select("*")
+    .eq("ticket_id", params.ticket_id)
+    .in("status", ["draft", "scheduled", "en_route", "in_progress"])
+    .maybeSingle();
+
+  if (existingWO) {
+    return {
+      work_order: existingWO,
+      action: "reused",
+    };
+  }
+
+  // 2. Attempt insert
+  const { data: newWO, error: woErr } = await sb
+    .from("work_orders")
+    .insert({
+      org_id: params.org_id,
+      site_id: params.site_id,
+      ticket_id: params.ticket_id,
+      technician_id: params.technician_id || null,
+      title: params.title,
+      description: params.description || null,
+      type: params.type || "alarm_investigation",
+      status: params.status || "scheduled",
+      scheduled_date: params.scheduled_date || new Date().toISOString().split("T")[0],
+      estimated_duration_mins: params.estimated_duration_mins || 60,
+    })
+    .select()
+    .single();
+
+  if (woErr) {
+    // 3. Gracefully catch unique_violation (23505) under concurrency race
+    if (
+      woErr.code === "23505" ||
+      woErr.message?.includes("idx_work_orders_active_ticket_unique") ||
+      woErr.message?.includes("duplicate key")
+    ) {
+      const { data: racedWO } = await sb
+        .from("work_orders")
+        .select("*")
+        .eq("ticket_id", params.ticket_id)
+        .in("status", ["draft", "scheduled", "en_route", "in_progress"])
+        .maybeSingle();
+
+      if (racedWO) {
+        return {
+          work_order: racedWO,
+          action: "reused",
+        };
+      }
+    }
+
+    return {
+      work_order: null,
+      action: "reused",
+      error: woErr.message,
+    };
+  }
+
+  return {
+    work_order: newWO,
+    action: "created",
+  };
+}
+

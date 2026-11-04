@@ -18,9 +18,23 @@ logging.basicConfig(
 )
 logger = logging.getLogger("sync_service")
 
-# --- SETTINGS ---
-SUPABASE_URL = os.getenv("NEXT_PUBLIC_SUPABASE_URL") or "https://ylnmjvgnjootrkywbcsj.supabase.co"
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlsbm1qdmduam9vdHJreXdiY3NqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2OTU4NywiZXhwIjoyMDkzNjQ1NTg3fQ.955II1P09pciz-r3YQE7ZNWfzcEnkfr0W2oAS5hMGfE"
+# --- SETTINGS & SAFETY GUARD ---
+PRODUCTION_PROJECT_REF = "ylnmjvgnjootrkywbcsj"
+STAGING_PROJECT_REF = "xpjzuquqehjamqsqshwq"
+
+SUPABASE_URL = os.getenv("NEXT_PUBLIC_SUPABASE_URL") or f"https://{STAGING_PROJECT_REF}.supabase.co"
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or ""
+
+# Safety guard for local development/testing:
+# When executing locally or in test mode, block accidental production targets.
+# In production hosting (where ENV or NODE_ENV == 'production'), allow standard operation.
+env = os.getenv("ENV") or os.getenv("NODE_ENV") or "development"
+if env != "production" and PRODUCTION_PROJECT_REF in SUPABASE_URL:
+    raise RuntimeError(
+        f"CRITICAL SAFETY VIOLATION: Non-production environment ({env}) cannot target production project ({PRODUCTION_PROJECT_REF}). "
+        "Local sync service execution must target staging."
+    )
+
 
 def get_supabase_headers():
     return {

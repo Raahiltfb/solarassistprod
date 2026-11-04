@@ -1,0 +1,11 @@
+# Root Dockerignore: Strictly prohibit credential and backup leakage
+.env
+.env*
+*.backup
+*.bak
+.git
+node_modules
+.next
+.venv
+__pycache__
+

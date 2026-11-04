@@ -18,6 +18,9 @@ node_modules/
 
 # Testing
 /coverage
+test_reports/
+frontend/supabase/.temp/
+frontend/supabase/staging_consolidated_migration.sql
 
 # Next.js
 .next/

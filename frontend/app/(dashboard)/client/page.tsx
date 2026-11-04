@@ -73,9 +73,9 @@ export default async function ClientPortfolioPage() {
   let sitesQuery = serviceClient.from("sites").select("*").order("name");
   if (profile.role === "client") {
     if (profile.org_id) {
-      sitesQuery = sitesQuery.or(`client_id.eq.${profile.id},client_org_id.eq.${profile.org_id}`);
+      sitesQuery = sitesQuery.or(`client_id.eq.${profile.id},client_org_id.eq.${profile.org_id},org_id.eq.${profile.org_id}`).limit(25);
     } else {
-      sitesQuery = sitesQuery.eq("client_id", profile.id);
+      sitesQuery = sitesQuery.eq("client_id", profile.id).limit(25);
     }
   }
   const { data: sitesRes } = await sitesQuery;
@@ -98,7 +98,7 @@ export default async function ClientPortfolioPage() {
       serviceClient.from("inverters").select("*").in("site_id", siteIds),
       serviceClient.from("alerts").select("*").in("site_id", siteIds).order("triggered_at", { ascending: false }).limit(100),
       serviceClient.from("cleaning_logs").select("*, sites(name)").in("site_id", siteIds).order("performed_at", { ascending: false }).limit(25),
-      serviceClient.from("work_orders").select("*, tickets(before_photo_url, after_photo_url)").in("site_id", siteIds).order("created_at", { ascending: false }).limit(25),
+      serviceClient.from("work_orders").select("*, tickets(id, status, title)").in("site_id", siteIds).order("created_at", { ascending: false }).limit(25),
       serviceClient.from("tickets").select("*").in("site_id", siteIds).order("created_at", { ascending: false }).limit(25),
       serviceClient.from("cleaning_visits").select("*, sites(name)").in("site_id", siteIds).gte("scheduled_date", todayStr).in("status", ["published", "scheduled", "planned", "approved"]).order("scheduled_date", { ascending: true }),
     ]);

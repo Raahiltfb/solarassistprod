@@ -3,9 +3,9 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ylnmjvgnjootrkywbcsj.supabase.co";
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlsbm1qdmduam9vdHJreXdiY3NqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjk1ODcsImV4cCI6MjA5MzY0NTU4N30.d9VUDRLSsruy7QSXf6GigVaIijkmmSdhP8nObWatB_8";
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlsbm1qdmduam9vdHJreXdiY3NqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2OTU4NywiZXhwIjoyMDkzNjQ1NTg3fQ.955II1P09pciz-r3YQE7ZNWfzcEnkfr0W2oAS5hMGfE";
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://xpjzuquqehjamqsqshwq.supabase.co";
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 const DEFAULT_PASSWORD = "Solar@12345";
 
@@ -45,41 +45,26 @@ export async function POST(req: Request) {
       .ilike("email", cleanEmail)
       .maybeSingle();
 
-    // 2. Authenticate user with default password
-    let { data: authData, error: authErr } = await supabaseServer.auth.signInWithPassword({
-      email: cleanEmail,
-      password: DEFAULT_PASSWORD,
-    });
+    // 2. Authenticate user with password (try baseline then simulation passwords)
+    const passwordsToTry = [DEFAULT_PASSWORD, "Simulation@12345"];
+    let authData: any = null;
+    let authErr: any = null;
 
-    // If login failed, try ensuring the user password in Auth DB via admin key
-    if (authErr || !authData.user) {
-      const { data: usersData } = await adminClient.auth.admin.listUsers();
-      const existingAuthUser = usersData.users.find((u) => u.email?.toLowerCase() === cleanEmail);
-
-      if (existingAuthUser) {
-        await adminClient.auth.admin.updateUserById(existingAuthUser.id, {
-          password: DEFAULT_PASSWORD,
-          email_confirm: true,
-        });
-      } else {
-        // Create auth user if missing
-        await adminClient.auth.admin.createUser({
-          email: cleanEmail,
-          password: DEFAULT_PASSWORD,
-          email_confirm: true,
-        });
-      }
-
-      // Retry sign in
-      const retry = await supabaseServer.auth.signInWithPassword({
+    for (const pwd of passwordsToTry) {
+      const res = await supabaseServer.auth.signInWithPassword({
         email: cleanEmail,
-        password: DEFAULT_PASSWORD,
+        password: pwd,
       });
-
-      if (retry.error) {
-        return NextResponse.json({ error: retry.error.message || "Failed to sign in" }, { status: 400 });
+      if (res.data?.user) {
+        authData = res.data;
+        authErr = null;
+        break;
       }
-      authData = retry.data;
+      authErr = res.error;
+    }
+
+    if (authErr || !authData?.user) {
+      return NextResponse.json({ error: authErr?.message || "Failed to sign in" }, { status: 400 });
     }
 
     if (!profile && authData?.user?.id) {
