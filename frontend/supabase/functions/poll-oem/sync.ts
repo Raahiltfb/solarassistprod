@@ -51,12 +51,14 @@ export async function pollAndSyncAll(supabaseUrl: string, supabaseKey: string, t
       error_count: 1,
     })
     .eq("status", "running")
+    .neq("trigger_source", "distributed_lock")
     .lt("started_at", staleCutoff);
 
   const { data: runningRuns } = await supabase
     .from("sync_runs")
     .select("id, started_at")
     .eq("status", "running")
+    .neq("trigger_source", "distributed_lock")
     .gte("started_at", staleCutoff);
 
   if (runningRuns && runningRuns.length > 0) {
@@ -104,19 +106,24 @@ export async function pollAndSyncAll(supabaseUrl: string, supabaseKey: string, t
   }
 
   try {
-    // 1. Fetch active integrations
+    // 1. Fetch active integrations (strictly isolated to Solis; Feston handled by Python multi-OEM worker)
     const { data: integrations, error: integErr } = await supabase
       .from("oem_integrations")
       .select("*")
-      .eq("is_active", true);
+      .eq("is_active", true)
+      .eq("provider", "solis");
 
     if (integErr) throw integErr;
-    console.log(`Found ${integrations?.length || 0} active OEM integration(s)`);
+    console.log(`Found ${integrations?.length || 0} active Solis integration(s)`);
 
     const activeMappedSiteIds = new Set<string>();
 
     for (const integ of (integrations || [])) {
       const provider = integ.provider;
+      if (provider !== "solis") {
+        console.warn(`Edge Function poll-oem only supports Solis. Skipping provider: ${provider}`);
+        continue;
+      }
       const orgId = integ.org_id;
       const config = integ.config || {};
       const plantsMapping = config.plants || [];

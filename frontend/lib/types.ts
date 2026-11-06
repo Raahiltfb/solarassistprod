@@ -78,7 +78,7 @@ export interface StringEntity {
   id: string;
   inverter_id: string;
   string_index: number;
-  modules_count: number;
+  modules_count?: number | null;
   capacity_kw: number;
   status: "ok" | "underperforming" | "fault";
 }

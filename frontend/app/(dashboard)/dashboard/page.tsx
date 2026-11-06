@@ -247,7 +247,7 @@ export default async function DashboardPage() {
     sb.from("profiles").select("*").eq("role", "technician").order("full_name"),
     sb.from("alerts").select("*, sites(name)").order("triggered_at", { ascending: false }).limit(50),
     sb.from("cleaning_logs").select("*, sites(name)").order("performed_at", { ascending: false }).limit(10),
-    sb.from("sync_runs").select("*").order("started_at", { ascending: false }).limit(10),
+    sb.from("sync_runs").select("*").neq("trigger_source", "distributed_lock").order("started_at", { ascending: false }).limit(10),
     sb.from("cleaning_visits").select("*, sites(name)").eq("cycle_period", currentCyclePeriod),
   ]);
 
@@ -263,7 +263,11 @@ export default async function DashboardPage() {
   // "Skipped: another run in progress" rows are overlap guards, not failures; "running" rows are in flight.
   const latestSyncRun =
     (syncRunsRes.data ?? []).find(
-      (r: any) => r.status !== "running" && !(r.error_message || "").startsWith("Skipped")
+      (r: any) =>
+        r.trigger_source !== "distributed_lock" &&
+        r.oem !== "system_lock" &&
+        r.status !== "running" &&
+        !(r.error_message || "").startsWith("Skipped")
     ) ?? null;
   const canonicalVisits = canonicalVisitsRes.data ?? [];
 

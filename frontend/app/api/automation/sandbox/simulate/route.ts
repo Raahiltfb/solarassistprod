@@ -26,6 +26,7 @@ export async function POST(req: Request) {
     let title = "[DEMO SIMULATION] Inverter Isolation Fault & Critical Shutdown";
     let severity: "critical" | "high" | "medium" | "low" = "critical";
     let description = "Simulated sudden inverter shutdown due to low isolation resistance on DC bus.";
+    let requiresTechnician = true;
 
     if (scenario === "string_underperformance") {
       code = "SUNGROW_STR_03";
@@ -85,6 +86,7 @@ export async function POST(req: Request) {
         title,
         severity,
         description,
+        requires_technician: requiresTechnician,
         status: "open",
         triggered_at: new Date().toISOString(),
       })

@@ -1,0 +1,533 @@
+{
+  "$schema": "SolarAssist Alarm Intelligence Schema V1",
+  "oem": "feston",
+  "source_document": "Feston / Deye Hybrid & String Inverter User Manual & DeyeCloud / SolarOS Fault Protocol",
+  "documentation_verified": true,
+  "mappings": {
+    "F18": {
+      "code": "F18",
+      "oem_code": "F18 (AC OverCurrent Hardware)",
+      "title": "AC Overcurrent Fault",
+      "description": "Inverter output AC current exceeded hardware safety limit.",
+      "oem_definition": "AC OverCurrent Fault F18. Hardware circuit detected instantaneous or sustained inverter AC output current exceeding safety limits.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "inverter",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Sudden heavy load connection or short circuit on AC distribution",
+        "Grid voltage surge or phase fluctuation",
+        "Inverter internal IGBT module or sensor failure"
+      ],
+      "recommended_action": "Check AC breaker and distribution load. Inspect inverter AC output terminals and restart after checking line impedance.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Safety & Isolation",
+          "instruction": "Isolate AC breaker and DC isolator switches. Wait 5 minutes for bus capacitors to discharge."
+        },
+        {
+          "step": 2,
+          "phase": "Inspection",
+          "instruction": "Check AC wiring terminals for loose connections, burnt marks, or line-to-line shorts."
+        },
+        {
+          "step": 3,
+          "phase": "Verification",
+          "instruction": "Measure AC line impedance and grid voltage before re-energizing inverter."
+        }
+      ]
+    },
+    "F20": {
+      "code": "F20",
+      "oem_code": "F20 (DC OverCurrent Hardware)",
+      "title": "DC Overcurrent Fault",
+      "description": "DC input current on PV or battery port exceeded allowable hardware limit.",
+      "oem_definition": "DC OverCurrent Fault F20. Hardware sensor detected excessive DC current on MPPT or battery inputs.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "pv",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "PV string over-sizing beyond inverter MPPT current specification",
+        "Short circuit on DC array or damaged string wiring",
+        "Battery charge/discharge current surge"
+      ],
+      "recommended_action": "Measure DC string operating currents using a DC clamp meter. Verify PV array module matching against inverter rating.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Safety & Isolation",
+          "instruction": "Switch off DC isolator and open string fuses."
+        },
+        {
+          "step": 2,
+          "phase": "Measurements",
+          "instruction": "Measure short-circuit current (Isc) and open-circuit voltage (Voc) of each string."
+        }
+      ]
+    },
+    "F22": {
+      "code": "F22",
+      "oem_code": "F22 (TZ EmergStop Fault)",
+      "title": "Hardware Emergency Stop (TZ Fault)",
+      "description": "Inverter hardware protection circuit triggered an immediate emergency shutdown.",
+      "oem_definition": "TZ EmergStop Fault F22. Hardware trip-zone protection detected severe hardware anomaly or emergency stop trigger.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "inverter",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Inverter internal bridge driver fault or power stage failure",
+        "Severe external electrical transient on AC grid or DC bus"
+      ],
+      "recommended_action": "Perform full power cycle of inverter. If fault persists on reboot, contact OEM support for main control board or power unit inspection.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Reboot Check",
+          "instruction": "Perform full power down: AC off, DC off, battery off. Wait 10 minutes and re-energize."
+        }
+      ]
+    },
+    "F23": {
+      "code": "F23",
+      "oem_code": "F23 (AC Leakage Current / GFCI)",
+      "title": "AC Leakage Current Fault (GFCI)",
+      "description": "Residual ground leakage current exceeded safety threshold.",
+      "oem_definition": "GFCI Fault F23. Inverter residual current monitoring unit detected leakage current exceeding 300mA or sudden jump over 30mA.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "electrical",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Damaged PV cable insulation in contact with grounded metal frame",
+        "Moisture condensation in combiner boxes, MC4 connectors, or AC conduit",
+        "Module micro-cracks with moisture infiltration",
+        "Improper grounding bonding between AC neutral and earth"
+      ],
+      "recommended_action": "Perform ground leakage and isolation tests across individual strings. Check moisture inside enclosures.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Safety & Isolation",
+          "instruction": "De-energize system. Do not touch exposed metal frames during active leakage alarm."
+        },
+        {
+          "step": 2,
+          "phase": "String Isolation",
+          "instruction": "Disconnect strings one by one to isolate the branch causing leakage."
+        }
+      ]
+    },
+    "F24": {
+      "code": "F24",
+      "oem_code": "F24 (DC Insulation Fault)",
+      "title": "DC Insulation Resistance Fault (ISO)",
+      "description": "PV array insulation resistance to earth ground is below the permissible limit.",
+      "oem_definition": "DC Insulation Fault F24. PV array insulation resistance to earth ground is lower than the safety threshold (typically < 100k ohm).",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "pv",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "PV cable sheath pinched or worn against sharp racking edges",
+        "Water or condensation inside DC connector or junction box",
+        "Rodent damage to DC string wiring runs"
+      ],
+      "recommended_action": "Use a 1000V DC insulation megohmmeter to test resistance of each string (positive to earth, negative to earth). Inspect wiring runs.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "String Megger Testing",
+          "instruction": "Disconnect string MC4 connectors from inverter. Megger test each string conductor to array ground."
+        },
+        {
+          "step": 2,
+          "phase": "Cable Repair",
+          "instruction": "Locate compromised cable section, replace connector/wire, and re-test for >1M ohm before reconnecting."
+        }
+      ]
+    },
+    "F26": {
+      "code": "F26",
+      "oem_code": "F26 (DC Bus Unbalance Fault)",
+      "title": "DC Bus Unbalance Fault",
+      "description": "DC bus positive and negative half-voltages show abnormal imbalance.",
+      "oem_definition": "DC Bus Unbalance Fault F26. Internal DC bus capacitor split voltage difference exceeds permissible tolerance.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "inverter",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Degraded electrolytic DC bus capacitor",
+        "Severe neutral imbalance or AC grid harmonic distortion",
+        "Internal voltage sensing circuit drift"
+      ],
+      "recommended_action": "Inspect grid neutral connection. If grid is balanced, internal inverter bus capacitors require OEM bench inspection.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Grid Neutral Check",
+          "instruction": "Check AC neutral connection and ground voltage at the inverter AC terminal block."
+        }
+      ]
+    },
+    "F29": {
+      "code": "F29",
+      "oem_code": "F29 (Parallel CAN Fault)",
+      "title": "Parallel CAN Communication Fault",
+      "description": "Communication link between parallel inverter units is interrupted.",
+      "oem_definition": "Parallel CAN Fault F29. CAN bus communication packet loss or timeout between master and slave inverters in a parallel cluster.",
+      "operational_interpretation": {
+        "severity": "medium",
+        "category": "communication",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Loose or damaged RJ45 CAN parallel cable",
+        "Parallel termination dip switch set incorrectly on end unit",
+        "Master/slave parallel address conflict in system settings"
+      ],
+      "recommended_action": "Check RJ45 parallel communication cables between inverters. Ensure termination resistors are enabled only on terminal inverters.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Cable & Termination Check",
+          "instruction": "Reseat CAN cables. Verify DIP switch termination settings on first and last inverter."
+        }
+      ]
+    },
+    "F35": {
+      "code": "F35",
+      "oem_code": "F35 (AC No Utility Fault)",
+      "title": "AC Grid Loss / No Utility (F35)",
+      "description": "Utility grid power is lost or AC circuit breaker is open.",
+      "oem_definition": "AC_NoUtillity_Fault F35. Inverter detected zero AC grid voltage on input lines. Grid outage or AC breaker opened.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "DISCOM / Utility power outage or load shedding",
+        "AC main circuit breaker tripped or maintenance switch open",
+        "Loose AC input wire in external isolator or AC combiner box"
+      ],
+      "recommended_action": "Verify utility grid presence at the AC distribution board. If grid is present, check AC breaker and isolator switches.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Grid Availability Check",
+          "instruction": "Confirm whether the local utility grid is active. Check site main incoming LT breaker."
+        },
+        {
+          "step": 2,
+          "phase": "Auto Recovery",
+          "instruction": "Inverter will automatically synchronize and reconnect 60 seconds after grid voltage returns to normal range."
+        }
+      ]
+    },
+    "F41": {
+      "code": "F41",
+      "oem_code": "F41 (Parallel System Phase Fault)",
+      "title": "Parallel System Phase Loss",
+      "description": "Phase sequence mismatch or missing phase in parallel inverter system.",
+      "oem_definition": "Parallel System Phase Fault F41. Parallel system detected phase sequence inconsistency across units.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "grid",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Phase rotation reversed between master and slave inverters (L1/L2/L3 swapped)",
+        "Single-phase grid brownout or blown line fuse"
+      ],
+      "recommended_action": "Check phase rotation with a phase indicator. Verify matching phase wiring across all parallel units.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Phase Sequence",
+          "instruction": "Check AC terminal sequence (R, S, T / L1, L2, L3) with a digital phase rotation meter."
+        }
+      ]
+    },
+    "F42": {
+      "code": "F42",
+      "oem_code": "F42 (AC Grid Frequency Low)",
+      "title": "AC Grid Low Frequency",
+      "description": "Utility grid frequency dropped below inverter operating limits.",
+      "oem_definition": "AC Line Low Frequency F42. AC grid frequency is lower than the configured low-frequency trip threshold.",
+      "operational_interpretation": {
+        "severity": "medium",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Grid overload or unstable local generator supply",
+        "Grid standard frequency setting parameter mismatch"
+      ],
+      "recommended_action": "Monitor utility grid frequency. Auto-reconnects when frequency normalizes within standard grid limits (47.5 Hz - 50.2 Hz).",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Grid Monitoring",
+          "instruction": "Verify generator or grid frequency. Inverter will reconnect automatically once frequency stabilizes."
+        }
+      ]
+    },
+    "F47": {
+      "code": "F47",
+      "oem_code": "F47 (AC Grid Frequency High)",
+      "title": "AC Grid High Frequency",
+      "description": "Utility grid frequency exceeded inverter operating limits.",
+      "oem_definition": "AC Grid Frequency High F47. AC grid frequency is higher than the configured over-frequency trip threshold.",
+      "operational_interpretation": {
+        "severity": "medium",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Lightly loaded local grid or governor overshoot on backup diesel generator",
+        "Grid standard frequency parameter mismatch"
+      ],
+      "recommended_action": "Monitor grid frequency. Reconnection occurs automatically after frequency stabilizes.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Grid Monitoring",
+          "instruction": "Check generator governor or wait for utility grid stabilization."
+        }
+      ]
+    },
+    "F48": {
+      "code": "F48",
+      "oem_code": "F48 (AC Grid Voltage Low)",
+      "title": "AC Grid Under-Voltage",
+      "description": "Utility grid voltage is below permissible lower operating limit.",
+      "oem_definition": "AC Grid Voltage Low F48. Utility line-to-neutral or line-to-line voltage dropped below low-voltage ride-through threshold.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Grid brownout or distant grid fault",
+        "High voltage drop along long or undersized AC cable run",
+        "Inadequate transformer tap setting at substation"
+      ],
+      "recommended_action": "Measure line voltage at inverter AC terminals. Check AC cable sizing and transformer tap setting if brownout persists.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Voltage Measurement",
+          "instruction": "Measure RMS voltage on all AC phases at the inverter terminals. System auto-reconnects once grid voltage restores."
+        }
+      ]
+    },
+    "F49": {
+      "code": "F49",
+      "oem_code": "F49 (AC Grid Voltage High)",
+      "title": "AC Grid Over-Voltage",
+      "description": "Utility grid voltage exceeded upper permissible limit.",
+      "oem_definition": "AC Grid Voltage High F49. Utility grid voltage exceeded upper trip threshold.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "High grid impedance combined with high solar export during peak sunshine",
+        "Utility distribution transformer tap set too high",
+        "Undersized AC cabling causing severe voltage rise between inverter and PCC"
+      ],
+      "recommended_action": "Measure grid voltage under zero solar export and during full export. Consult utility for transformer tap adjustment if needed.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Grid Voltage Profile",
+          "instruction": "Record voltage rise across AC cable run. Inverter auto-reconnects when voltage returns within parameters."
+        }
+      ]
+    },
+    "F56": {
+      "code": "F56",
+      "oem_code": "F56 (DC Bus Voltage High)",
+      "title": "DC Bus Over-Voltage",
+      "description": "Inverter internal DC bus voltage exceeded upper hardware safety threshold.",
+      "oem_definition": "DC Busbar Voltage High F56. Internal DC bus capacitor voltage exceeded maximum safety limit.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "inverter",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "PV string open circuit voltage (Voc) exceeded inverter maximum input rating under cold weather",
+        "Inverter internal boost circuit or voltage regulation fault"
+      ],
+      "recommended_action": "Check PV string open-circuit voltage with a 1000V DC meter. Verify module temperature coefficients and string sizing.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Voc Measurement",
+          "instruction": "Measure Voc of each PV string under full irradiance. Ensure Voc never exceeds maximum rated inverter voltage."
+        }
+      ]
+    },
+    "F58": {
+      "code": "F58",
+      "oem_code": "F58 (BMS Communication Fault)",
+      "title": "BMS Communication Lost",
+      "description": "Communication link between inverter and Lithium battery BMS has timed out.",
+      "oem_definition": "BMS Communication Fault F58. Inverter CAN/RS485 communication with battery management system timed out or dropped.",
+      "operational_interpretation": {
+        "severity": "medium",
+        "category": "battery",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Loose or disconnected RJ45 BMS communication cable",
+        "BMS protocol baud rate or address mismatch in inverter battery settings",
+        "Battery powered down or entered sleep mode"
+      ],
+      "recommended_action": "Check RJ45 cable between inverter BMS port and battery. Verify battery protocol selection in system settings.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "BMS Cable Check",
+          "instruction": "Reseat communication cable. Check battery power switch is ON and battery status LEDs show normal communication."
+        }
+      ]
+    },
+    "F63": {
+      "code": "F63",
+      "oem_code": "F63 (ARC Fault)",
+      "title": "DC Arc Fault Detected (AFCI)",
+      "description": "Arc-Fault Circuit Interrupter detected series or parallel arcing on DC array.",
+      "oem_definition": "ARC Fault F63. Inverter AFCI module detected electrical arcing signature in the DC circuit.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "pv",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Loose or improperly crimped MC4 connector in PV string",
+        "Damaged or pinched DC cable conductor sparking against rail",
+        "Internal contact arcing in DC disconnect switch"
+      ],
+      "recommended_action": "Thoroughly inspect all DC connectors, junction boxes, and module junction boxes on affected array. Clear fault only after verification.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Physical Array Inspection",
+          "instruction": "Inspect all MC4 connections for signs of overheating, melting, or discoloration."
+        },
+        {
+          "step": 2,
+          "phase": "Manual Reset",
+          "instruction": "Per electrical safety standards, AFCI faults require physical inspection and manual acknowledgement before system clearing."
+        }
+      ]
+    },
+    "F64": {
+      "code": "F64",
+      "oem_code": "F64 (Heatsink OverTemp Fault)",
+      "title": "Heat Sink Over-Temperature",
+      "description": "Internal power heatsink or IGBT temperature exceeded safe thermal threshold.",
+      "oem_definition": "Heatsink Over-temperature Fault F64. Thermal sensors on IGBT module or power transformer exceeded maximum operating temperature.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "inverter",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Inverter cooling fans blocked, failed, or air vents choked with dust",
+        "Direct sunlight exposure or ambient room temperature above 50\u00b0C",
+        "Inadequate clearance around inverter cooling heatsink"
+      ],
+      "recommended_action": "Check cooling fans and clean heatsink air vents. Ensure adequate ventilation clearance around inverter enclosure.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Ventilation Check",
+          "instruction": "Clean air filters and inspect external cooling fan operation. Inverter auto-reconnects once internal temperature drops below 65\u00b0C."
+        }
+      ]
+    },
+    "F25": {
+      "code": "F25",
+      "oem_code": "F25 (DC Feedback Fault)",
+      "title": "DC Injection / Feedback Fault",
+      "description": "Direct current component injected into AC grid output exceeded permissible safety limits.",
+      "oem_definition": "DC_Feedback_Fault F25. Inverter current sensing circuit detected excessive DC component in AC output exceeding IEC/IEEE safety limits.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "electrical",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Internal current transducer sensing offset drift",
+        "Severe AC grid voltage waveform distortion or DC bias from external inductive loads",
+        "Inverter output filter stage degradation"
+      ],
+      "recommended_action": "Perform complete inverter power cycle. If fault persists upon grid reconnection, contact OEM support for transducer calibration.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Power Cycle Verification",
+          "instruction": "Switch off AC breaker, then DC isolator. Wait 5 minutes for bus capacitors to discharge. Power on DC first, then AC breaker."
+        }
+      ]
+    },
+    "F34": {
+      "code": "F34",
+      "oem_code": "F34 (AC Grid Voltage Out of Range)",
+      "title": "AC Grid Voltage Out of Range",
+      "description": "Utility grid voltage is outside the permissible operating window.",
+      "oem_definition": "AC_Grid_Voltage_Fault F34. Utility line voltage is higher or lower than the configured grid standard ride-through window.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Local utility grid fluctuation or line voltage sag/surge",
+        "High grid impedance during peak solar generation causing voltage rise",
+        "Utility distribution transformer tap setting mismatch"
+      ],
+      "recommended_action": "Measure AC line-to-neutral and line-to-line RMS voltages at the inverter terminal block. Inverter auto-reconnects when voltage normalizes.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Voltage Measurement",
+          "instruction": "Verify grid voltage with a true-RMS multimeter. The inverter will automatically resume power generation within 60 seconds of grid normalization."
+        }
+      ]
+    }
+  }
+}

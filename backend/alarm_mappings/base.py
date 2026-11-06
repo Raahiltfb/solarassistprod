@@ -1,16 +1,19 @@
 from typing import Dict, Any
 
 from .solis import SOLIS_ALARM_MAPPING
+from .feston import match_feston_alarm, FESTON_ALARM_MAPPING
 
 def translate_alert(oem: str, raw_code: str, default_title: str) -> dict:
     """Translates raw OEM alarm codes into normalized, human-readable alerts."""
     oem_lower = oem.lower() if oem else ""
-    mapping = {}
     
     if oem_lower == "solis":
-        mapping = SOLIS_ALARM_MAPPING
+        rule = SOLIS_ALARM_MAPPING.get(raw_code)
+    elif oem_lower in ("feston", "solaros"):
+        rule = match_feston_alarm(raw_code, default_title)
+    else:
+        rule = None
         
-    rule = mapping.get(raw_code)
     if rule:
         return {
             "title": rule.get("title", default_title),

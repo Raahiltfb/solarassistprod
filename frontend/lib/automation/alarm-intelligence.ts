@@ -2,6 +2,7 @@
 import solisRegistry from "../../../shared/alarm_registry/solis.json";
 import growattRegistry from "../../../shared/alarm_registry/growatt.json";
 import sungrowRegistry from "../../../shared/alarm_registry/sungrow.json";
+import festonRegistry from "../../../shared/alarm_registry/feston.json";
 
 export interface FieldGuidanceStep {
   step: number;
@@ -39,6 +40,14 @@ const registries: Record<string, { mappings: Record<string, any>; documentation_
     mappings: sungrowRegistry.mappings as Record<string, any>,
     documentation_verified: true,
   },
+  feston: {
+    mappings: festonRegistry.mappings as Record<string, any>,
+    documentation_verified: true,
+  },
+  solaros: {
+    mappings: festonRegistry.mappings as Record<string, any>,
+    documentation_verified: true,
+  },
 };
 
 /**
@@ -53,7 +62,13 @@ export function getAlarmIntelligence(code: string, oem = "solis"): AlarmIntellig
   const normalizedCode = code ? String(code).trim().toUpperCase() : "";
 
   const reg = registries[normalizedOem] || registries.solis;
-  const raw = reg.mappings[normalizedCode] || reg.mappings[code];
+  let raw = reg.mappings[normalizedCode] || reg.mappings[code];
+
+  if (!raw && (normalizedOem === "feston" || normalizedOem === "solaros")) {
+    if (normalizedCode === "ERR5" || normalizedCode === "2") {
+      raw = reg.mappings["F35"];
+    }
+  }
 
   if (raw) {
     const ops = raw.operational_interpretation || {};

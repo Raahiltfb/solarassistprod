@@ -11,6 +11,7 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies
@@ -23,5 +24,9 @@ COPY . /app/
 # Expose port
 EXPOSE 8000
 
-# Start command
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
+# Container healthcheck for orchestrators (targets liveness probe to avoid restarting on external OEM hiccups)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:8000/api/health/live || exit 1
+
+# Start command with graceful shutdown timeout (30s)
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-graceful-shutdown", "30"]

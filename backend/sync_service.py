@@ -7,9 +7,18 @@ from typing import Set
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 
-from adapters.solis import SolisAdapter
-from adapters.base import OemAdapter
-from alarm_mappings import translate_alert
+try:
+    from adapters.solis import SolisAdapter
+    from adapters.feston import FestonAdapter
+    from adapters.base import OemAdapter
+    from alarm_mappings import translate_alert
+    from distributed_lock import DistributedLock
+except ImportError:
+    from backend.adapters.solis import SolisAdapter
+    from backend.adapters.feston import FestonAdapter
+    from backend.adapters.base import OemAdapter
+    from backend.alarm_mappings import translate_alert
+    from backend.distributed_lock import DistributedLock
 
 # Set up logging
 logging.basicConfig(
@@ -26,13 +35,14 @@ SUPABASE_URL = os.getenv("NEXT_PUBLIC_SUPABASE_URL") or f"https://{STAGING_PROJE
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or ""
 
 # Safety guard for local development/testing:
-# When executing locally or in test mode, block accidental production targets.
+# When executing locally or in test mode, block accidental production targets unless explicitly authorized.
 # In production hosting (where ENV or NODE_ENV == 'production'), allow standard operation.
 env = os.getenv("ENV") or os.getenv("NODE_ENV") or "development"
-if env != "production" and PRODUCTION_PROJECT_REF in SUPABASE_URL:
+allow_prod = os.getenv("ALLOW_PRODUCTION_INGESTION", "").lower() in ("true", "1")
+if env != "production" and not allow_prod and PRODUCTION_PROJECT_REF in SUPABASE_URL:
     raise RuntimeError(
         f"CRITICAL SAFETY VIOLATION: Non-production environment ({env}) cannot target production project ({PRODUCTION_PROJECT_REF}). "
-        "Local sync service execution must target staging."
+        "Local sync service execution must target staging unless ALLOW_PRODUCTION_INGESTION=true is explicitly set."
     )
 
 
@@ -83,6 +93,25 @@ def get_adapter_for_integration(integ: dict) -> OemAdapter:
         key_secret = config.get("solis_key_secret") or os.getenv("SOLIS_KEY_SECRET") or "a21fcc244b2f4fe48097ceca92a1c160"
         api_url = config.get("solis_api_url") or os.getenv("SOLIS_API_URL") or "https://www.soliscloud.com:13333"
         return SolisAdapter(key_id=key_id, key_secret=key_secret, api_url=api_url)
+    elif provider in ("feston", "solaros"):
+        app_id = config.get("app_id") or os.getenv("SOLAROS_APP_ID") or "202610131053002"
+        app_secret = config.get("app_secret") or os.getenv("SOLAROS_APP_SECRET") or "a7e3f7b5ab36de3103b76b62798ea2d3"
+        api_url = config.get("api_url") or os.getenv("SOLAROS_API_URL") or "https://india-developer.solaros.com"
+        email = config.get("email") or os.getenv("SOLAROS_EMAIL")
+        username = config.get("username") or os.getenv("SOLAROS_USERNAME")
+        password = config.get("password") or os.getenv("SOLAROS_PASSWORD")
+        access_token = config.get("access_token") or os.getenv("SOLAROS_ACCESS_TOKEN")
+        company_id = config.get("company_id") or (int(os.getenv("SOLAROS_COMPANY_ID")) if os.getenv("SOLAROS_COMPANY_ID") else None)
+        return FestonAdapter(
+            app_id=app_id,
+            app_secret=app_secret,
+            api_url=api_url,
+            email=email,
+            username=username,
+            password=password,
+            access_token=access_token,
+            company_id=company_id
+        )
     else:
         raise ValueError(f"Unsupported provider: {provider}")
 
@@ -196,7 +225,7 @@ def process_alert_automation_python(alert_row: dict):
 STRING_DEVIATION_THRESHOLD = float(os.getenv("STRING_DEVIATION_THRESHOLD") or 0.25)
 MIN_STRING_POWER_KW = 0.1
 
-def analyze_strings_for_anomalies(inv_id, site_id, org_id, string_telemetries, telemetry) -> list:
+def analyze_strings_for_anomalies(inv_id, site_id, org_id, string_telemetries, telemetry, oem: str = "solis") -> list:
     """
     Returns a list of active synthetic alert keys.
     Detects string performance deviations on the FIRST qualifying telemetry cycle,
@@ -251,14 +280,22 @@ def analyze_strings_for_anomalies(inv_id, site_id, org_id, string_telemetries, t
         affected_str = ", ".join([f"String #{a['index']}" for a in anomalous_strings])
         desc = f"Persistent string underperformance: {affected_str} operating {anomalous_strings[0]['deviation']:.1f}% below peer median ({median_power:.2f} kW)."
         
-        supabase_patch("alerts", {
-            "code": code,
-            "title": title,
-            "description": desc,
-            "severity": "high",
-            "requires_technician": True,
-            "recommended_action": "Field investigation required: inspect string DC connections, module shading, or diode failures."
-        }, params={"id": f"eq.{alert['id']}"})
+        try:
+            supabase_patch("alerts", {
+                "code": code,
+                "title": title,
+                "description": desc,
+                "severity": "high",
+                "requires_technician": True,
+                "recommended_action": "Field investigation required: inspect string DC connections, module shading, or diode failures."
+            }, params={"id": f"eq.{alert['id']}"})
+        except Exception:
+            supabase_patch("alerts", {
+                "code": code,
+                "title": title,
+                "description": desc,
+                "severity": "high"
+            }, params={"id": f"eq.{alert['id']}"})
         
         updated = supabase_get("alerts", params={"id": f"eq.{alert['id']}"})
         if updated:
@@ -269,7 +306,7 @@ def analyze_strings_for_anomalies(inv_id, site_id, org_id, string_telemetries, t
         affected_str = ", ".join([f"String #{a['index']}" for a in anomalous_strings])
         desc = f"First-cycle deviation detected: {affected_str} operating {anomalous_strings[0]['deviation']:.1f}% below peer median ({median_power:.2f} kW)."
         
-        supabase_post("alerts", [{
+        synth_payload = {
             "org_id": org_id,
             "site_id": site_id,
             "inverter_id": inv_id,
@@ -279,17 +316,32 @@ def analyze_strings_for_anomalies(inv_id, site_id, org_id, string_telemetries, t
             "severity": "medium",
             "status": "open",
             "triggered_at": telemetry.timestamp,
-            "oem": "solis",
+            "oem": oem,
             "alarm_code": "STRING_DEV_01",
             "category": "performance",
             "is_auto_resolvable": True,
             "requires_technician": False,
             "recommended_action": "Monitor on subsequent telemetry cycles for recovery or persistence."
-        }], headers_override={"Prefer": "return=representation"})
+        }
+        try:
+            supabase_post("alerts", [synth_payload], headers_override={"Prefer": "return=representation"})
+        except Exception:
+            base_synth = {
+                "org_id": org_id,
+                "site_id": site_id,
+                "inverter_id": inv_id,
+                "code": code,
+                "title": title,
+                "description": desc,
+                "severity": "medium",
+                "status": "open",
+                "triggered_at": telemetry.timestamp
+            }
+            supabase_post("alerts", [base_synth], headers_override={"Prefer": "return=representation"})
         
     return active_keys
 
-def process_station_concurrently(station, adapter, plants_mapping, org_id, provider):
+def process_station_concurrently(station, adapter, plants_mapping, org_id, provider, dist_lock=None):
     metrics = {
         "error_count": 0,
         "sites_upserted_count": 0,
@@ -303,33 +355,38 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
     
     plant_id = station.plant_id
     try:
-        # Check mapping
+        if dist_lock:
+            dist_lock.assert_active_owner()
+            
+        # Check mapping: 1. Try dedicated oem_station_mappings table
         mapped_site_id = None
-        for pm in plants_mapping:
-            if str(pm.get("plant_id")) == str(plant_id):
-                mapped_site_id = pm.get("site_id")
-                break
+        try:
+            db_station_map = supabase_get("oem_station_mappings", params={
+                "oem": f"eq.{provider}",
+                "external_station_id": f"eq.{plant_id}"
+            })
+            if db_station_map:
+                mapped_site_id = db_station_map[0].get("site_id")
+        except Exception as e:
+            logger.debug(f"oem_station_mappings lookup skipped or table not yet migrated: {e}")
+
+        # 2. Check plants_mapping in integration config
+        if not mapped_site_id:
+            for pm in plants_mapping:
+                if str(pm.get("plant_id")) == str(plant_id):
+                    mapped_site_id = pm.get("site_id")
+                    break
                 
-        # Validate if the mapped site exists and has the correct name
+        # Validate if the mapped site exists in DB
         is_valid_mapped_site = False
         if mapped_site_id:
             try:
                 site_data = supabase_get("sites", params={"id": f"eq.{mapped_site_id}"})
-                if site_data and site_data[0].get("name") == station.name:
+                if site_data:
                     is_valid_mapped_site = True
             except Exception as e:
                 logger.error(f"Error checking site {mapped_site_id}: {e}")
                 mapped_site_id = None
-        
-        # If not valid or mapped, look up by name in sites table to prevent duplicate names
-        if not is_valid_mapped_site:
-            try:
-                existing_sites = supabase_get("sites", params={"name": f"eq.{station.name}"})
-                if existing_sites:
-                    mapped_site_id = existing_sites[0]["id"]
-                    is_valid_mapped_site = True
-            except Exception as e:
-                logger.error(f"Error searching site by name {station.name}: {e}")
         
         # Populate common site model fields
         site_fields = {
@@ -344,18 +401,32 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
         if station.commissioned_on:
             site_fields["commissioned_on"] = station.commissioned_on
         
+        if dist_lock:
+            dist_lock.assert_active_owner()
+            
         if is_valid_mapped_site:
             # Update (preserve site's org_id assignment)
             supabase_patch("sites", site_fields, params={"id": f"eq.{mapped_site_id}"})
             site_id = mapped_site_id
-            logger.info(f"Updated Site ID: {site_id} for Station '{station.name}'")
+            logger.info(f"Updated Site ID: {site_id} for Station '{station.name}' (External ID: {plant_id})")
         else:
             # Create (set org_id for new site)
             create_site_fields = {**site_fields, "org_id": org_id}
             res_site = supabase_post("sites", [create_site_fields], headers_override={"Prefer": "return=representation"})
             site_id = res_site[0]["id"]
             metrics["sites_upserted_count"] += 1
-            logger.info(f"Created Site ID: {site_id} for Station '{station.name}'")
+            logger.info(f"Created Site ID: {site_id} for Station '{station.name}' (External ID: {plant_id})")
+            
+            # Persist deterministic mapping in oem_station_mappings
+            try:
+                supabase_post("oem_station_mappings", [{
+                    "site_id": site_id,
+                    "oem": provider,
+                    "external_station_id": str(plant_id),
+                    "station_name": station.name
+                }])
+            except Exception as e:
+                logger.debug(f"Failed to record oem_station_mappings entry (schema may be pending): {e}")
             
         metrics["mapped_site_id"] = site_id
         
@@ -372,11 +443,12 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                     "oem_device_id": f"eq.{dev.oem_device_id}"
                 })
                 
+                inv_capacity = dev.capacity_kw if dev.capacity_kw > 0.0 else (station.capacity_kwp or 0.0)
                 inv_fields = {
                     "site_id": site_id,
                     "model": dev.model,
                     "serial_number": dev.serial_number,
-                    "capacity_kw": dev.capacity_kw,
+                    "capacity_kw": inv_capacity,
                     "string_count": dev.string_count,
                     "status": dev.status,
                     "last_seen_at": dev.last_seen_at
@@ -384,6 +456,9 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                 if station.commissioned_on:
                     inv_fields["installed_on"] = station.commissioned_on
                 
+                if dist_lock:
+                    dist_lock.assert_active_owner()
+                    
                 if db_inverters:
                     inv_id = db_inverters[0]["id"]
                     supabase_patch("inverters", inv_fields, params={"id": f"eq.{inv_id}"})
@@ -408,46 +483,77 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                     if telemetry.timestamp and telemetry.timestamp > dev.last_seen_at:
                         supabase_patch("inverters", {"last_seen_at": telemetry.timestamp}, params={"id": f"eq.{inv_id}"})
                     
-                    # Upsert telemetry gracefully handling duplicates
-                    supabase_post(
-                        "telemetry", 
-                        [{
-                            "inverter_id": inv_id,
-                            "timestamp": telemetry.timestamp,
-                            "ac_power_kw": telemetry.ac_power_kw,
-                            "dc_power_kw": telemetry.dc_power_kw,
-                            "energy_kwh": telemetry.energy_kwh,
-                            "efficiency_pct": telemetry.efficiency_pct,
-                            "temperature_c": telemetry.temperature_c,
-                            "daily_generation_kwh": telemetry.daily_generation_kwh,
-                            "total_generation_kwh": telemetry.total_generation_kwh,
-                            "specific_yield": telemetry.specific_yield,
-                            "online_status": telemetry.online_status,
-                            "last_update": telemetry.last_update,
-                            "frequency_hz": telemetry.frequency_hz,
-                            "reactive_power_kvar": telemetry.reactive_power_kvar,
-                            "power_factor": telemetry.power_factor,
-                            "current_r_a": telemetry.current_r_a,
-                            "current_s_a": telemetry.current_s_a,
-                            "current_t_a": telemetry.current_t_a,
-                            "voltage_r_v": telemetry.voltage_r_v,
-                            "voltage_s_v": telemetry.voltage_s_v,
-                            "voltage_t_v": telemetry.voltage_t_v,
-                            "apparent_power_kva": telemetry.apparent_power_kva,
-                            "battery_soc_pct": telemetry.battery_soc_pct,
-                            "battery_soh_pct": telemetry.battery_soh_pct,
-                            "battery_power_kw": telemetry.battery_power_kw,
-                            "battery_voltage_v": telemetry.battery_voltage_v,
-                            "battery_current_a": telemetry.battery_current_a,
-                            "load_power_kw": telemetry.load_power_kw,
-                            "grid_purchased_today_kwh": telemetry.grid_purchased_today_kwh,
-                            "grid_sell_today_kwh": telemetry.grid_sell_today_kwh,
-                            "load_today_kwh": telemetry.load_today_kwh,
-                            "metrics": telemetry.metrics
-                        }],
-                        headers_override={"Prefer": "resolution=ignore-duplicates"},
-                        params={"on_conflict": "inverter_id,timestamp"}
-                    )
+                    # Upsert telemetry gracefully handling duplicates and cross-environment constraints
+                    telemetry_payload = {
+                        "inverter_id": inv_id,
+                        "timestamp": telemetry.timestamp,
+                        "ac_power_kw": telemetry.ac_power_kw,
+                        "dc_power_kw": telemetry.dc_power_kw,
+                        "energy_kwh": telemetry.energy_kwh,
+                        "efficiency_pct": telemetry.efficiency_pct,
+                        "temperature_c": telemetry.temperature_c,
+                        "daily_generation_kwh": telemetry.daily_generation_kwh,
+                        "total_generation_kwh": telemetry.total_generation_kwh,
+                        "specific_yield": telemetry.specific_yield,
+                        "online_status": telemetry.online_status,
+                        "last_update": telemetry.last_update,
+                        "frequency_hz": telemetry.frequency_hz,
+                        "reactive_power_kvar": telemetry.reactive_power_kvar,
+                        "power_factor": telemetry.power_factor,
+                        "current_r_a": telemetry.current_r_a,
+                        "current_s_a": telemetry.current_s_a,
+                        "current_t_a": telemetry.current_t_a,
+                        "voltage_r_v": telemetry.voltage_r_v,
+                        "voltage_s_v": telemetry.voltage_s_v,
+                        "voltage_t_v": telemetry.voltage_t_v,
+                        "apparent_power_kva": telemetry.apparent_power_kva,
+                        "battery_soc_pct": telemetry.battery_soc_pct,
+                        "battery_soh_pct": telemetry.battery_soh_pct,
+                        "battery_power_kw": telemetry.battery_power_kw,
+                        "battery_voltage_v": telemetry.battery_voltage_v,
+                        "battery_current_a": telemetry.battery_current_a,
+                        "load_power_kw": telemetry.load_power_kw,
+                        "grid_purchased_today_kwh": telemetry.grid_purchased_today_kwh,
+                        "grid_sell_today_kwh": telemetry.grid_sell_today_kwh,
+                        "load_today_kwh": telemetry.load_today_kwh,
+                        "metrics": telemetry.metrics
+                    }
+                    if dist_lock:
+                        dist_lock.assert_active_owner()
+                    try:
+                        supabase_post(
+                            "telemetry", 
+                            [telemetry_payload],
+                            headers_override={"Prefer": "resolution=ignore-duplicates"},
+                            params={"on_conflict": "inverter_id,timestamp"}
+                        )
+                    except requests.exceptions.HTTPError as e:
+                        if "42P10" in str(e) or "400" in str(e):
+                            existing = supabase_get("telemetry", params={
+                                "inverter_id": f"eq.{inv_id}",
+                                "timestamp": f"eq.{telemetry.timestamp}"
+                            })
+                            if not existing:
+                                base_payload = {
+                                    "inverter_id": inv_id,
+                                    "timestamp": telemetry.timestamp,
+                                    "ac_power_kw": telemetry.ac_power_kw,
+                                    "dc_power_kw": telemetry.dc_power_kw,
+                                    "energy_kwh": telemetry.energy_kwh,
+                                    "efficiency_pct": telemetry.efficiency_pct,
+                                    "temperature_c": telemetry.temperature_c,
+                                    "daily_generation_kwh": telemetry.daily_generation_kwh,
+                                    "total_generation_kwh": telemetry.total_generation_kwh,
+                                    "specific_yield": telemetry.specific_yield,
+                                    "online_status": telemetry.online_status,
+                                    "last_update": telemetry.last_update
+                                }
+                                try:
+                                    supabase_post("telemetry", [telemetry_payload])
+                                except Exception:
+                                    supabase_post("telemetry", [base_payload])
+                        else:
+                            raise
                     metrics["telemetry_inserted_count"] += 1
                     logger.info(f"Processed Telemetry for Inverter {inv_id}")
                         
@@ -455,6 +561,22 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                 existing_strings = supabase_get("strings", params={"inverter_id": f"eq.{inv_id}"})
                 string_map = {s["string_index"]: s["id"] for s in existing_strings}
                 
+                # Dynamic MPPT Discovery: Seed String 1 if no strings exist yet for this inverter
+                if not string_map:
+                    string_cap = round(inv_capacity / (dev.string_count or 1), 2) if (dev.string_count or 1) > 0 else inv_capacity
+                    str_payload = {
+                        "inverter_id": inv_id,
+                        "string_index": 1,
+                        "capacity_kw": string_cap,
+                        "status": "ok"
+                    }
+                    if getattr(dev, "modules_count", None):
+                        str_payload["modules_count"] = dev.modules_count
+                    res_str = supabase_post("strings", [str_payload], headers_override={"Prefer": "return=representation"})
+                    if res_str:
+                        string_map[1] = res_str[0]["id"]
+                        logger.info(f"Dynamically discovered and created initial String Index 1 for Inverter {inv_id}")
+
                 # String Telemetry sync (100% Dynamic & Safe Pruning)
                 string_telemetry_batch = []
                 for st in string_telemetries:
@@ -476,14 +598,16 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                         
                     # If active but not in DB, create it dynamically
                     if not string_id:
-                        string_cap = round(dev.capacity_kw / (dev.string_count or 8), 2) if (dev.string_count or 8) > 0 else 0.0
-                        res_str = supabase_post("strings", [{
+                        string_cap = round(inv_capacity / (dev.string_count or 1), 2) if (dev.string_count or 1) > 0 else 0.0
+                        str_payload = {
                             "inverter_id": inv_id,
                             "string_index": st.string_index,
-                            "modules_count": 20,
                             "capacity_kw": string_cap,
                             "status": "ok"
-                        }], headers_override={"Prefer": "return=representation"})
+                        }
+                        if getattr(dev, "modules_count", None):
+                            str_payload["modules_count"] = dev.modules_count
+                        res_str = supabase_post("strings", [str_payload], headers_override={"Prefer": "return=representation"})
                         string_id = res_str[0]["id"]
                         string_map[st.string_index] = string_id
                     # Accumulate string telemetry for batch upsert
@@ -498,12 +622,26 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
 
                 # Batch upsert all active string telemetry for this inverter in one HTTP request
                 if string_telemetry_batch:
-                    supabase_post(
-                        "string_telemetry", 
-                        string_telemetry_batch,
-                        headers_override={"Prefer": "resolution=ignore-duplicates"},
-                        params={"on_conflict": "string_id,timestamp"}
-                    )
+                    if dist_lock:
+                        dist_lock.assert_active_owner()
+                    try:
+                        supabase_post(
+                            "string_telemetry", 
+                            string_telemetry_batch,
+                            headers_override={"Prefer": "resolution=ignore-duplicates"},
+                            params={"on_conflict": "string_id,timestamp"}
+                        )
+                    except requests.exceptions.HTTPError as e:
+                        if "42P10" in str(e) or "400" in str(e):
+                            for stb in string_telemetry_batch:
+                                existing_st = supabase_get("string_telemetry", params={
+                                    "string_id": f"eq.{stb['string_id']}",
+                                    "timestamp": f"eq.{stb['timestamp']}"
+                                })
+                                if not existing_st:
+                                    supabase_post("string_telemetry", [stb])
+                        else:
+                            raise
                     metrics["string_telemetry_inserted_count"] += len(string_telemetry_batch)
                 
                 # Update dynamic string count in inverters table
@@ -511,7 +649,7 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                 supabase_patch("inverters", {"string_count": dynamic_string_count}, params={"id": f"eq.{inv_id}"})
                 
                 # Analyze strings for anomalies
-                synth_alerts = analyze_strings_for_anomalies(inv_id, site_id, org_id, string_telemetries, telemetry)
+                synth_alerts = analyze_strings_for_anomalies(inv_id, site_id, org_id, string_telemetries, telemetry, oem=provider)
                 for sa in synth_alerts:
                     all_synthetic_alerts.add(sa)
                     
@@ -549,8 +687,10 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                         
                     existing_alerts = supabase_get("alerts", params=params)
                     if not existing_alerts:
+                        if dist_lock:
+                            dist_lock.assert_active_owner()
                         translated = translate_alert(alert.oem, alert.alarm_code, alert.title)
-                        res_alert = supabase_post("alerts", [{
+                        alert_payload = {
                             "org_id": org_id,
                             "site_id": site_id,
                             "inverter_id": inv_id,
@@ -566,7 +706,22 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                             "is_auto_resolvable": translated.get("is_auto_resolvable", False),
                             "requires_technician": translated.get("requires_technician", True),
                             "recommended_action": translated.get("recommended_action", "")
-                        }], headers_override={"Prefer": "return=representation"})
+                        }
+                        try:
+                            res_alert = supabase_post("alerts", [alert_payload], headers_override={"Prefer": "return=representation"})
+                        except Exception:
+                            base_alert = {
+                                "org_id": org_id,
+                                "site_id": site_id,
+                                "inverter_id": inv_id,
+                                "code": alert.code,
+                                "title": translated.get("title", alert.title),
+                                "description": alert.description + (f" - {translated.get('description')}" if translated.get('description') else ""),
+                                "severity": translated.get("severity", alert.severity),
+                                "status": "open",
+                                "triggered_at": alert.triggered_at
+                            }
+                            res_alert = supabase_post("alerts", [base_alert], headers_override={"Prefer": "return=representation"})
                         metrics["alerts_processed_count"] += 1
                         logger.info(f"Created alert for code {alert.code} under Site {site_id}")
                         
@@ -586,6 +741,8 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                     code_key = f"{db_alert['code']}:{db_alert.get('inverter_id') or ''}"
                     alarm_code_key = f"{db_alert.get('alarm_code') or db_alert['code']}:{db_alert.get('inverter_id') or ''}"
                     if code_key not in active_alert_keys and alarm_code_key not in active_alert_keys:
+                        if dist_lock:
+                            dist_lock.assert_active_owner()
                         now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
                         supabase_patch("alerts", {
                             "status": "resolved",
@@ -629,49 +786,54 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
     return metrics
 
 
-def poll_and_sync_all(trigger_source: str = "manual"):
-    """Polls all active OEM integrations, normalizes data, and cleans up demo data safely."""
+def poll_and_sync_all(trigger_source: str = "manual", oem_filter: str = None):
+    """
+    Polls all active OEM integrations, normalizes data, and persists records safely.
+    Guaranteed concurrency-safe across distributed containers via DistributedLock.
+    Supports oem_filter ('solis' or 'feston') for controlled single-OEM execution.
+    Provides strict failure isolation between OEMs.
+    """
     started_at = datetime.now(timezone.utc)
     
+    # Intra-process lock
     if not sync_lock.acquire(blocking=False):
-        logger.warning("Another sync session is already in progress. Logging skipped cycle.")
-        try:
-            sync_run_payload = {
-                "status": "failed",
-                "oem": "solis",
-                "trigger_source": trigger_source,
-                "started_at": started_at.isoformat(),
-                "completed_at": started_at.isoformat(),
-                "error_message": "Skipped: Another synchronization run was already in progress.",
-                "duration_seconds": 0.0,
-                "error_count": 1
-            }
-            supabase_post("sync_runs", [sync_run_payload])
-        except Exception as e:
-            logger.error(f"Failed to log skipped sync run: {e}")
+        logger.warning("Another sync thread in this process is already in progress. Skipping cycle.")
         return
         
+    dist_lock = None
     sync_run_id = None
     telemetry_inserted_count = 0
     string_telemetry_inserted_count = 0
     alerts_processed_count = 0
-    error_count = 0
+    total_error_count = 0
     stations_fetched_count = 0
     sites_upserted_count = 0
     inverters_linked_count = 0
+    oem_metrics = {}
     
     try:
-        logger.info("Starting sync and data normalization cycle...")
-        
         if not SUPABASE_KEY:
             logger.error("SUPABASE_SERVICE_ROLE_KEY environment variable is not set. Cannot run sync.")
             return
+
+        # Distributed lock across all container instances / workers
+        dist_lock = DistributedLock(
+            supabase_url=SUPABASE_URL,
+            supabase_key=SUPABASE_KEY,
+            lease_seconds=int(os.getenv("SYNC_LOCK_LEASE_SECONDS") or 120),
+            heartbeat_interval=15
+        )
+        if not dist_lock.acquire():
+            logger.warning("Another active worker currently holds the distributed lock. Skipping this invocation.")
+            return
+            
+        logger.info(f"Starting multi-OEM sync cycle (Source: {trigger_source}, Filter: {oem_filter or 'all'})...")
             
         # Create sync_run record in DB
         try:
             sync_run_payload = {
                 "status": "running",
-                "oem": "solis",
+                "oem": oem_filter or "multi_oem",
                 "trigger_source": trigger_source,
                 "started_at": started_at.isoformat(),
                 "sites_processed": 0,
@@ -687,154 +849,170 @@ def poll_and_sync_all(trigger_source: str = "manual"):
                 logger.info(f"Initialized sync_runs tracking record with ID: {sync_run_id}")
         except Exception as e:
             logger.error(f"Failed to initialize sync_runs record: {e}")
-            error_count += 1
+            total_error_count += 1
             
         # 1. Fetch active OEM configurations
-        integrations = supabase_get("oem_integrations", params={"is_active": "eq.true"})
-        logger.info(f"Found {len(integrations)} active OEM integration(s)")
+        all_integrations = supabase_get("oem_integrations", params={"is_active": "eq.true"})
+        integrations = []
+        for integ in all_integrations:
+            raw_p = integ.get("provider")
+            p = "feston" if raw_p == "solaros" else raw_p
+            if oem_filter and p != oem_filter:
+                continue
+            integrations.append(integ)
+            
+        logger.info(f"Found {len(integrations)} active OEM integration(s) matching filter '{oem_filter or 'all'}'")
         
-        # Active mapped site IDs across all integrations to keep after cleanup
-        active_mapped_site_ids: Set[str] = set()
-        
+        # Process each OEM integration in an isolated failure domain
         for integ in integrations:
-            provider = integ.get("provider")
+            raw_provider = integ.get("provider")
+            provider = "feston" if raw_provider == "solaros" else raw_provider
             org_id = integ.get("org_id")
             config = integ.get("config", {})
             plants_mapping = config.get("plants", [])
             
-            logger.info(f"Running adapter sync for {provider} (Integration: {integ['id']})")
+            oem_metrics[provider] = {
+                "status": "pending",
+                "stations_fetched": 0,
+                "sites_upserted": 0,
+                "inverters_linked": 0,
+                "telemetry_inserted": 0,
+                "string_telemetry_inserted": 0,
+                "alerts_processed": 0,
+                "error_count": 0,
+                "error_message": None
+            }
+            
+            logger.info(f"--- Starting isolated sync for OEM '{provider}' (Integration: {integ['id']}) ---")
+            if dist_lock:
+                dist_lock.assert_active_owner()
             
             try:
-                adapter = get_adapter_for_integration(integ)
-            except Exception as e:
-                logger.error(f"Failed to load adapter for provider {provider}: {e}")
-                error_count += 1
-                continue
-                
-            # 2. Get list of solar stations from API
-            try:
-                stations = adapter.list_stations()
-                stations_fetched_count += len(stations)
-                logger.info(f"Adapter returned {len(stations)} station(s) for {provider}")
-            except Exception as e:
-                logger.error(f"Failed to list stations for provider {provider}: {e}")
-                error_count += 1
-                continue
-            
-            # Map to translate plant_id to site_id during the iteration
-            updated_plants_mapping = []
-            
-            # --- CONCURRENT FAN-OUT PROCESSING ---
-            with ThreadPoolExecutor(max_workers=20) as executor:
-                futures = []
-                for station in stations:
-                    futures.append(executor.submit(process_station_concurrently, station, adapter, plants_mapping, org_id, provider))
-                
-                for future in as_completed(futures):
-                    try:
-                        metrics = future.result()
-                        error_count += metrics["error_count"]
-                        sites_upserted_count += metrics["sites_upserted_count"]
-                        inverters_linked_count += metrics["inverters_linked_count"]
-                        telemetry_inserted_count += metrics["telemetry_inserted_count"]
-                        string_telemetry_inserted_count += metrics["string_telemetry_inserted_count"]
-                        alerts_processed_count += metrics["alerts_processed_count"]
-                        
-                        if metrics["mapped_site_id"]:
-                            active_mapped_site_ids.add(metrics["mapped_site_id"])
-                            updated_plants_mapping.append({
-                                "plant_id": metrics["plant_id"], 
-                                "site_id": metrics["mapped_site_id"]
-                            })
-                    except Exception as e:
-                        logger.error(f"Unhandled exception in station worker thread: {e}", exc_info=True)
-                        error_count += 1
-            # --- END FAN-OUT ---
-            
-            # 6. Update configuration plants mapping on Supabase
-            try:
-                supabase_patch("oem_integrations", {
-                    "config": {"plants": updated_plants_mapping},
-                    "last_sync_at": datetime.now(timezone.utc).isoformat()
-                }, params={"id": f"eq.{integ['id']}"})
-                logger.info(f"Integration {integ['id']} updated config successfully.")
-            except Exception as e:
-                logger.error(f"Failed to update oem_integrations config mapping: {e}")
-                error_count += 1
-            
-        # 7. Verification Gate Check
-        # Count unique site mappings actually stored across active configs
-        all_active_configs = supabase_get("oem_integrations", params={"is_active": "eq.true"})
-        current_mapped_site_ids = set()
-        for c in all_active_configs:
-            for p in c.get("config", {}).get("plants", []):
-                s_id = p.get("site_id")
-                if s_id:
-                    current_mapped_site_ids.add(s_id)
-                    
-        # Verification Count Check
-        logger.info(f"Verification Gate: Stations Fetched: {stations_fetched_count} | Unique Sites Mapped: {len(current_mapped_site_ids)}")
-        
-        if stations_fetched_count == 0:
-            logger.warning("Verification gate failed! The API returned 0 total stations (likely an OEM API outage). Cleanup aborted to prevent data loss.")
-            if sync_run_id:
-                supabase_patch("sync_runs", {
-                    "status": "failed",
-                    "completed_at": datetime.now(timezone.utc).isoformat(),
-                    "error_message": "Verification gate failed: OEM API returned 0 stations.",
-                    "error_count": error_count + 1
-                }, params={"id": f"eq.{sync_run_id}"})
-            return
-            
-        if len(current_mapped_site_ids) != stations_fetched_count:
-            logger.warning("Verification gate failed! The number of mapped sites in DB does not match station count. Cleanup aborted.")
-            if sync_run_id:
-                supabase_patch("sync_runs", {
-                    "status": "failed",
-                    "completed_at": datetime.now(timezone.utc).isoformat(),
-                    "error_message": "Verification gate failed: Mapped sites count mismatch.",
-                    "error_count": error_count + 1
-                }, params={"id": f"eq.{sync_run_id}"})
-            return
-            
-        # Verification Passed -> Perform Cleanup of leftover demo sites
-        logger.info("Verification gate passed! Proceeding to remove unmapped demo sites...")
-        
-        all_db_sites = supabase_get("sites")
-        deleted_sites_count = 0
-        
-        for site in all_db_sites:
-            site_id = site["id"]
-            if site_id not in current_mapped_site_ids:
-                logger.info(f"Removing unmapped demo site: '{site.get('name')}' (ID: {site_id})")
                 try:
-                    supabase_delete("sites", params={"id": f"eq.{site_id}"})
-                    deleted_sites_count += 1
+                    adapter = get_adapter_for_integration(integ)
                 except Exception as e:
-                    logger.error(f"Failed to delete demo site {site_id}: {e}")
-                    error_count += 1
+                    logger.error(f"Failed to load adapter for provider {provider}: {e}")
+                    oem_metrics[provider]["status"] = "failed"
+                    oem_metrics[provider]["error_message"] = f"Adapter load error: {e}"
+                    oem_metrics[provider]["error_count"] += 1
+                    total_error_count += 1
+                    continue
+                    
+                # 2. List stations dynamically from OEM API
+                try:
+                    stations = adapter.list_stations()
+                    stations_fetched_count += len(stations)
+                    oem_metrics[provider]["stations_fetched"] = len(stations)
+                    logger.info(f"Discovered {len(stations)} station(s) for {provider}")
+                except Exception as e:
+                    logger.error(f"Failed to list stations for provider {provider}: {e}")
+                    oem_metrics[provider]["status"] = "failed"
+                    oem_metrics[provider]["error_message"] = f"List stations error: {e}"
+                    oem_metrics[provider]["error_count"] += 1
+                    total_error_count += 1
+                    continue
                 
-        logger.info(f"Cleanup finished. Demo Sites removed: {deleted_sites_count}")
-        logger.info("Sync, migration, and verification completed successfully!")
+                updated_plants_mapping = []
+                oem_err_count = 0
+                
+                # --- CONCURRENT FAN-OUT PROCESSING FOR THIS OEM ---
+                with ThreadPoolExecutor(max_workers=20) as executor:
+                    futures = []
+                    for station in stations:
+                        futures.append(executor.submit(process_station_concurrently, station, adapter, plants_mapping, org_id, provider, dist_lock))
+                    
+                    for future in as_completed(futures):
+                        try:
+                            metrics = future.result()
+                            oem_err_count += metrics["error_count"]
+                            sites_upserted_count += metrics["sites_upserted_count"]
+                            inverters_linked_count += metrics["inverters_linked_count"]
+                            telemetry_inserted_count += metrics["telemetry_inserted_count"]
+                            string_telemetry_inserted_count += metrics["string_telemetry_inserted_count"]
+                            alerts_processed_count += metrics["alerts_processed_count"]
+                            
+                            oem_metrics[provider]["sites_upserted"] += metrics["sites_upserted_count"]
+                            oem_metrics[provider]["inverters_linked"] += metrics["inverters_linked_count"]
+                            oem_metrics[provider]["telemetry_inserted"] += metrics["telemetry_inserted_count"]
+                            oem_metrics[provider]["string_telemetry_inserted"] += metrics["string_telemetry_inserted_count"]
+                            oem_metrics[provider]["alerts_processed"] += metrics["alerts_processed_count"]
+                            
+                            if metrics["mapped_site_id"]:
+                                updated_plants_mapping.append({
+                                    "plant_id": metrics["plant_id"], 
+                                    "site_id": metrics["mapped_site_id"]
+                                    })
+                        except Exception as e:
+                            logger.error(f"Unhandled exception in {provider} station worker thread: {e}", exc_info=True)
+                            oem_err_count += 1
+                # --- END FAN-OUT ---
+                
+                oem_metrics[provider]["error_count"] = oem_err_count
+                total_error_count += oem_err_count
+                
+                # Update integration plants mapping on Supabase (preserving existing keys)
+                try:
+                    if dist_lock:
+                        dist_lock.assert_active_owner()
+                    new_config = dict(config)
+                    new_config["plants"] = updated_plants_mapping
+                    supabase_patch("oem_integrations", {
+                        "config": new_config,
+                        "last_sync_at": datetime.now(timezone.utc).isoformat()
+                    }, params={"id": f"eq.{integ['id']}"})
+                    logger.info(f"Integration {integ['id']} ({provider}) updated config successfully.")
+                except Exception as e:
+                    logger.error(f"Failed to update oem_integrations config mapping for {provider}: {e}")
+                    total_error_count += 1
+                    
+                oem_metrics[provider]["status"] = "success" if oem_err_count == 0 else "partial_success"
+                logger.info(f"--- Completed sync for OEM '{provider}': Status = {oem_metrics[provider]['status']} ---")
+                
+            except Exception as oem_unhandled:
+                logger.error(f"Unhandled error in OEM '{provider}' sync cycle: {oem_unhandled}", exc_info=True)
+                oem_metrics[provider]["status"] = "failed"
+                oem_metrics[provider]["error_message"] = str(oem_unhandled)
+                oem_metrics[provider]["error_count"] += 1
+                total_error_count += 1
+                # Execution proceeds to the next OEM in the loop
+            
+        # Determine overall run status
+        succeeded_oems = [o for o, m in oem_metrics.items() if m["status"] in ("success", "partial_success")]
+        failed_oems = [o for o, m in oem_metrics.items() if m["status"] == "failed"]
         
-        # Log successful sync run completed
+        if failed_oems and succeeded_oems:
+            final_status = "partial_success"
+        elif failed_oems and not succeeded_oems:
+            final_status = "failed"
+        else:
+            final_status = "success"
+            
+        summary_messages = []
+        for o, m in oem_metrics.items():
+            summary_messages.append(f"{o}: {m['status']} (stations: {m['stations_fetched']}, inverters: {m['inverters_linked']}, errors: {m['error_count']})")
+        final_summary = "; ".join(summary_messages) if summary_messages else "No active integrations processed."
+        
+        logger.info(f"Cycle completed with overall status: {final_status}. Summary: {final_summary}")
+        
+        # Update final sync run log
         if sync_run_id:
             completed_at = datetime.now(timezone.utc)
             duration_seconds = (completed_at - started_at).total_seconds()
             supabase_patch("sync_runs", {
-                "status": "success",
+                "status": final_status,
                 "completed_at": completed_at.isoformat(),
                 "sites_processed": stations_fetched_count,
                 "inverters_processed": inverters_linked_count,
                 "telemetry_records": telemetry_inserted_count,
                 "string_records": string_telemetry_inserted_count,
                 "alerts_processed": alerts_processed_count,
-                "error_count": error_count,
+                "error_count": total_error_count,
+                "error_message": final_summary if final_status != "success" else None,
                 "duration_seconds": duration_seconds
             }, params={"id": f"eq.{sync_run_id}"})
             
     except Exception as e:
-        logger.error(f"Error occurred during synchronization: {e}", exc_info=True)
+        logger.error(f"Fatal error during synchronization cycle: {e}", exc_info=True)
         if sync_run_id:
             try:
                 completed_at = datetime.now(timezone.utc)
@@ -843,30 +1021,34 @@ def poll_and_sync_all(trigger_source: str = "manual"):
                     "status": "failed",
                     "completed_at": completed_at.isoformat(),
                     "error_message": str(e),
-                    "error_count": error_count + 1,
+                    "error_count": total_error_count + 1,
                     "duration_seconds": duration_seconds
                 }, params={"id": f"eq.{sync_run_id}"})
             except Exception as patch_err:
                 logger.error(f"Failed to log sync run failure: {patch_err}")
     finally:
+        if dist_lock and dist_lock.acquired:
+            dist_lock.release()
         sync_lock.release()
 
 async def start_polling_loop():
     """Polling loop background worker run inside the server process."""
     env = os.getenv("ENV") or os.getenv("NODE_ENV") or "development"
-    if env == "production":
-        logger.info("Background polling loop disabled in production mode (delegating execution to Vercel Cron).")
+    enable_daemon = os.getenv("ENABLE_DAEMON_POLLING", "").lower() in ("true", "1")
+    
+    if env == "production" and not enable_daemon:
+        logger.info("Background polling daemon disabled in production mode (ENABLE_DAEMON_POLLING not set; awaiting scheduled trigger).")
         return
         
     poll_interval = int(os.getenv("POLL_INTERVAL_SECONDS") or 900)
-    logger.info(f"Starting background polling service. Interval: {poll_interval} seconds")
+    logger.info(f"Starting autonomous polling daemon. Interval: {poll_interval} seconds")
     
     import asyncio
     await asyncio.sleep(5)
     
     while True:
         try:
-            await asyncio.to_thread(poll_and_sync_all, trigger_source="local_daemon")
+            await asyncio.to_thread(poll_and_sync_all, trigger_source="autonomous_daemon")
         except Exception as e:
             logger.error(f"Polling loop encountered an unhandled exception: {e}")
         

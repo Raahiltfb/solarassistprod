@@ -6,3 +6,5 @@ from .base import (
     NormalizedAlert,
     OemAdapter
 )
+from .solis import SolisAdapter
+from .feston import FestonAdapter

@@ -58,6 +58,8 @@ class SolisAdapter(OemAdapter):
 
     def list_stations(self) -> List[NormalizedStation]:
         res = self._call_solis("/v1/api/userStationList", {"pageNo": 1, "pageSize": 100})
+        if res.get("code") != "0":
+            raise RuntimeError(f"Solis userStationList API error [{res.get('code')}]: {res.get('msg')}")
         stations = []
         if res.get("code") == "0":
             records = res.get("data", {}).get("page", {}).get("records", [])
