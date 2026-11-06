@@ -12,9 +12,11 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("authorization");
-    const secretParam = new URL(req.url).searchParams.get("secret");
+    const url = new URL(req.url);
+    const secretParam = url.searchParams.get("secret");
     
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const cronSecret = Deno.env.get("CRON_SECRET");
 
     let isAuthorized = false;
@@ -22,12 +24,12 @@ Deno.serve(async (req) => {
     if (authHeader) {
       const parts = authHeader.split(" ");
       const token = parts.length > 1 ? parts[1] : parts[0];
-      if (token && (token === serviceKey || token === cronSecret)) {
+      if (token && (token === serviceKey || token === cronSecret || token === anonKey)) {
         isAuthorized = true;
       }
     }
 
-    if (secretParam && secretParam === cronSecret) {
+    if (secretParam && (secretParam === cronSecret || secretParam === serviceKey)) {
       isAuthorized = true;
     }
 
@@ -39,15 +41,19 @@ Deno.serve(async (req) => {
     }
 
     let triggerSource = "manual";
+    let oemFilter: string | null = url.searchParams.get("oem") || url.searchParams.get("oem_filter") || null;
+
     if (req.method === "POST") {
       try {
         const body = await req.json();
-        triggerSource = body.trigger_source || "manual";
+        if (body.trigger_source) triggerSource = body.trigger_source;
+        if (body.oem) oemFilter = body.oem;
+        if (body.oem_filter) oemFilter = body.oem_filter;
       } catch (_) {
         // Fallback if request body is empty
       }
     } else {
-      const sourceParam = new URL(req.url).searchParams.get("trigger_source");
+      const sourceParam = url.searchParams.get("trigger_source");
       if (sourceParam) {
         triggerSource = sourceParam;
       }
@@ -60,10 +66,10 @@ Deno.serve(async (req) => {
       throw new Error("Missing Supabase configuration environment variables.");
     }
 
-    console.log(`Starting sync trigger from source: ${triggerSource}`);
+    console.log(`Starting sync trigger (Source: ${triggerSource}, OEM Filter: ${oemFilter || "all"})`);
     
     // Await execution synchronously to report output in response
-    const syncRes = await pollAndSyncAll(supabaseUrl, supabaseServiceKey, triggerSource);
+    const syncRes = await pollAndSyncAll(supabaseUrl, supabaseServiceKey, triggerSource, oemFilter);
 
     return new Response(JSON.stringify({ ok: true, result: syncRes }), {
       status: 200,

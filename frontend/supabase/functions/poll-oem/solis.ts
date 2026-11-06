@@ -1,80 +1,23 @@
 import crypto from "node:crypto";
+import {
+  NormalizedStation,
+  NormalizedDevice,
+  NormalizedTelemetry,
+  NormalizedStringTelemetry,
+  NormalizedAlert,
+  OemAdapter
+} from "./types.ts";
 
-export interface NormalizedStation {
-  plant_id: string;
-  name: string;
-  capacity_kwp: number;
-  location: string;
-  timezone: string;
-}
+export type {
+  NormalizedStation,
+  NormalizedDevice,
+  NormalizedTelemetry,
+  NormalizedStringTelemetry,
+  NormalizedAlert,
+  OemAdapter
+};
 
-export interface NormalizedDevice {
-  oem_device_id: string;
-  model: string;
-  serial_number: string;
-  capacity_kw: number;
-  string_count: number;
-  status: string;
-  last_seen_at: string;
-}
-
-export interface NormalizedTelemetry {
-  timestamp: string;
-  ac_power_kw: number;
-  dc_power_kw: number;
-  energy_kwh: number;
-  efficiency_pct: number;
-  temperature_c: number;
-  daily_generation_kwh: number;
-  total_generation_kwh: number;
-  specific_yield: number;
-  online_status: boolean;
-  last_update: string;
-  frequency_hz: number;
-  reactive_power_kvar: number;
-  power_factor: number;
-  current_r_a: number;
-  current_s_a: number;
-  current_t_a: number;
-  voltage_r_v: number;
-  voltage_s_v: number;
-  voltage_t_v: number;
-  apparent_power_kva: number;
-  battery_soc_pct?: number | null;
-  battery_soh_pct?: number | null;
-  battery_power_kw?: number | null;
-  battery_voltage_v?: number | null;
-  battery_current_a?: number | null;
-  load_power_kw?: number | null;
-  grid_purchased_today_kwh?: number | null;
-  grid_sell_today_kwh?: number | null;
-  load_today_kwh?: number | null;
-  metrics: Record<string, any>;
-}
-
-export interface NormalizedStringTelemetry {
-  string_index: number;
-  voltage_v: number;
-  current_a: number;
-  power_kw: number;
-  status: string;
-}
-
-export interface NormalizedAlert {
-  code: string;
-  title: string;
-  description: string;
-  severity: string;
-  triggered_at: string;
-  alarm_code: string;
-  oem: string;
-  category: string;
-  is_auto_resolvable: boolean;
-  requires_technician: boolean;
-  recommended_action: string;
-}
-
-export class SolisAdapter {
+export class SolisAdapter implements OemAdapter {
   private keyId: string;
   private keySecret: string;
   private apiUrl: string;
@@ -124,6 +67,7 @@ export class SolisAdapter {
           return resJson;
         } else {
           console.warn(`Solis API returned error code ${resJson.code}: ${resJson.msg}`);
+          return resJson;
         }
       } catch (err: any) {
         console.error(`Solis API connection error on attempt ${attempt + 1}: ${err.message}`);
@@ -139,9 +83,11 @@ export class SolisAdapter {
 
   async listStations(): Promise<NormalizedStation[]> {
     const res = await this._callSolis("/v1/api/userStationList", { pageNo: 1, pageSize: 100 });
+    if (!res || res.code !== "0") {
+      throw new Error(`Solis userStationList API error [${res?.code}]: ${res?.msg}`);
+    }
     const stations: NormalizedStation[] = [];
-    if (res && res.code === "0") {
-      const records = res.data?.page?.records || [];
+    const records = res.data?.page?.records || [];
       for (const s of records) {
         const plantId = String(s.id);
         const name = s.sName || s.stationName || `Solis Plant ${plantId}`;
@@ -166,7 +112,6 @@ export class SolisAdapter {
           timezone: timezoneStr
         });
       }
-    }
     return stations;
   }
 
