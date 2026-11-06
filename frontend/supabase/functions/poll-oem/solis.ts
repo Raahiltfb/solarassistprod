@@ -116,7 +116,7 @@ export class SolisAdapter implements OemAdapter {
   }
 
   async listDevices(plantId: string): Promise<NormalizedDevice[]> {
-    const stationIdParam = /^\d+$/.test(plantId) ? parseInt(plantId, 10) : plantId;
+    const stationIdParam = String(plantId);
     const res = await this._callSolis("/v1/api/inverterList", { stationId: stationIdParam, pageNo: 1, pageSize: 100 });
     const devices: NormalizedDevice[] = [];
     if (res && res.code === "0") {
