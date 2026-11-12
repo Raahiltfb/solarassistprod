@@ -428,7 +428,8 @@ export class FestonAdapter implements OemAdapter {
           const dc = Number(resOrig[`DC${idx}`] || 0);
           const dp = Number(resOrig[`DP${idx}`] || 0);
 
-          if (dv > 0 || dc > 0) {
+          // Filter out unconnected or zero-panel MPPT channels (require meaningful solar voltage > 50V or active current > 0.1A)
+          if (dv > 50.0 || (dv > 10.0 && dc > 0.1)) {
             dcSumW += dp;
             stringTelemetries.push({
               string_index: idx,

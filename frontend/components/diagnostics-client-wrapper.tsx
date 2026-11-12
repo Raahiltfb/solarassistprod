@@ -181,6 +181,12 @@ export function DiagnosticsClientWrapper({
 
       if (!isStringDeviation) continue;
 
+      // Only include database alerts that have genuine string telemetry metrics attached.
+      // Alerts lacking specific current metrics or with zero expected current must not create phantom anomalies.
+      if (!alt.metrics?.expected_current || Number(alt.metrics.expected_current) <= 0 || alt.metrics.deviation_pct === undefined) {
+        continue;
+      }
+
       const strIdx = alt.metrics?.string_index || 1;
       const key = `${alt.site_id}:${alt.inverter_id}:${strIdx}`;
       if (existingKeys.has(key)) continue;
@@ -188,6 +194,8 @@ export function DiagnosticsClientWrapper({
       const siteObj = sites.find((s) => s.id === alt.site_id);
       const invObj = allInverters.find((i) => i.id === alt.inverter_id);
       const invName = invObj?.serial_number ? `SN: ${invObj.serial_number}` : "Inverter";
+
+      const devPct = Number(alt.metrics.deviation_pct);
 
       dbAlertAnomalies.push({
         id: `alert-${alt.id}`,
@@ -209,7 +217,7 @@ export function DiagnosticsClientWrapper({
         historical_voltage_v: Number(alt.metrics?.voltage || 0),
         expected_voltage_v: Number(alt.metrics?.voltage || 0),
         deviation_abs_a: Number(alt.metrics?.deviation_abs || 0),
-        deviation_pct: Number(alt.metrics?.deviation_pct || 30),
+        deviation_pct: devPct,
         historical_deviation_pct: Number(alt.metrics?.historical_deviation_pct || 0),
         voltage_deviation_pct: 0,
         duration_mins: 60,

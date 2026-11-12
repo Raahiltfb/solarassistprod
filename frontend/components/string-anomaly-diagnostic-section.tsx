@@ -382,7 +382,9 @@ export function StringAnomalyDiagnosticSection({
                         ? "OFFLINE"
                         : anom.type === "voltage_droop"
                         ? `${anom.voltage_deviation_pct}% V`
-                        : anom.deviation_pct > 0 ? `+${anom.deviation_pct}% I` : `${anom.deviation_pct}% I`}
+                        : anom.deviation_pct < 0
+                        ? `${anom.deviation_pct.toFixed(0)}% I`
+                        : `-${Math.abs(anom.deviation_pct).toFixed(0)}% I`}
                     </span>
                   </TableCell>
                   <TableCell className="text-right font-mono">{anom.duration_mins}m</TableCell>

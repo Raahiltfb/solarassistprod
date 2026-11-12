@@ -46,7 +46,7 @@ async function runWithConcurrency<T, R>(
 }
 
 const STRING_DEVIATION_THRESHOLD = 0.25;
-const MIN_STRING_POWER_KW = 0.1;
+const MIN_STRING_POWER_KW = 0.5; // Require at least 500W per string before analyzing string deviations
 
 async function analyzeStringsForAnomalies(
   supabase: any,
@@ -60,10 +60,11 @@ async function analyzeStringsForAnomalies(
 ): Promise<string[]> {
   const activeKeys: string[] = [];
   if (!stringTelemetries || stringTelemetries.length < 2) return activeKeys;
-  if (!telemetry || (telemetry.dc_power_kw !== null && telemetry.dc_power_kw < 0.2)) return activeKeys;
+  if (!telemetry || (telemetry.dc_power_kw !== null && telemetry.dc_power_kw < 1.0)) return activeKeys;
 
+  // Only consider genuinely active, producing strings (V > 50V and I > 0.2A)
   const activeStList = stringTelemetries.filter(
-    (st) => st.power_kw !== null && (st.voltage_v > 10.0 || st.current_a > 0.05)
+    (st) => st.power_kw !== null && st.voltage_v > 50.0 && st.current_a > 0.2
   );
   if (activeStList.length < 2) return activeKeys;
 
@@ -73,11 +74,28 @@ async function analyzeStringsForAnomalies(
 
   if (medianPower < MIN_STRING_POWER_KW) return activeKeys;
 
-  const anomalousStrings: Array<{ index: number; power: number; deviation: number }> = [];
+  const currents = activeStList.map((st) => st.current_a).sort((a, b) => a - b);
+  const medianCurrent = currents.length % 2 === 0 ? (currents[mid - 1] + currents[mid]) / 2.0 : currents[mid];
+
+  const anomalousStrings: Array<{
+    index: number;
+    power: number;
+    current: number;
+    voltage: number;
+    deviation: number;
+  }> = [];
+
   for (const st of activeStList) {
-    if (st.power_kw < medianPower * (1 - STRING_DEVIATION_THRESHOLD)) {
+    // Only flag if relative deviation exceeds threshold AND absolute power difference is >= 0.35 kW
+    if (st.power_kw < medianPower * (1 - STRING_DEVIATION_THRESHOLD) && (medianPower - st.power_kw) >= 0.35) {
       const deviation = ((medianPower - st.power_kw) / medianPower) * 100;
-      anomalousStrings.push({ index: st.string_index, power: st.power_kw, deviation });
+      anomalousStrings.push({
+        index: st.string_index,
+        power: st.power_kw,
+        current: st.current_a,
+        voltage: st.voltage_v,
+        deviation
+      });
     }
   }
 
@@ -99,7 +117,19 @@ async function analyzeStringsForAnomalies(
 
     const title = "STRING PERFORMANCE DEVIATION";
     const affectedStr = anomalousStrings.map((a) => `String #${a.index}`).join(", ");
-    const desc = `Persistent string underperformance: ${affectedStr} operating ${anomalousStrings[0].deviation.toFixed(1)}% below peer median (${medianPower.toFixed(2)} kW).`;
+    const primaryAnom = anomalousStrings[0];
+    const desc = `Persistent string underperformance: ${affectedStr} operating ${primaryAnom.deviation.toFixed(1)}% below peer median (${medianPower.toFixed(2)} kW).`;
+
+    const metricsData = {
+      string_index: primaryAnom.index,
+      actual_current: primaryAnom.current,
+      expected_current: medianCurrent,
+      deviation_pct: -Math.abs(primaryAnom.deviation),
+      deviation_abs: Math.abs(medianCurrent - primaryAnom.current),
+      voltage: primaryAnom.voltage,
+      actual_power_kw: primaryAnom.power,
+      expected_power_kw: medianPower,
+    };
 
     if (existing && existing.length > 0) {
       await supabase
@@ -109,6 +139,7 @@ async function analyzeStringsForAnomalies(
           description: desc,
           severity: "high",
           requires_technician: true,
+          metrics: metricsData,
           recommended_action: "Field investigation required: inspect string DC connections, module shading, or diode failures."
         })
         .eq("id", existing[0].id);
@@ -127,6 +158,7 @@ async function analyzeStringsForAnomalies(
           oem,
           alarm_code: code,
           category: "pv",
+          metrics: metricsData,
           is_auto_resolvable: true,
           requires_technician: true,
           recommended_action: "Field investigation required: inspect string DC connections, module shading, or diode failures."
