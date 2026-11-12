@@ -13,28 +13,12 @@ const LOGIN_OPTIONS = [
   {
     group: "Administrative",
     options: [
-      { label: "Admin (admin@solarassist.dev)", email: "admin@solarassist.dev" },
+      { label: "Solar Assist Fleet Admin (admin@solarassist.dev)", email: "admin@solarassist.dev" },
       { label: "Super Admin (super@solarassist.dev)", email: "super@solarassist.dev" },
     ],
   },
   {
-    group: "EPC A (200 Sites)",
-    options: [
-      { label: "EPC A Admin (admin@epca-solar.dev)", email: "admin@epca-solar.dev" },
-      { label: "EPC A Technician (tech-epca-1@epca-solar.dev)", email: "tech-epca-1@epca-solar.dev" },
-      { label: "EPC A Client (client-epca-1@epca-solar.dev)", email: "client-epca-1@epca-solar.dev" },
-    ],
-  },
-  {
-    group: "EPC B (200 Sites)",
-    options: [
-      { label: "EPC B Admin (admin@epcb-solar.dev)", email: "admin@epcb-solar.dev" },
-      { label: "EPC B Technician (tech-epcb-1@epcb-solar.dev)", email: "tech-epcb-1@epcb-solar.dev" },
-      { label: "EPC B Client (client-epcb-1@epcb-solar.dev)", email: "client-epcb-1@epcb-solar.dev" },
-    ],
-  },
-  {
-    group: "Field Technicians (10 Field Technicians)",
+    group: "Field Technicians (10 Active Technicians)",
     options: [
       { label: "Tech 1 · Team A (tech1@solarassist.dev)", email: "tech1@solarassist.dev" },
       { label: "Tech 2 · Team A (tech2@solarassist.dev)", email: "tech2@solarassist.dev" },
@@ -49,19 +33,31 @@ const LOGIN_OPTIONS = [
     ],
   },
   {
-    group: "Client Portals (All 11 Client Accounts)",
+    group: "Client Portals (Fleet Sites)",
     options: [
       { label: "Cilantro CHS (client@cilantro.com)", email: "client@cilantro.com" },
+      { label: "Maxima CHS (client@maxima.com)", email: "client@maxima.com" },
+      { label: "MK Thakur Complex (client@mkthakur.com)", email: "client@mkthakur.com" },
       { label: "Alcove Society (client@alcove.com)", email: "client@alcove.com" },
       { label: "Manavsthal Tower (client@manavsthal.com)", email: "client@manavsthal.com" },
+      { label: "Patwardhan Hospital (client@patwardhan.com)", email: "client@patwardhan.com" },
       { label: "Dosti Jade CHS (client@dostijade.com)", email: "client@dostijade.com" },
-      { label: "BWSSB Bangalore (client@bwssb.com)", email: "client@bwssb.com" },
       { label: "Belmac Panvel (client@belmac.com)", email: "client@belmac.com" },
+      { label: "BWSSB Bangalore (client@bwssb.com)", email: "client@bwssb.com" },
       { label: "Regalia CHS (client@regalia.com)", email: "client@regalia.com" },
       { label: "Maitri Anand CHS (client@maitrianand.com)", email: "client@maitrianand.com" },
       { label: "Sophistica Solar (client@sophistica.com)", email: "client@sophistica.com" },
-      { label: "Patwardhan Hospital (client@patwardhan.com)", email: "client@patwardhan.com" },
       { label: "Ivy By Courtyard (client@ivy.com)", email: "client@ivy.com" },
+      { label: "Casa Florea (client@casaflorea.com)", email: "client@casaflorea.com" },
+      { label: "Madhukosh CHS (client@madhukosh.com)", email: "client@madhukosh.com" },
+      { label: "Garcinia Residency (client@garcinia.com)", email: "client@garcinia.com" },
+      { label: "Anoopam Mission (client@anoopam.com)", email: "client@anoopam.com" },
+      { label: "Suvarna Pushpa CHS (client@suvarnapushpa.com)", email: "client@suvarnapushpa.com" },
+      { label: "Suyash Heights (client@suyash.com)", email: "client@suyash.com" },
+      { label: "Venecia CHS (client@venecia.com)", email: "client@venecia.com" },
+      { label: "Vijay Vatika CHS (client@vijayvatika.com)", email: "client@vijayvatika.com" },
+      { label: "Crestia Solar (client@crestia.com)", email: "client@crestia.com" },
+      { label: "STP Plant Services (client@stp.com)", email: "client@stp.com" },
     ],
   },
 ];
@@ -259,29 +255,18 @@ export default function LoginPage() {
                       className="text-xs h-8"
                       onClick={() => handleLogin("admin@solarassist.dev")}
                     >
-                      Solar Assist Fleet
+                      Fleet Admin
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      id="quick-login-epca"
+                      id="quick-login-super"
                       disabled={loading}
                       className="text-xs h-8 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/10"
-                      onClick={() => handleLogin("admin@epca-solar.dev")}
+                      onClick={() => handleLogin("super@solarassist.dev")}
                     >
-                      EPC A (200 Sites)
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      id="quick-login-epcb"
-                      disabled={loading}
-                      className="text-xs h-8 text-blue-500 border-blue-500/30 hover:bg-blue-500/10"
-                      onClick={() => handleLogin("admin@epcb-solar.dev")}
-                    >
-                      EPC B (200 Sites)
+                      Super Admin
                     </Button>
                     <Button
                       type="button"
@@ -290,20 +275,31 @@ export default function LoginPage() {
                       id="quick-login-tech"
                       disabled={loading}
                       className="text-xs h-8 text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
-                      onClick={() => handleLogin("tech-epca-1@epca-solar.dev")}
+                      onClick={() => handleLogin("tech1@solarassist.dev")}
                     >
-                      Technician (EPC A)
+                      Field Technician
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      id="quick-login-client"
+                      id="quick-login-client-cilantro"
                       disabled={loading}
-                      className="col-span-2 text-xs h-8 text-purple-500 border-purple-500/30 hover:bg-purple-500/10"
-                      onClick={() => handleLogin("client-epca-1@epca-solar.dev")}
+                      className="text-xs h-8 text-purple-500 border-purple-500/30 hover:bg-purple-500/10"
+                      onClick={() => handleLogin("client@cilantro.com")}
                     >
-                      Client Portal (EPC A)
+                      Client (Cilantro)
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      id="quick-login-client-maxima"
+                      disabled={loading}
+                      className="col-span-2 text-xs h-8 text-cyan-500 border-cyan-500/30 hover:bg-cyan-500/10"
+                      onClick={() => handleLogin("client@maxima.com")}
+                    >
+                      Client Portal (Maxima CHS)
                     </Button>
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { SiteSelectorCombobox, SiteOption } from "@/components/ui/site-selector-combobox";
 import { SiteHealthOverviewHeader, SiteHealthSummary } from "@/components/site-health-overview-header";
 import { FleetStringHealthOverview } from "@/components/fleet-string-health-overview";
@@ -68,6 +68,28 @@ export function DiagnosticsClientWrapper({
     metric?: "voltage_v" | "current_a" | "power_kw";
     stringIndex?: number;
   } | null>(null);
+
+  useEffect(() => {
+    if (initialSiteId) {
+      setSelectedSiteId(initialSiteId);
+    }
+  }, [initialSiteId]);
+
+  useEffect(() => {
+    if (initialPrimaryTab) {
+      setPrimaryTab(initialPrimaryTab);
+    }
+  }, [initialPrimaryTab]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search);
+      const subtab = sp.get("subtab");
+      if (subtab) {
+        setActiveTab(subtab);
+      }
+    }
+  }, []);
 
   function handleNavigateToTab(
     tab: string,

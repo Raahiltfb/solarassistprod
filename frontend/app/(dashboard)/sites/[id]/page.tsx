@@ -290,7 +290,16 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ id:
                 {alerts.map((a) => (
                   <TableRow key={a.id}>
                     <TableCell className="font-mono text-xs">{a.code}</TableCell>
-                    <TableCell>{a.title}</TableCell>
+                    <TableCell>
+                      {a.code === "STRING_PERFORMANCE_DEVIATION" || a.title?.toUpperCase().includes("STRING") || a.code?.toUpperCase().includes("STRING") ? (
+                        <Link href={`/diagnostics?site_id=${id}&tab=site`} className="text-primary hover:underline font-medium inline-flex items-center gap-1">
+                          <span>{a.title}</span>
+                          <span className="text-[10px] text-muted-foreground">(View Deviation →)</span>
+                        </Link>
+                      ) : (
+                        a.title
+                      )}
+                    </TableCell>
                     <TableCell><Badge variant={a.severity === "critical" ? "destructive" : a.severity === "high" ? "warning" : "secondary"} className="capitalize">{a.severity}</Badge></TableCell>
                     <TableCell className="capitalize">{a.status}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{formatDateTime(a.triggered_at)}</TableCell>

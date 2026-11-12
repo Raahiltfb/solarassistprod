@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { formatDateTime } from "@/lib/utils";
 import { SubNav } from "@/components/sub-nav";
 import type { Alert } from "@/lib/types";
-import { Check, Ticket } from "lucide-react";
+import { Check, Ticket, Activity } from "lucide-react";
 
 export default function AlertsPage() {
   const [alerts, setAlerts] = useState<any[]>([]);
@@ -125,7 +125,18 @@ export default function AlertsPage() {
                   {a.inverters?.serial_number && <div className="font-mono text-muted-foreground">SN: {a.inverters.serial_number}</div>}
                 </TableCell>
                 <TableCell className="max-w-xs">
-                  <div className="font-medium text-sm">{a.title}</div>
+                  {a.code === "STRING_PERFORMANCE_DEVIATION" || a.title?.toUpperCase().includes("STRING") || a.code?.toUpperCase().includes("STRING") ? (
+                    <Link
+                      href={a.site_id ? `/diagnostics?site_id=${a.site_id}&tab=site` : "/diagnostics"}
+                      className="font-medium text-sm text-primary hover:underline flex items-center gap-1.5"
+                      title="View string deviation in Technical Intelligence"
+                    >
+                      <span>{a.title}</span>
+                      <Activity className="h-3.5 w-3.5 text-primary shrink-0" />
+                    </Link>
+                  ) : (
+                    <div className="font-medium text-sm">{a.title}</div>
+                  )}
                   {a.description && <div className="text-xs text-muted-foreground mt-0.5 break-words leading-tight">{a.description}</div>}
                   {a.recommended_action && (
                     <div className="text-[11px] text-primary bg-primary/5 rounded border border-primary/10 px-2 py-0.5 mt-1.5 inline-block">
@@ -159,6 +170,13 @@ export default function AlertsPage() {
                 <TableCell className="text-xs text-muted-foreground font-mono">{formatDateTime(a.triggered_at)}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1.5">
+                    {(a.code === "STRING_PERFORMANCE_DEVIATION" || a.title?.toUpperCase().includes("STRING") || a.code?.toUpperCase().includes("STRING")) && (
+                      <Button asChild size="sm" variant="outline" className="h-8 text-xs gap-1 border-primary/30 text-primary hover:bg-primary/10">
+                        <Link href={a.site_id ? `/diagnostics?site_id=${a.site_id}&tab=site` : "/diagnostics"}>
+                          <Activity className="h-3.5 w-3.5" /> String Deviation
+                        </Link>
+                      </Button>
+                    )}
                     {a.status === "open" && (
                       <Button size="sm" variant="outline" onClick={() => acknowledge(a.id)} data-testid={`alert-ack-${a.id}`}>
                         <Check className="h-3.5 w-3.5 mr-1" /> Ack

@@ -477,6 +477,16 @@ export function NeedsAttentionQueue({
         ? "DISPATCH IMMEDIATELY — Critical fault code detected. Automated P1 ticket & job creation queued."
         : "HUMAN REVIEW REQUIRED — Telemetry anomaly detected. System awaiting admin review.";
 
+      const isStringDeviation =
+        alert.code === "STRING_PERFORMANCE_DEVIATION" ||
+        alert.code === "STRING_ANOMALY" ||
+        (alert.code && alert.code.toUpperCase().includes("STRING")) ||
+        (alert.title && alert.title.toUpperCase().includes("STRING"));
+
+      const techIntelUrl = alert.site_id
+        ? `/diagnostics?site_id=${alert.site_id}&tab=site`
+        : "/diagnostics";
+
       return {
         id: `alert-${alert.id}`,
         type: "alert" as const,
@@ -487,7 +497,11 @@ export function NeedsAttentionQueue({
         actionExplanation,
         severity: alert.severity === "critical" ? ("critical" as const) : alert.severity === "high" ? ("high" as const) : ("medium" as const),
         timestamp: alert.triggered_at,
-        actionUrl: alert.ticket_id ? `/tickets/${alert.ticket_id}` : "/alerts",
+        actionUrl: alert.ticket_id
+          ? `/tickets/${alert.ticket_id}`
+          : isStringDeviation
+          ? techIntelUrl
+          : "/alerts",
         actionLabel: alert.ticket_id ? "View Ticket" : "View Alert",
         badgeText: `Alert ${alert.severity.toUpperCase()}`,
         badgeVariant: alert.severity === "critical" ? ("destructive" as const) : alert.severity === "high" ? ("warning" as const) : ("secondary" as const),
@@ -664,7 +678,15 @@ export function NeedsAttentionQueue({
                         {item.badgeText}
                       </Badge>
                     </div>
-                    <h4 className="font-semibold text-sm text-foreground leading-tight">{item.title}</h4>
+                    <h4 className="font-semibold text-sm text-foreground leading-tight">
+                      {item.actionUrl ? (
+                        <Link href={item.actionUrl} className="hover:underline">
+                          {item.title}
+                        </Link>
+                      ) : (
+                        item.title
+                      )}
+                    </h4>
                     <p className="text-xs text-muted-foreground leading-relaxed">{item.subtitle}</p>
 
                     {/* System Action Explanation Box */}

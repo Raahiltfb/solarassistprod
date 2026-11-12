@@ -20,7 +20,9 @@ node_modules/
 /coverage
 test_reports/
 frontend/supabase/.temp/
+supabase/.temp/
 frontend/supabase/staging_consolidated_migration.sql
+scratch/
 
 # Next.js
 .next/

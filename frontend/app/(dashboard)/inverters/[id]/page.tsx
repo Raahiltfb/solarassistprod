@@ -255,29 +255,58 @@ export default async function InverterDetailsPage({ params }: { params: Promise<
                     <TableHead>Category</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Triggered Time</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {alerts.map((a) => (
-                    <TableRow key={a.id}>
-                      <TableCell className="font-mono text-xs font-semibold">{a.alarm_code || a.code}</TableCell>
-                      <TableCell>
-                        <div className="font-medium">{a.title}</div>
-                        {a.description && <div className="text-xs text-muted-foreground break-words leading-tight mt-0.5">{a.description}</div>}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={a.severity === "critical" ? "destructive" : a.severity === "high" ? "warning" : "secondary"} className="capitalize">
-                          {a.severity}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="capitalize text-xs">{a.category || "inverter"}</TableCell>
-                      <TableCell className="capitalize">{a.status}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{formatDateTime(a.triggered_at)}</TableCell>
-                    </TableRow>
-                  ))}
+                  {alerts.map((a) => {
+                    const isStringDeviation =
+                      a.code === "STRING_PERFORMANCE_DEVIATION" ||
+                      a.code === "STRING_ANOMALY" ||
+                      (a.code && a.code.toUpperCase().includes("STRING")) ||
+                      (a.title && a.title.toUpperCase().includes("STRING"));
+
+                    return (
+                      <TableRow key={a.id}>
+                        <TableCell className="font-mono text-xs font-semibold">{a.alarm_code || a.code}</TableCell>
+                        <TableCell>
+                          {isStringDeviation ? (
+                            <Link
+                              href={`/diagnostics?site_id=${inverter.site_id}&tab=site`}
+                              className="font-medium hover:underline text-primary flex items-center gap-1.5"
+                            >
+                              {a.title}
+                            </Link>
+                          ) : (
+                            <div className="font-medium">{a.title}</div>
+                          )}
+                          {a.description && <div className="text-xs text-muted-foreground break-words leading-tight mt-0.5">{a.description}</div>}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={a.severity === "critical" ? "destructive" : a.severity === "high" ? "warning" : "secondary"} className="capitalize">
+                            {a.severity}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="capitalize text-xs">{a.category || "inverter"}</TableCell>
+                        <TableCell className="capitalize">{a.status}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{formatDateTime(a.triggered_at)}</TableCell>
+                        <TableCell className="text-right">
+                          {isStringDeviation ? (
+                            <Button asChild size="sm" variant="outline" className="h-7 text-xs gap-1 border-primary/30 text-primary hover:bg-primary/10">
+                              <Link href={`/diagnostics?site_id=${inverter.site_id}&tab=site`}>
+                                <Activity className="h-3 w-3" /> Tech Intelligence
+                              </Link>
+                            </Button>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                   {alerts.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
                         No alerts recorded for this inverter.
                       </TableCell>
                     </TableRow>

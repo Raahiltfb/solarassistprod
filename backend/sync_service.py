@@ -483,7 +483,8 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                     if telemetry.timestamp and telemetry.timestamp > dev.last_seen_at:
                         supabase_patch("inverters", {"last_seen_at": telemetry.timestamp}, params={"id": f"eq.{inv_id}"})
                     
-                    # Upsert telemetry gracefully handling duplicates and cross-environment constraints
+                    inv_cap = float(dev.get("capacity_kw") or 0.0) if isinstance(dev, dict) else float(getattr(dev, "capacity_kw", 0.0) or 0.0)
+                    spec_yield = round(telemetry.daily_generation_kwh / inv_cap, 2) if (inv_cap > 0 and telemetry.daily_generation_kwh > 0) else telemetry.specific_yield
                     telemetry_payload = {
                         "inverter_id": inv_id,
                         "timestamp": telemetry.timestamp,
@@ -494,7 +495,7 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                         "temperature_c": telemetry.temperature_c,
                         "daily_generation_kwh": telemetry.daily_generation_kwh,
                         "total_generation_kwh": telemetry.total_generation_kwh,
-                        "specific_yield": telemetry.specific_yield,
+                        "specific_yield": spec_yield,
                         "online_status": telemetry.online_status,
                         "last_update": telemetry.last_update,
                         "frequency_hz": telemetry.frequency_hz,

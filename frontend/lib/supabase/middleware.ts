@@ -1,12 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const STAGING_URL = "https://xpjzuquqehjamqsqshwq.supabase.co";
-const STAGING_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhwanp1cXVxZWhqYW1xc3FzaHdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5OTI3MzYsImV4cCI6MjEwODU2ODczNn0.pfWb62_WTMBu0K1V2cu25-Iu6tARTYq2hiawHY0Dnfk";
+// Canonical production Supabase instance
+const PROD_URL = "https://ylnmjvgnjootrkywbcsj.supabase.co";
+const PROD_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlsbm1qdmduam9vdHJreXdiY3NqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNjk1ODcsImV4cCI6MjA5MzY0NTU4N30.d9VUDRLSsruy7QSXf6GigVaIijkmmSdhP8nObWatB_8";
 
 function getSupabaseUrl(): string {
   const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, "");
-  const target = (envUrl && envUrl.startsWith("https://")) ? envUrl : STAGING_URL;
+  const target = (envUrl && envUrl.startsWith("https://")) ? envUrl : PROD_URL;
   if (process.env.NODE_ENV === "test" && target.includes("ylnmjvgnjootrkywbcsj")) {
     throw new Error("CRITICAL SAFETY VIOLATION: Test execution against production Supabase (ylnmjvgnjootrkywbcsj) is prohibited.");
   }
@@ -18,7 +19,7 @@ function getSupabaseAnonKey(): string {
   if (envKey && envKey.length > 20) {
     return envKey;
   }
-  return STAGING_ANON_KEY;
+  return PROD_ANON_KEY;
 }
 
 export async function updateSession(request: NextRequest) {

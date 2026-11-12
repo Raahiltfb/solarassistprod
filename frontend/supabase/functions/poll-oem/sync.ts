@@ -486,7 +486,9 @@ export async function pollAndSyncAll(
                       temperature_c: telemetry.temperature_c,
                       daily_generation_kwh: telemetry.daily_generation_kwh,
                       total_generation_kwh: telemetry.total_generation_kwh,
-                      specific_yield: telemetry.specific_yield,
+                      specific_yield: (dev.capacity_kw && Number(dev.capacity_kw) > 0 && telemetry.daily_generation_kwh > 0)
+                        ? Math.round((telemetry.daily_generation_kwh / Number(dev.capacity_kw)) * 100) / 100
+                        : (telemetry.specific_yield || 0.0),
                       online_status: telemetry.online_status,
                       last_update: telemetry.last_update,
                       frequency_hz: telemetry.frequency_hz,
