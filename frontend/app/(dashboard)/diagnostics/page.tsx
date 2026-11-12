@@ -62,21 +62,27 @@ export default async function TechnicalIntelligencePage({
     return chunkResults.flat();
   }
 
-  // 2. Fetch inverters, tickets, telemetry, and fleet-wide string telemetry in parallel with safe chunking
-  const [allInverters, allResolvedTickets, telemetryRes, fleetStringTelemetryRes] = await Promise.all([
+  // 2. Fetch inverters, tickets, active alerts, telemetry, and fleet-wide string telemetry in parallel with safe chunking
+  const [allInverters, allResolvedTickets, activeAlerts, telemetryRes, fleetStringTelemetryRes] = await Promise.all([
     fetchChunkedIn<any>("inverters", "site_id", siteIds),
     fetchChunkedIn<any>("tickets", "site_id", siteIds, "*", (q) => q.eq("status", "resolved").order("created_at", { ascending: false }).limit(100)),
+    fetchChunkedIn<any>("alerts", "site_id", siteIds, "*, inverters(serial_number)", (q) => q.in("status", ["open", "acknowledged"]).order("triggered_at", { ascending: false })),
     sb.from("telemetry").select("*").order("timestamp", { ascending: false }).limit(500),
     sb.from("string_telemetry").select("string_id, timestamp, voltage_v, current_a, power_kw, status").order("timestamp", { ascending: false }).limit(3000),
   ]);
 
   const allInverterIds = allInverters.map((i) => i.id);
-  const allStrings = await fetchChunkedIn<any>(
-    "strings", 
-    "inverter_id", 
-    allInverterIds, 
-    "id, inverter_id, string_index, capacity_kw, status"
-  );
+  const [allStrings, latestTelemetryRes] = await Promise.all([
+    fetchChunkedIn<any>(
+      "strings", 
+      "inverter_id", 
+      allInverterIds, 
+      "id, inverter_id, string_index, capacity_kw, status"
+    ),
+    allInverterIds.length > 0
+      ? sb.rpc("get_latest_telemetry", { inverter_ids: allInverterIds })
+      : Promise.resolve({ data: [] }),
+  ]);
   const allTelemetry = telemetryRes.data ?? [];
   const fleetStringTelemetry = fleetStringTelemetryRes.data ?? [];
 
@@ -121,6 +127,8 @@ export default async function TechnicalIntelligencePage({
       allTelemetry={allTelemetry}
       allStringTelemetry={allStringTelemetry}
       allResolvedTickets={allResolvedTickets}
+      activeAlerts={activeAlerts ?? []}
+      latestTelemetryRecords={latestTelemetryRes.data ?? []}
     />
   );
 }

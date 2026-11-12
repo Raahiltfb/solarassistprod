@@ -610,9 +610,13 @@ export async function pollAndSyncAll(
                   }
                 }
 
-                // Update dynamic string count
+                // Update dynamic string count and ensure communicating inverters are marked online
                 const dynamicStringCount = Object.keys(stringMap).length;
-                await supabase.from("inverters").update({ string_count: dynamicStringCount }).eq("id", invId);
+                await supabase.from("inverters").update({
+                  string_count: dynamicStringCount,
+                  status: telemetry ? "online" : dev.status,
+                  last_seen_at: telemetry?.timestamp || dev.last_seen_at || new Date().toISOString()
+                }).eq("id", invId);
 
                 // Synthetic String Deviation Analysis
                 const synthAlerts = await analyzeStringsForAnomalies(

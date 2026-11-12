@@ -240,69 +240,6 @@ export default function LoginPage() {
                 >
                   {loading ? "Signing in..." : "Sign In"}
                 </Button>
-
-                <div className="pt-3 border-t border-border/50">
-                  <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 text-center">
-                    Quick Operational Roles
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      id="quick-login-sa"
-                      disabled={loading}
-                      className="text-xs h-8"
-                      onClick={() => handleLogin("admin@solarassist.dev")}
-                    >
-                      Fleet Admin
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      id="quick-login-super"
-                      disabled={loading}
-                      className="text-xs h-8 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/10"
-                      onClick={() => handleLogin("super@solarassist.dev")}
-                    >
-                      Super Admin
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      id="quick-login-tech"
-                      disabled={loading}
-                      className="text-xs h-8 text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
-                      onClick={() => handleLogin("tech1@solarassist.dev")}
-                    >
-                      Field Technician
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      id="quick-login-client-cilantro"
-                      disabled={loading}
-                      className="text-xs h-8 text-purple-500 border-purple-500/30 hover:bg-purple-500/10"
-                      onClick={() => handleLogin("client@cilantro.com")}
-                    >
-                      Client (Cilantro)
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      id="quick-login-client-maxima"
-                      disabled={loading}
-                      className="col-span-2 text-xs h-8 text-cyan-500 border-cyan-500/30 hover:bg-cyan-500/10"
-                      onClick={() => handleLogin("client@maxima.com")}
-                    >
-                      Client Portal (Maxima CHS)
-                    </Button>
-                  </div>
-                </div>
               </form>
             </CardContent>
           </Card>

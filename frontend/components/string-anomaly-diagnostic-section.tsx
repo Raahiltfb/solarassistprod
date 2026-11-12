@@ -24,17 +24,24 @@ export function StringAnomalyDiagnosticSection({
   strings,
   inverters,
   sites,
+  initialAnomalies,
   onNavigateToTab,
 }: {
   telemetry: any[];
   strings: any[];
   inverters: any[];
   sites: any[];
+  initialAnomalies?: StringAnomaly[];
   onNavigateToTab?: (tab: string, context?: MultiStringNavigationContext) => void;
 }) {
   const sb = createClient();
 
-  const anomalies: StringAnomaly[] = analyzeStringAnomalies(telemetry, strings, inverters, sites);
+  const anomalies: StringAnomaly[] = useMemo(() => {
+    if (initialAnomalies && initialAnomalies.length > 0) {
+      return initialAnomalies;
+    }
+    return analyzeStringAnomalies(telemetry, strings, inverters, sites);
+  }, [initialAnomalies, telemetry, strings, inverters, sites]);
 
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [dispatchingId, setDispatchingId] = useState<string | null>(null);

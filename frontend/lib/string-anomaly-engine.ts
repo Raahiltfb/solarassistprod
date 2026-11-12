@@ -1,4 +1,5 @@
 import { Site, Inverter } from "./types";
+import { getInverterStatus } from "./status-utils";
 
 export type AnomalyType = 
   | "string_disconnected" 
@@ -221,18 +222,22 @@ export function analyzeStringAnomalies(
     list.push({ string_id: pt.string_id, point: pt });
   }
 
-  // Evaluate offline inverters and push offline diagnostic anomalies
+  // Evaluate offline inverters and push offline diagnostic anomalies using canonical status-utils
   for (const inv of inverters) {
-    const dbStatus = (inv.status || "").toLowerCase();
-    let isOffline = dbStatus === "offline" || dbStatus === "fault";
-
-    let lastSeenStr = inv.last_seen_at;
-    if (!isOffline && lastSeenStr) {
-      const lastSeenMs = new Date(lastSeenStr).getTime();
-      if (!isNaN(lastSeenMs) && Date.now() - lastSeenMs > 30 * 60 * 1000) {
-        isOffline = true;
+    // Determine latest telemetry timestamp for this inverter from incoming telemetry stream or inv.last_seen_at
+    let latestTs: string | undefined = inv.last_seen_at || undefined;
+    for (const [strId, pts] of stringTelemetryPointsMap.entries()) {
+      const s = stringMap.get(strId);
+      if (s && s.inverter_id === inv.id && pts.length > 0) {
+        const ptTs = pts[0]?.timestamp;
+        if (ptTs && (!latestTs || new Date(ptTs).getTime() > new Date(latestTs).getTime())) {
+          latestTs = ptTs;
+        }
       }
     }
+
+    const invStatus = getInverterStatus(inv, latestTs);
+    const isOffline = invStatus === "OFFLINE";
 
     if (isOffline) {
       const siteObj = siteMap.get(inv.site_id);

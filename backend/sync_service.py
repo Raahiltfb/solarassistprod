@@ -645,9 +645,14 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                             raise
                     metrics["string_telemetry_inserted_count"] += len(string_telemetry_batch)
                 
-                # Update dynamic string count in inverters table
+                # Update dynamic string count and ensure communicating inverters are marked online
                 dynamic_string_count = len(string_map)
-                supabase_patch("inverters", {"string_count": dynamic_string_count}, params={"id": f"eq.{inv_id}"})
+                inv_patch = {
+                    "string_count": dynamic_string_count,
+                    "status": "online" if telemetry else dev.status,
+                    "last_seen_at": telemetry.timestamp.isoformat() if (telemetry and hasattr(telemetry, "timestamp") and telemetry.timestamp) else dev.last_seen_at
+                }
+                supabase_patch("inverters", inv_patch, params={"id": f"eq.{inv_id}"})
                 
                 # Analyze strings for anomalies
                 synth_alerts = analyze_strings_for_anomalies(inv_id, site_id, org_id, string_telemetries, telemetry, oem=provider)
