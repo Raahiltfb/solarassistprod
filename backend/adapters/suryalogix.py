@@ -346,3 +346,4 @@ class SuryalogixAdapter(OemAdapter):
                 )
 
         return alerts
+

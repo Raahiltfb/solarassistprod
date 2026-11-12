@@ -712,6 +712,7 @@ export function DiagnosticsClientWrapper({
             {/* Tab 2: Multi-String Analytics Overlay */}
             <TabsContent value="multi-string" className="pt-4">
               <StringAnalyticsSection
+                key={`str-analytics-${selectedSite.id}`}
                 inverters={siteInverters}
                 anomalies={anomalies}
                 initialInverterId={multiStringContext?.inverterId}
@@ -723,6 +724,7 @@ export function DiagnosticsClientWrapper({
             {/* Tab 3: Multi-Inverter Diagnostic Comparison */}
             <TabsContent value="multi-inverter" className="pt-4">
               <MultiInverterDiagnosticSection
+                key={`inv-diag-${selectedSite.id}`}
                 inverters={siteInverters}
                 latestTelemetryMap={latestTelemetryMap}
               />

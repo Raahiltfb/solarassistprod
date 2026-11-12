@@ -171,3 +171,4 @@ SUNGROW_ALARM_MAPPING = {
         "recommended_action": "Inspect string current in iSolarCloud, check string fuses, and measure open-circuit voltage at disconnect.",
     },
 }
+

@@ -245,7 +245,7 @@ export default async function DashboardPage() {
       .select("*, profiles!daily_routes_technician_id_fkey(full_name, base_address), route_stops(*, work_orders(*, sites(name)))")
       .eq("date", todayStr),
     sb.from("profiles").select("*").eq("role", "technician").order("full_name"),
-    sb.from("alerts").select("*, sites(name)").order("triggered_at", { ascending: false }).limit(50),
+    sb.from("alerts").select("*, sites(name)").in("status", ["open", "acknowledged"]).order("triggered_at", { ascending: false }).limit(200),
     sb.from("cleaning_logs").select("*, sites(name)").order("performed_at", { ascending: false }).limit(10),
     sb.from("sync_runs").select("*").neq("trigger_source", "distributed_lock").order("started_at", { ascending: false }).limit(10),
     sb.from("cleaning_visits").select("*, sites(name)").eq("cycle_period", currentCyclePeriod),

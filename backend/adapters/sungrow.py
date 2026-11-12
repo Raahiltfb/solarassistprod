@@ -185,3 +185,4 @@ class SungrowAdapter(OemAdapter):
                 )
             )
         return alerts
+

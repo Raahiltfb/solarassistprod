@@ -15,6 +15,7 @@ const NAV = [
   {
     href: "/client",
     label: "Portfolio",
+    mobileLabel: "Portfolio",
     icon: LayoutDashboard,
     roles: ["client"],
     subPaths: [],
@@ -22,6 +23,7 @@ const NAV = [
   {
     href: "/client/sites",
     label: "My Sites",
+    mobileLabel: "Sites",
     icon: Building2,
     roles: ["client"],
     subPaths: [],
@@ -29,6 +31,7 @@ const NAV = [
   {
     href: "/client/reports",
     label: "Monthly Reports",
+    mobileLabel: "Reports",
     icon: BarChart3,
     roles: ["client"],
     subPaths: [],
@@ -38,6 +41,7 @@ const NAV = [
   {
     href: "/dashboard",
     label: "Command Center",
+    mobileLabel: "Command",
     icon: LayoutDashboard,
     roles: ["super_admin", "epc_admin"],
     subPaths: [],
@@ -45,6 +49,7 @@ const NAV = [
   {
     href: "/overview",
     label: "Fleet Overview",
+    mobileLabel: "Fleet",
     icon: Activity,
     roles: ["super_admin", "epc_admin"],
     subPaths: [],
@@ -52,6 +57,7 @@ const NAV = [
   {
     href: "/service-requests",
     label: "Operations",
+    mobileLabel: "Operations",
     icon: Wrench,
     roles: ["super_admin", "epc_admin"],
     subPaths: ["/tickets", "/operations/routes", "/workforce"],
@@ -59,6 +65,7 @@ const NAV = [
   {
     href: "/cleaning",
     label: "Cleaning",
+    mobileLabel: "Cleaning",
     icon: SprayCan,
     roles: ["super_admin", "epc_admin"],
     subPaths: ["/cleaning/planner", "/cleaning/visits", "/cleaning/teams", "/cleaning/policies"],
@@ -66,6 +73,7 @@ const NAV = [
   {
     href: "/sites",
     label: "Assets",
+    mobileLabel: "Assets",
     icon: Building2,
     roles: ["super_admin", "epc_admin"],
     subPaths: ["/alerts", "/inverters"],
@@ -73,6 +81,7 @@ const NAV = [
   {
     href: "/diagnostics",
     label: "Technical Intelligence",
+    mobileLabel: "Tech Intel",
     icon: Activity,
     roles: ["super_admin", "epc_admin"],
     subPaths: [],
@@ -80,6 +89,7 @@ const NAV = [
   {
     href: "/reports",
     label: "Clients & Reports",
+    mobileLabel: "Reports",
     icon: BarChart3,
     roles: ["super_admin", "epc_admin"],
     subPaths: [],
@@ -87,6 +97,7 @@ const NAV = [
   {
     href: "/settings",
     label: "Configuration",
+    mobileLabel: "Settings",
     icon: Settings,
     roles: ["super_admin", "epc_admin"],
     subPaths: ["/users"],
@@ -96,6 +107,7 @@ const NAV = [
   {
     href: "/dashboard",
     label: "My Work",
+    mobileLabel: "Work",
     icon: LayoutDashboard,
     roles: ["technician"],
     subPaths: [],
@@ -103,6 +115,7 @@ const NAV = [
   {
     href: "/service-requests",
     label: "Assigned Tasks",
+    mobileLabel: "Tasks",
     icon: Wrench,
     roles: ["technician"],
     subPaths: [],
@@ -110,6 +123,7 @@ const NAV = [
   {
     href: "/technician/cleaning",
     label: "Log Cleaning",
+    mobileLabel: "Cleaning",
     icon: SprayCan,
     roles: ["technician"],
     subPaths: [],
@@ -217,7 +231,10 @@ export function Shell({ profile, children }: { profile: Profile; children: React
 
         {/* Fixed Mobile Bottom Navigation Bar (Native Mobile PWA feel) */}
         <nav
-          className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur border-t flex justify-around items-center h-16 px-1 safe-area-pb"
+          className={cn(
+            "md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur border-t h-16 safe-area-pb shadow-lg",
+            items.length <= 5 ? "flex justify-around items-center px-1" : "flex items-center overflow-x-auto scrollbar-none no-scrollbar px-2 gap-1"
+          )}
           data-testid="mobile-nav"
         >
           {items.map((it) => {
@@ -231,12 +248,15 @@ export function Shell({ profile, children }: { profile: Profile; children: React
                 href={it.href}
                 prefetch={true}
                 className={cn(
-                  "flex flex-col items-center justify-center flex-1 h-full py-1 text-[11px] font-medium transition-colors gap-1 min-w-0 px-1",
+                  "flex flex-col items-center justify-center h-full py-1 text-[11px] font-medium transition-colors gap-1",
+                  items.length <= 5 ? "flex-1 min-w-0 px-1" : "shrink-0 min-w-[64px] max-w-[76px] px-1.5",
                   Active ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 <it.icon className={cn("h-5 w-5 shrink-0", Active ? "text-primary stroke-[2.5]" : "text-muted-foreground")} />
-                <span className="w-full text-center text-[10px] sm:text-[11px] leading-tight whitespace-nowrap">{it.label}</span>
+                <span className="w-full text-center text-[10px] leading-tight truncate">
+                  {(it as any).mobileLabel || it.label}
+                </span>
               </Link>
             );
           })}

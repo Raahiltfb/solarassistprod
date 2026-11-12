@@ -63,12 +63,19 @@ export function StringAnalyticsSection({
   );
   const [loading, setLoading] = useState<boolean>(false);
 
-  // Synchronize state when navigating from diagnostic anomaly inspect action
+  // Synchronize state when navigating or when inverters change
   useEffect(() => {
     if (initialInverterId && inverters.some((i) => i.id === initialInverterId)) {
       setSelectedInvId(initialInverterId);
+    } else if (inverters.length > 0 && (!selectedInvId || !inverters.some((i) => i.id === selectedInvId))) {
+      setSelectedInvId(inverters[0].id);
+    } else if (inverters.length === 0) {
+      setSelectedInvId("");
+      setStrings([]);
+      setSelectedStrIds([]);
+      setTelemetry([]);
     }
-  }, [initialInverterId, inverters]);
+  }, [initialInverterId, inverters, selectedInvId]);
 
   useEffect(() => {
     if (initialMetric) {

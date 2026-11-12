@@ -358,3 +358,4 @@ export class SuryalogixAdapter implements OemAdapter {
     return alerts;
   }
 }
+

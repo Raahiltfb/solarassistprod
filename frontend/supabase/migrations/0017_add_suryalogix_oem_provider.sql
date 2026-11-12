@@ -2,3 +2,4 @@
 -- Safe, additive, non-blocking operation
 
 ALTER TYPE public.oem_provider ADD VALUE IF NOT EXISTS 'suryalogix';
+

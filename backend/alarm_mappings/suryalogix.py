@@ -90,3 +90,4 @@ SURYALOGIX_ALARM_MAPPING = {
         "recommended_action": "Open SMB enclosure, check continuity across DC fuses, and measure open-circuit string voltage.",
     },
 }
+
