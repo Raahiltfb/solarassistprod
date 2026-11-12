@@ -1,6 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
 import { SolisAdapter } from "./solis.ts";
 import { FestonAdapter } from "./feston.ts";
+import { SuryalogixAdapter } from "./suryalogix.ts";
+import { SungrowAdapter } from "./sungrow.ts";
 import {
   NormalizedStation,
   NormalizedDevice,
@@ -172,6 +174,34 @@ function getAdapterForIntegration(integ: Record<string, any>): OemAdapter {
       username,
       password,
       accessToken
+    });
+  } else if (provider === "suryalogix" || provider === "suryalog") {
+    const secret = getEnv("SURYALOGIX_SECRET") || config.secret || "cd8ae85e44e2ca7d997904893f8fb7fe";
+    const apiUrl = getEnv("SURYALOGIX_API_URL") || config.api_url || "https://cloud.suryalog.ae/api/get_datalog_v7.php";
+    const plants = config.plants || [];
+
+    return new SuryalogixAdapter({
+      secret,
+      apiUrl,
+      plants
+    });
+  } else if (provider === "sungrow" || provider === "isolarcloud") {
+    const appKey = getEnv("ISOLARCLOUD_APP_KEY") || config.app_key || config.appkey || "B3500A80C94EADF9C52E01D7790A96DD";
+    const secretKey = getEnv("ISOLARCLOUD_SECRET_KEY") || config.secret_key || config.secret || "k2a5vg8w7qdua4nqet6rsspnrhsmr3in";
+    const rsaPublicKey = getEnv("ISOLARCLOUD_RSA_PUBLIC_KEY") || config.rsa_public_key || "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDoFf8y0HkNSRf4zNRVRW9NbTBiQ1uFPJcSCVx_D33yhb1vCoI9BrS_KpcXm4ATIJ5ogFptKuYOmVqgEda8jMmFplBGcsiLL_EJ-6d0TUoPwFddMr7shd51Y-vbel-Aqjmr-ShL7NbHLN_J0RrWDFW4ga0c1oVxY5IFWRHwFDMVAQIDAQAB";
+    const apiUrl = getEnv("ISOLARCLOUD_API_URL") || config.api_url || "https://gateway.isolarcloud.in";
+    const userAccount = getEnv("ISOLARCLOUD_USER_ACCOUNT") || config.user_account || config.username;
+    const userPassword = getEnv("ISOLARCLOUD_USER_PASSWORD") || config.user_password || config.password;
+    const token = getEnv("ISOLARCLOUD_TOKEN") || config.token;
+
+    return new SungrowAdapter({
+      appKey,
+      secretKey,
+      rsaPublicKey,
+      apiUrl,
+      userAccount,
+      userPassword,
+      token
     });
   } else {
     throw new Error(`Unsupported OEM provider: ${provider}`);

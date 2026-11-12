@@ -10,12 +10,16 @@ import requests
 try:
     from adapters.solis import SolisAdapter
     from adapters.feston import FestonAdapter
+    from adapters.suryalogix import SuryalogixAdapter
+    from adapters.sungrow import SungrowAdapter
     from adapters.base import OemAdapter
     from alarm_mappings import translate_alert
     from distributed_lock import DistributedLock
 except ImportError:
     from backend.adapters.solis import SolisAdapter
     from backend.adapters.feston import FestonAdapter
+    from backend.adapters.suryalogix import SuryalogixAdapter
+    from backend.adapters.sungrow import SungrowAdapter
     from backend.adapters.base import OemAdapter
     from backend.alarm_mappings import translate_alert
     from backend.distributed_lock import DistributedLock
@@ -111,6 +115,32 @@ def get_adapter_for_integration(integ: dict) -> OemAdapter:
             password=password,
             access_token=access_token,
             company_id=company_id
+        )
+    elif provider in ("suryalogix", "suryalog"):
+        secret = config.get("secret") or os.getenv("SURYALOGIX_SECRET") or "cd8ae85e44e2ca7d997904893f8fb7fe"
+        api_url = config.get("api_url") or os.getenv("SURYALOGIX_API_URL") or "https://cloud.suryalog.ae/api/get_datalog_v7.php"
+        plants = config.get("plants") or []
+        return SuryalogixAdapter(
+            secret=secret,
+            api_url=api_url,
+            plants=plants
+        )
+    elif provider in ("sungrow", "isolarcloud"):
+        app_key = config.get("app_key") or config.get("appkey") or os.getenv("ISOLARCLOUD_APP_KEY") or "B3500A80C94EADF9C52E01D7790A96DD"
+        secret_key = config.get("secret_key") or config.get("secret") or os.getenv("ISOLARCLOUD_SECRET_KEY") or "k2a5vg8w7qdua4nqet6rsspnrhsmr3in"
+        rsa_public_key = config.get("rsa_public_key") or os.getenv("ISOLARCLOUD_RSA_PUBLIC_KEY") or "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDoFf8y0HkNSRf4zNRVRW9NbTBiQ1uFPJcSCVx_D33yhb1vCoI9BrS_KpcXm4ATIJ5ogFptKuYOmVqgEda8jMmFplBGcsiLL_EJ-6d0TUoPwFddMr7shd51Y-vbel-Aqjmr-ShL7NbHLN_J0RrWDFW4ga0c1oVxY5IFWRHwFDMVAQIDAQAB"
+        api_url = config.get("api_url") or os.getenv("ISOLARCLOUD_API_URL") or "https://gateway.isolarcloud.in"
+        token = config.get("token") or os.getenv("ISOLARCLOUD_TOKEN")
+        user_account = config.get("user_account") or os.getenv("ISOLARCLOUD_USER_ACCOUNT")
+        user_password = config.get("user_password") or os.getenv("ISOLARCLOUD_USER_PASSWORD")
+        return SungrowAdapter(
+            app_key=app_key,
+            secret_key=secret_key,
+            rsa_public_key=rsa_public_key,
+            api_url=api_url,
+            token=token,
+            user_account=user_account,
+            user_password=user_password
         )
     else:
         raise ValueError(f"Unsupported provider: {provider}")
@@ -647,10 +677,11 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                 
                 # Update dynamic string count and ensure communicating inverters are marked online
                 dynamic_string_count = len(string_map)
+                last_seen = telemetry.timestamp.isoformat() if (telemetry and hasattr(telemetry.timestamp, "isoformat")) else (str(telemetry.timestamp) if telemetry and getattr(telemetry, "timestamp", None) else dev.last_seen_at)
                 inv_patch = {
                     "string_count": dynamic_string_count,
                     "status": "online" if telemetry else dev.status,
-                    "last_seen_at": telemetry.timestamp.isoformat() if (telemetry and hasattr(telemetry, "timestamp") and telemetry.timestamp) else dev.last_seen_at
+                    "last_seen_at": last_seen
                 }
                 supabase_patch("inverters", inv_patch, params={"id": f"eq.{inv_id}"})
                 

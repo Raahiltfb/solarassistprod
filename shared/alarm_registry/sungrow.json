@@ -1,49 +1,153 @@
 {
   "$schema": "SolarAssist Alarm Intelligence Schema V1",
   "oem": "sungrow",
-  "source_document": "Sungrow String Inverter User Manual (SG110CX/SG125HV), Section 10.2 (Troubleshooting & Fault Codes)",
+  "source_document": "Sungrow String Inverter User Manual (SG110CX/SG125HV/SG33CX), Section 10.2 (Troubleshooting & Fault Codes)",
   "documentation_verified": true,
   "mappings": {
-    "FAULT_39": {
-      "code": "FAULT_39",
-      "oem_code": "Fault 39 (Low Insulation Resistance)",
-      "title": "Isolation Fault (ISO-F)",
-      "description": "Ground isolation resistance of the PV array is below the safe operational threshold.",
-      "oem_definition": "Low Insulation Resistance (Fault 39). Inverter impedance measurement detected earth insulation resistance lower than safety standard.",
+    "FAULT_2": {
+      "code": "FAULT_2",
+      "oem_code": "Fault 2 (Grid Undervoltage)",
+      "title": "Grid Undervoltage",
+      "description": "Grid voltage is below the lower operating limit configured on the inverter.",
+      "oem_definition": "Grid Undervoltage (Fault 2). Utility grid AC voltage is consistently lower than lower trip limit.",
       "operational_interpretation": {
-        "severity": "critical",
-        "category": "pv",
+        "severity": "high",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Utility grid brownout or heavy local industrial load switching",
+        "Tripped AC circuit breaker or blown line fuse",
+        "AC disconnect switch open"
+      ],
+      "recommended_action": "Check AC breaker and verify utility grid supply voltage. Inverter will auto-reconnect once grid recovers."
+    },
+    "FAULT_3": {
+      "code": "FAULT_3",
+      "oem_code": "Fault 3 (Grid Transient Overvoltage)",
+      "title": "Grid Transient Overvoltage",
+      "description": "Transient grid AC voltage spike exceeded statutory protection limit.",
+      "oem_definition": "Grid Transient Overvoltage (Fault 3). Instantaneous AC line surge detected.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Grid lightning surge or capacitor bank switching",
+        "Substation fault on distribution feeder"
+      ],
+      "recommended_action": "Inverter will wait out disconnection timer and automatically attempt reconnect."
+    },
+    "FAULT_4": {
+      "code": "FAULT_4",
+      "oem_code": "Fault 4 (Grid Transient Undervoltage)",
+      "title": "Grid Transient Undervoltage",
+      "description": "Transient AC voltage drop below safe operational threshold.",
+      "oem_definition": "Grid Transient Undervoltage (Fault 4). Short-duration voltage dip detected.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Motor starting or sudden load increase on shared distribution transformer",
+        "Utility fault ride-through event"
+      ],
+      "recommended_action": "Monitor grid stability; inverter will self-recover when voltage normalizes."
+    },
+    "FAULT_8": {
+      "code": "FAULT_8",
+      "oem_code": "Fault 8 (Grid Underfrequency)",
+      "title": "Grid Underfrequency",
+      "description": "Grid AC frequency dropped below minimum operating limit.",
+      "oem_definition": "Grid Underfrequency (Fault 8). Frequency lower than minimum trip limit.",
+      "operational_interpretation": {
+        "severity": "medium",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Severe generation-demand deficit on utility grid",
+        "Generator instability in microgrid/DG mode"
+      ],
+      "recommended_action": "Wait for utility frequency stabilization."
+    },
+    "FAULT_10": {
+      "code": "FAULT_10",
+      "oem_code": "Fault 10 (Grid Overfrequency)",
+      "title": "Grid Overfrequency",
+      "description": "Grid frequency exceeded maximum permissible frequency threshold.",
+      "oem_definition": "Grid Overfrequency (Fault 10). Frequency higher than grid protection limit.",
+      "operational_interpretation": {
+        "severity": "medium",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Grid frequency fluctuation during sudden utility load loss",
+        "Microgrid frequency surge"
+      ],
+      "recommended_action": "Inverter will auto-reconnect once grid frequency returns to nominal range."
+    },
+    "FAULT_11": {
+      "code": "FAULT_11",
+      "oem_code": "Fault 11 (Grid Power Outage)",
+      "title": "Grid Blackout / AC Power Loss",
+      "description": "Utility grid power completely lost at inverter AC terminals.",
+      "oem_definition": "Grid Power Outage (Fault 11). Zero voltage and zero current detected on all phases.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Utility power outage or planned load shedding",
+        "Upstream LT breaker or HT transformer isolator tripped"
+      ],
+      "recommended_action": "Check AC main breaker and confirm site grid availability."
+    },
+    "FAULT_12": {
+      "code": "FAULT_12",
+      "oem_code": "Fault 12 (Islanding Fault)",
+      "title": "Anti-Islanding Protection Trip",
+      "description": "Inverter anti-islanding circuit detected island operation condition.",
+      "oem_definition": "Islanding Fault (Fault 12). Active or passive anti-islanding threshold crossed.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Grid disconnect while solar output equals local plant load",
+        "High grid impedance during network reconfiguration"
+      ],
+      "recommended_action": "Ensure utility grid is solidly connected and breaker is closed."
+    },
+    "FAULT_14": {
+      "code": "FAULT_14",
+      "oem_code": "Fault 14 (Grid Phase Sequence Error)",
+      "title": "Grid Phase Sequence Fault",
+      "description": "Three-phase AC output sequence is incorrect (e.g. reversed phases).",
+      "oem_definition": "Phase Sequence Error (Fault 14). Line phase angle or rotation reversed.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "electrical",
         "requires_technician": true,
         "is_auto_resolvable": false
       },
       "potential_causes": [
-        "PV array DC cable insulation mechanical damage",
-        "Water ingress in DC string combiner or module connectors",
-        "DC positive or negative conductor pinched against ground structure"
+        "Reversed AC phase conductors during installation or cabling work",
+        "Utility line phase swap"
       ],
-      "recommended_action": "Check PV string insulation resistance to earth per Sungrow manual. Locate and eliminate ground fault on DC side.",
-      "general_field_guidance": [
-        {
-          "step": 1,
-          "phase": "Safety & Isolation",
-          "instruction": "Disconnect AC and DC power to the inverter. Ensure DC switch is in OFF position."
-        },
-        {
-          "step": 2,
-          "phase": "Visual Inspection",
-          "instruction": "Inspect DC cables entering inverter gland plate and check for chafing against sharp enclosure edges."
-        },
-        {
-          "step": 3,
-          "phase": "Measurements",
-          "instruction": "Test positive-to-ground and negative-to-ground insulation resistance on each string with megohmmeter."
-        },
-        {
-          "step": 4,
-          "phase": "Verification",
-          "instruction": "Fix isolated string, re-connect DC inputs, and verify Fault 39 auto-clears on reboot."
-        }
-      ]
+      "recommended_action": "De-energize AC breaker, check phase sequence with rotation meter, and swap L1/L2 phases if reversed."
     },
     "FAULT_15": {
       "code": "FAULT_15",
@@ -61,85 +165,137 @@
         "Grid supply voltage elevated by utility substation tap setting",
         "AC line resistance too high, causing voltage rise under full solar export"
       ],
-      "recommended_action": "Measure grid voltage. If grid voltage is normal, inspect AC wiring connections.",
-      "general_field_guidance": [
-        {
-          "step": 1,
-          "phase": "Measurements",
-          "instruction": "Check AC terminal voltage across phases using a true-RMS multimeter."
-        },
-        {
-          "step": 2,
-          "phase": "Verification",
-          "instruction": "Confirm inverter resumes grid-tied operation once voltage stabilizes within range."
-        }
-      ]
+      "recommended_action": "Measure grid voltage. If grid voltage is normal, inspect AC wiring connections."
+    },
+    "FAULT_16": {
+      "code": "FAULT_16",
+      "oem_code": "Fault 16 (Output Overcurrent)",
+      "title": "Inverter AC Output Overcurrent",
+      "description": "AC current delivered by inverter exceeded instantaneous hardware limit.",
+      "oem_definition": "Output Overcurrent (Fault 16). Inverter AC current sensor triggered overcurrent protection.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "inverter",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Short circuit on AC cables or busbar",
+        "Sudden grid voltage sag causing inverter current surge",
+        "Internal inverter IGBT power bridge fault"
+      ],
+      "recommended_action": "Isolate AC and DC switches. Inspect AC cabling for short circuits before restarting."
+    },
+    "FAULT_19": {
+      "code": "FAULT_19",
+      "oem_code": "Fault 19 (Excessive Leakage Current)",
+      "title": "Residual Current (RCD) Fault",
+      "description": "Leakage current to earth exceeded allowable residual current threshold.",
+      "oem_definition": "Excessive Leakage Current (Fault 19). Differential residual current sensor tripped.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "pv",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Moisture or standing water in module junctions or conduit",
+        "Chafed cable conductor touching grounded frame"
+      ],
+      "recommended_action": "Inspect DC cabling and module junctions for water ingress or insulation breakdown."
+    },
+    "FAULT_36": {
+      "code": "FAULT_36",
+      "oem_code": "Fault 36 (Excessive Heatsink Temperature)",
+      "title": "Inverter Heatsink Overtemperature",
+      "description": "Inverter power module heatsink temperature exceeded thermal safety cutoff limits.",
+      "oem_definition": "Excessive Heatsink Temperature (Fault 36). Power IGBT heatsink thermal probe tripped.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "inverter",
+        "requires_technician": true,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Cooling fan seized or blocked",
+        "Dust accumulation on heatsink fins",
+        "Inadequate ventilation clearance"
+      ],
+      "recommended_action": "Clean heatsink fins, test cooling fans, and ensure unrestricted air passage."
     },
     "FAULT_37": {
       "code": "FAULT_37",
       "oem_code": "Fault 37 (Excessive Ambient/Internal Temperature)",
-      "title": "Inverter Overtemperature",
+      "title": "Inverter Cabinet Overtemperature",
       "description": "Inverter internal heatsink or ambient temperature exceeded thermal safety cutoff limits.",
       "oem_definition": "Excessive Ambient/Internal Temperature (Fault 37). Temperature sensor inside inverter chassis tripped over-temperature threshold.",
       "operational_interpretation": {
         "severity": "high",
         "category": "inverter",
         "requires_technician": true,
-        "is_auto_resolvable": false
-      },
-      "potential_causes": [
-        "Inverter cooling fan blocked or seized",
-        "Air intake/outlet vents obstructed by vegetation, bird nests, or debris",
-        "Ambient temperature exceeding 60°C in direct unshaded sunlight"
-      ],
-      "recommended_action": "Clear air intake and exhaust vents. Verify fan operation and clean heatsink fins.",
-      "general_field_guidance": [
-        {
-          "step": 1,
-          "phase": "Safety & Isolation",
-          "instruction": "Wait for inverter to cool. Keep hands away from hot heatsink surfaces."
-        },
-        {
-          "step": 2,
-          "phase": "Visual Inspection",
-          "instruction": "Clean external air filters and inspect cooling fans for dust accumulation."
-        },
-        {
-          "step": 3,
-          "phase": "Measurements",
-          "instruction": "Use Sungrow iSolarCloud app to read internal temperature sensor channels."
-        },
-        {
-          "step": 4,
-          "phase": "Verification",
-          "instruction": "Verify cooling fan spins up and temperature drops to normal operating range."
-        }
-      ]
-    },
-    "FAULT_10": {
-      "code": "FAULT_10",
-      "oem_code": "Fault 10 (Grid Overfrequency)",
-      "title": "Grid Frequency Deviation",
-      "description": "Grid frequency exceeded maximum permissible frequency threshold.",
-      "oem_definition": "Grid Overfrequency (Fault 10). Frequency higher than grid protection limit.",
-      "operational_interpretation": {
-        "severity": "high",
-        "category": "grid",
-        "requires_technician": false,
         "is_auto_resolvable": true
       },
       "potential_causes": [
-        "Grid frequency fluctuation during sudden utility load loss",
-        "Microgrid frequency surge"
+        "Inverter cooling fan blocked or seized",
+        "Air intake/outlet vents obstructed by vegetation or debris",
+        "Direct unshaded sunlight heating enclosure"
       ],
-      "recommended_action": "Monitor grid frequency status.",
-      "general_field_guidance": [
-        {
-          "step": 1,
-          "phase": "Measurements",
-          "instruction": "Verify grid frequency via utility meter or power logger."
-        }
-      ]
+      "recommended_action": "Clear air vents, check fan operation, and verify thermal environment."
+    },
+    "FAULT_39": {
+      "code": "FAULT_39",
+      "oem_code": "Fault 39 (Low Insulation Resistance)",
+      "title": "Isolation Fault (ISO-F)",
+      "description": "Ground isolation resistance of the PV array is below the safe operational threshold.",
+      "oem_definition": "Low Insulation Resistance (Fault 39). Inverter impedance measurement detected earth insulation resistance lower than safety standard.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "pv",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "PV array DC cable insulation mechanical damage",
+        "Water ingress in DC string combiner or module connectors",
+        "DC positive or negative conductor pinched against ground structure"
+      ],
+      "recommended_action": "Check PV string insulation resistance to earth with megohmmeter. Locate and eliminate ground fault on DC side."
+    },
+    "FAULT_40": {
+      "code": "FAULT_40",
+      "oem_code": "Fault 40 (DC Bus Overvoltage)",
+      "title": "DC Bus Overvoltage",
+      "description": "Inverter internal DC bus capacitor voltage exceeded hardware protection limit.",
+      "oem_definition": "DC Bus Overvoltage (Fault 40). Internal DC bus voltage sensor exceeded safety threshold.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "pv",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "PV array Voc in cold weather exceeds inverter rating",
+        "Grid disconnection under full load causing DC bus voltage spike"
+      ],
+      "recommended_action": "Check string open circuit voltage against maximum permissible DC input voltage."
+    },
+    "FAULT_42": {
+      "code": "FAULT_42",
+      "oem_code": "Fault 42 (PV Input Overcurrent)",
+      "title": "PV Input Overcurrent",
+      "description": "DC input current into MPPT tracker exceeded allowable inverter maximum rating.",
+      "oem_definition": "PV Input Overcurrent (Fault 42). DC input current sensor triggered overcurrent threshold.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "pv",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Incorrect parallel string connection exceeding MPPT rated Isc",
+        "Bifacial irradiance boost beyond input threshold"
+      ],
+      "recommended_action": "Verify module string paralleling design and check MPPT maximum short-circuit current."
     },
     "FAULT_43": {
       "code": "FAULT_43",
@@ -157,24 +313,45 @@
         "Improper wiring termination during module installation or cable crimping",
         "Crossed MC4 connector labeling"
       ],
-      "recommended_action": "De-energize inverter DC disconnect immediately. Use DC voltmeter to identify and correct reversed string.",
-      "general_field_guidance": [
-        {
-          "step": 1,
-          "phase": "Safety & Isolation",
-          "instruction": "Open DC isolator under zero load conditions."
-        },
-        {
-          "step": 2,
-          "phase": "Measurements",
-          "instruction": "Measure Voc of each string input. Confirm positive polarity on positive lead."
-        },
-        {
-          "step": 3,
-          "phase": "Verification",
-          "instruction": "Correct wiring, re-plug MC4 connector, and verify polarity before switching on DC."
-        }
-      ]
+      "recommended_action": "De-energize inverter DC disconnect immediately. Use DC voltmeter to identify and correct reversed string."
+    },
+    "FAULT_75": {
+      "code": "FAULT_75",
+      "oem_code": "Fault 75 (Communication Error)",
+      "title": "Communication Fault with Meter / Logger",
+      "description": "Inverter lost RS485 communication with smart meter or monitoring logger.",
+      "oem_definition": "Communication Error (Fault 75). Inverter modbus master port timed out waiting for meter/logger response.",
+      "operational_interpretation": {
+        "severity": "medium",
+        "category": "communication",
+        "requires_technician": true,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "RS485 cable loose or severed",
+        "Incorrect meter baud rate or modbus address",
+        "Meter auxiliary power offline"
+      ],
+      "recommended_action": "Check meter RS485 communication wiring and verify communication parameters."
+    },
+    "FAULT_532": {
+      "code": "FAULT_532",
+      "oem_code": "Fault 532 (String Abnormal Warning)",
+      "title": "String Underperformance / Zero Current",
+      "description": "One of the DC strings has zero current while other parallel strings are generating normally.",
+      "oem_definition": "String Abnormal Warning (Fault 532). Current deviation detected across monitored string inputs.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "pv",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Blown DC string fuse",
+        "Disconnected MC4 plug or open-circuit bypass diode",
+        "Severely soiled or shaded module string"
+      ],
+      "recommended_action": "Inspect string current in iSolarCloud, check string fuses, and measure open-circuit voltage at disconnect."
     }
   }
 }

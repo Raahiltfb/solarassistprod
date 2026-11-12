@@ -2,17 +2,23 @@ from typing import Dict, Any
 
 from .solis import SOLIS_ALARM_MAPPING
 from .feston import match_feston_alarm, FESTON_ALARM_MAPPING
+from .suryalogix import SURYALOGIX_ALARM_MAPPING
+from .sungrow import SUNGROW_ALARM_MAPPING
 
 def translate_alert(oem: str, raw_code: str, default_title: str) -> dict:
     """Translates raw OEM alarm codes into normalized, human-readable alerts."""
     oem_lower = oem.lower() if oem else ""
     
+    rule = None
     if oem_lower == "solis":
         rule = SOLIS_ALARM_MAPPING.get(raw_code)
     elif oem_lower in ("feston", "solaros"):
         rule = match_feston_alarm(raw_code, default_title)
-    else:
-        rule = None
+    elif oem_lower in ("suryalogix", "suryalog"):
+        rule = SURYALOGIX_ALARM_MAPPING.get(raw_code)
+    elif oem_lower in ("sungrow", "isolarcloud"):
+        clean_code = raw_code if raw_code.startswith("FAULT_") else f"FAULT_{raw_code}"
+        rule = SUNGROW_ALARM_MAPPING.get(clean_code) or SUNGROW_ALARM_MAPPING.get(raw_code)
         
     if rule:
         return {

@@ -369,6 +369,273 @@ export function matchFestonAlarm(rawCode: string, title: string = ""): AlarmRule
   return null;
 }
 
+export const SURYALOGIX_ALARM_MAPPING: Record<string, AlarmRule> = {
+  "ERR_COMM_DOWN": {
+    title: "Inverter Communication Lost",
+    description: "Communication link between Suryalogix data logger and the inverter has been interrupted.",
+    severity: "high",
+    category: "communication",
+    is_auto_resolvable: true,
+    requires_technician: true,
+    recommended_action: "Check RS485 wiring, logger terminal connections, and inverter control card power."
+  },
+  "INV_STATUS_FAULT": {
+    title: "Inverter General Fault",
+    description: "Inverter reported critical error state and tripped offline.",
+    severity: "critical",
+    category: "inverter",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Check inverter LCD display or diagnostic registers for exact fault code, isolate AC/DC and inspect installation."
+  },
+  "INV_STATUS_DERATING": {
+    title: "Inverter Thermal or Power Derating",
+    description: "Inverter active power output is throttled due to high temperature or curtailment limit.",
+    severity: "medium",
+    category: "inverter",
+    is_auto_resolvable: true,
+    requires_technician: false,
+    recommended_action: "Inspect cooling fans for debris, verify cabinet ventilation clearance, and check active power setpoint."
+  },
+  "OVER_TEMP": {
+    title: "Heatsink / Cabinet Over Temperature",
+    description: "Power electronics heatsink or internal cabinet temperature exceeded safe operating threshold.",
+    severity: "high",
+    category: "inverter",
+    is_auto_resolvable: true,
+    requires_technician: true,
+    recommended_action: "Clean heatsink fins, test cooling fan rotation, and verify air intake filters."
+  },
+  "GRID_OVER_VOLTAGE": {
+    title: "Grid Overvoltage",
+    description: "Three-phase grid voltage exceeded inverter high voltage threshold.",
+    severity: "high",
+    category: "grid",
+    is_auto_resolvable: true,
+    requires_technician: false,
+    recommended_action: "Inverter will auto-reconnect once grid voltage normalizes. Contact distribution utility if persistent."
+  },
+  "GRID_UNDER_VOLTAGE": {
+    title: "Grid Undervoltage / AC Blackout",
+    description: "Utility grid voltage fell below minimum allowable operational limit.",
+    severity: "high",
+    category: "grid",
+    is_auto_resolvable: true,
+    requires_technician: false,
+    recommended_action: "Check AC breaker position and inspect grid supply status."
+  },
+  "PV_ISO_FAULT": {
+    title: "PV Array Ground Isolation Fault",
+    description: "Insulation resistance between DC array conductors and earth is below the safety threshold.",
+    severity: "critical",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Test string insulation resistance to earth using 1000V megohmmeter. Locate and repair faulted DC conductor."
+  },
+  "DC_OVER_VOLTAGE": {
+    title: "DC Input Overvoltage",
+    description: "DC input voltage on MPPT terminals exceeded the inverter maximum open-circuit voltage rating.",
+    severity: "critical",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Measure open-circuit voltage (Voc) of each string immediately. Reconfigure string module count if over design limit."
+  },
+  "SMB_COMM_FAULT": {
+    title: "String Combiner Box Communication Fault",
+    description: "Communication with DC String Monitoring Box (SMB) timed out.",
+    severity: "medium",
+    category: "communication",
+    is_auto_resolvable: true,
+    requires_technician: true,
+    recommended_action: "Check 24V DC auxiliary power in SMB and verify RS485 communication lines."
+  },
+  "SMB_STRING_FAULT": {
+    title: "SMB DC String Disconnect / Blown Fuse",
+    description: "SMB card detected blown DC fuse or zero-current deviation on active string.",
+    severity: "high",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Open SMB enclosure, check continuity across DC fuses, and measure open-circuit string voltage."
+  }
+};
+
+export const SUNGROW_ALARM_MAPPING: Record<string, AlarmRule> = {
+  "FAULT_2": {
+    title: "Grid Undervoltage",
+    description: "Grid voltage is below the lower operating limit configured on the inverter.",
+    severity: "high",
+    category: "grid",
+    is_auto_resolvable: true,
+    requires_technician: false,
+    recommended_action: "Check AC breaker and verify utility grid supply voltage. Inverter will auto-reconnect once grid recovers."
+  },
+  "FAULT_3": {
+    title: "Grid Transient Overvoltage",
+    description: "Transient grid AC voltage spike exceeded statutory protection limit.",
+    severity: "high",
+    category: "grid",
+    is_auto_resolvable: true,
+    requires_technician: false,
+    recommended_action: "Inverter will wait out disconnection timer and automatically attempt reconnect."
+  },
+  "FAULT_4": {
+    title: "Grid Transient Undervoltage",
+    description: "Transient AC voltage drop below safe operational threshold.",
+    severity: "high",
+    category: "grid",
+    is_auto_resolvable: true,
+    requires_technician: false,
+    recommended_action: "Monitor grid stability; inverter will self-recover when voltage normalizes."
+  },
+  "FAULT_8": {
+    title: "Grid Underfrequency",
+    description: "Grid AC frequency dropped below minimum operating limit.",
+    severity: "medium",
+    category: "grid",
+    is_auto_resolvable: true,
+    requires_technician: false,
+    recommended_action: "Wait for utility frequency stabilization."
+  },
+  "FAULT_10": {
+    title: "Grid Overfrequency",
+    description: "Grid frequency exceeded maximum permissible frequency threshold.",
+    severity: "medium",
+    category: "grid",
+    is_auto_resolvable: true,
+    requires_technician: false,
+    recommended_action: "Inverter will auto-reconnect once grid frequency returns to nominal range."
+  },
+  "FAULT_11": {
+    title: "Grid Blackout / AC Power Loss",
+    description: "Utility grid power completely lost at inverter AC terminals.",
+    severity: "high",
+    category: "grid",
+    is_auto_resolvable: true,
+    requires_technician: false,
+    recommended_action: "Check AC main breaker and confirm site grid availability."
+  },
+  "FAULT_12": {
+    title: "Anti-Islanding Protection Trip",
+    description: "Inverter anti-islanding circuit detected island operation condition.",
+    severity: "high",
+    category: "grid",
+    is_auto_resolvable: true,
+    requires_technician: false,
+    recommended_action: "Ensure utility grid is solidly connected and breaker is closed."
+  },
+  "FAULT_14": {
+    title: "Grid Phase Sequence Fault",
+    description: "Three-phase AC output sequence is incorrect (e.g. reversed phases).",
+    severity: "high",
+    category: "electrical",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "De-energize AC breaker, check phase sequence with rotation meter, and swap L1/L2 phases if reversed."
+  },
+  "FAULT_15": {
+    title: "Grid Overvoltage",
+    description: "Grid AC voltage exceeded the upper operating threshold configured on the inverter.",
+    severity: "high",
+    category: "grid",
+    is_auto_resolvable: true,
+    requires_technician: false,
+    recommended_action: "Measure grid voltage. If grid voltage is normal, inspect AC wiring connections."
+  },
+  "FAULT_16": {
+    title: "Inverter AC Output Overcurrent",
+    description: "AC current delivered by inverter exceeded instantaneous hardware limit.",
+    severity: "critical",
+    category: "inverter",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Isolate AC and DC switches. Inspect AC cabling for short circuits before restarting."
+  },
+  "FAULT_19": {
+    title: "Residual Current (RCD) Fault",
+    description: "Leakage current to earth exceeded allowable residual current threshold.",
+    severity: "critical",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Inspect DC cabling and module junctions for water ingress or insulation breakdown."
+  },
+  "FAULT_36": {
+    title: "Inverter Heatsink Overtemperature",
+    description: "Inverter power module heatsink temperature exceeded thermal safety cutoff limits.",
+    severity: "high",
+    category: "inverter",
+    is_auto_resolvable: true,
+    requires_technician: true,
+    recommended_action: "Clean heatsink fins, test cooling fans, and ensure unrestricted air passage."
+  },
+  "FAULT_37": {
+    title: "Inverter Cabinet Overtemperature",
+    description: "Inverter internal heatsink or ambient temperature exceeded thermal safety cutoff limits.",
+    severity: "high",
+    category: "inverter",
+    is_auto_resolvable: true,
+    requires_technician: true,
+    recommended_action: "Clear air vents, check fan operation, and verify thermal environment."
+  },
+  "FAULT_39": {
+    title: "Isolation Fault (ISO-F)",
+    description: "Ground isolation resistance of the PV array is below the safe operational threshold.",
+    severity: "critical",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Check PV string insulation resistance to earth with megohmmeter. Locate and eliminate ground fault on DC side."
+  },
+  "FAULT_40": {
+    title: "DC Bus Overvoltage",
+    description: "Inverter internal DC bus capacitor voltage exceeded hardware protection limit.",
+    severity: "critical",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Check string open circuit voltage against maximum permissible DC input voltage."
+  },
+  "FAULT_42": {
+    title: "PV Input Overcurrent",
+    description: "DC input current into MPPT tracker exceeded allowable inverter maximum rating.",
+    severity: "critical",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Verify module string paralleling design and check MPPT maximum short-circuit current."
+  },
+  "FAULT_43": {
+    title: "String Reverse Polarity",
+    description: "One or more DC strings are connected with reversed positive and negative polarity.",
+    severity: "high",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "De-energize inverter DC disconnect immediately. Use DC voltmeter to identify and correct reversed string."
+  },
+  "FAULT_75": {
+    title: "Communication Fault with Meter / Logger",
+    description: "Inverter lost RS485 communication with smart meter or monitoring logger.",
+    severity: "medium",
+    category: "communication",
+    is_auto_resolvable: true,
+    requires_technician: true,
+    recommended_action: "Check meter RS485 communication wiring and verify communication parameters."
+  },
+  "FAULT_532": {
+    title: "String Underperformance / Zero Current",
+    description: "One of the DC strings has zero current while other parallel strings are generating normally.",
+    severity: "high",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Inspect string current in iSolarCloud, check string fuses, and measure open-circuit voltage at disconnect."
+  }
+};
+
 export function translateAlert(oem: string, rawCode: string, defaultTitle: string) {
   const oemLower = (oem || "").toLowerCase();
 
@@ -389,6 +656,37 @@ export function translateAlert(oem: string, rawCode: string, defaultTitle: strin
 
   if (oemLower === "solis") {
     const rule = SOLIS_ALARM_MAPPING[rawCode];
+    if (rule) {
+      return {
+        title: rule.title || defaultTitle,
+        description: rule.description || `OEM code: ${rawCode}`,
+        severity: rule.severity || "medium",
+        category: rule.category || "inverter",
+        recommended_action: rule.recommended_action || "Check inverter status and consult manual.",
+        is_auto_resolvable: rule.is_auto_resolvable ?? false,
+        requires_technician: rule.requires_technician ?? true
+      };
+    }
+  }
+
+  if (oemLower === "suryalogix" || oemLower === "suryalog") {
+    const rule = SURYALOGIX_ALARM_MAPPING[rawCode];
+    if (rule) {
+      return {
+        title: rule.title || defaultTitle,
+        description: rule.description || `OEM code: ${rawCode}`,
+        severity: rule.severity || "medium",
+        category: rule.category || "inverter",
+        recommended_action: rule.recommended_action || "Check inverter status and consult manual.",
+        is_auto_resolvable: rule.is_auto_resolvable ?? false,
+        requires_technician: rule.requires_technician ?? true
+      };
+    }
+  }
+
+  if (oemLower === "sungrow" || oemLower === "isolarcloud") {
+    const cleanCode = rawCode.startsWith("FAULT_") ? rawCode : `FAULT_${rawCode}`;
+    const rule = SUNGROW_ALARM_MAPPING[cleanCode] || SUNGROW_ALARM_MAPPING[rawCode];
     if (rule) {
       return {
         title: rule.title || defaultTitle,

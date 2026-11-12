@@ -1,0 +1,196 @@
+{
+  "$schema": "SolarAssist Alarm Intelligence Schema V1",
+  "oem": "suryalogix",
+  "source_document": "Suryalogix Cloud Suryalog API Integration SOP & Inverter Modbus Protocol Reference",
+  "documentation_verified": true,
+  "mappings": {
+    "ERR_COMM_DOWN": {
+      "code": "ERR_COMM_DOWN",
+      "oem_code": "Communication Link Down (suryalog_status = 0)",
+      "title": "Inverter Communication Lost",
+      "description": "Communication link between Suryalogix data logger and the inverter has been interrupted.",
+      "oem_definition": "Logger detected RS485 / Modbus TCP timeout or CRC communication failure with inverter device.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "communication",
+        "requires_technician": true,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "RS485 communication cable disconnected, sheared, or loose terminals",
+        "Data logger power cycle or gateway reboot",
+        "Inverter auxiliary power supply offline"
+      ],
+      "recommended_action": "Check RS485 wiring, logger terminal connections, and inverter control card power."
+    },
+    "INV_STATUS_FAULT": {
+      "code": "INV_STATUS_FAULT",
+      "oem_code": "Inverter Status 5 (General Fault)",
+      "title": "Inverter General Fault",
+      "description": "Inverter reported critical error state and tripped offline.",
+      "oem_definition": "inverter_status register returned status code 5 indicating protection trip.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "inverter",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Internal hardware protection trip",
+        "Severe AC grid disturbance or short circuit",
+        "DC array ground isolation breakdown"
+      ],
+      "recommended_action": "Check inverter LCD display or diagnostic registers for exact fault code, isolate AC/DC and inspect installation."
+    },
+    "INV_STATUS_DERATING": {
+      "code": "INV_STATUS_DERATING",
+      "oem_code": "Inverter Status 6 (Derating)",
+      "title": "Inverter Thermal or Power Derating",
+      "description": "Inverter active power output is throttled due to high temperature or curtailment limit.",
+      "oem_definition": "Inverter operating in derating mode (inverter_status = 6 or active_plimit > 0).",
+      "operational_interpretation": {
+        "severity": "medium",
+        "category": "inverter",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "High heatsink temperature exceeding 75°C",
+        "Clogged external cooling fans or heat exchanger dust accumulation",
+        "Utility grid active power curtailment command"
+      ],
+      "recommended_action": "Inspect cooling fans for debris, verify cabinet ventilation clearance, and check active power setpoint."
+    },
+    "OVER_TEMP": {
+      "code": "OVER_TEMP",
+      "oem_code": "TEMP_HS / TEMP_INT Over Temperature",
+      "title": "Heatsink / Cabinet Over Temperature",
+      "description": "Power electronics heatsink or internal cabinet temperature exceeded safe operating threshold.",
+      "oem_definition": "TEMP_HS > 80°C or TEMP_INT > 70°C detected in telemetry.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "inverter",
+        "requires_technician": true,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Cooling fan failure or mechanical obstruction",
+        "Direct solar exposure on inverter cabinet without sunshade",
+        "Dust accumulation on heatsink fins"
+      ],
+      "recommended_action": "Clean heatsink fins, test cooling fan rotation, and verify air intake filters."
+    },
+    "GRID_OVER_VOLTAGE": {
+      "code": "GRID_OVER_VOLTAGE",
+      "oem_code": "Grid Over Voltage (OV-G-V)",
+      "title": "Grid Overvoltage",
+      "description": "Three-phase grid voltage exceeded inverter high voltage threshold.",
+      "oem_definition": "AC line voltage exceeded statutory upper threshold.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Local distribution grid voltage surge",
+        "High impedance in AC cabling causing excessive voltage rise during peak generation",
+        "Transformer tap setting set too high"
+      ],
+      "recommended_action": "Inverter will auto-reconnect once grid voltage normalizes. Contact distribution utility if persistent."
+    },
+    "GRID_UNDER_VOLTAGE": {
+      "code": "GRID_UNDER_VOLTAGE",
+      "oem_code": "Grid Under Voltage (UN-G-V)",
+      "title": "Grid Undervoltage / AC Blackout",
+      "description": "Utility grid voltage fell below minimum allowable operational limit.",
+      "oem_definition": "AC terminal voltage dropped below operational trip limit.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Utility grid outage or load shedding",
+        "Main AC circuit breaker or LT switchgear tripped",
+        "Loose AC terminal connection"
+      ],
+      "recommended_action": "Check AC breaker position and inspect grid supply status."
+    },
+    "PV_ISO_FAULT": {
+      "code": "PV_ISO_FAULT",
+      "oem_code": "Isolation Fault / Ground Resistance Low",
+      "title": "PV Array Ground Isolation Fault",
+      "description": "Insulation resistance between DC array conductors and earth is below the safety threshold.",
+      "oem_definition": "DC insulation resistance measurement failed safe limit test prior to grid connection.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "pv",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Damaged DC cable insulation touching metal module mounting structure",
+        "Water ingress in DC combiner box or MC4 connectors",
+        "Pinched wire during recent maintenance or cleaning"
+      ],
+      "recommended_action": "Test string insulation resistance to earth using 1000V megohmmeter. Locate and repair faulted DC conductor."
+    },
+    "DC_OVER_VOLTAGE": {
+      "code": "DC_OVER_VOLTAGE",
+      "oem_code": "DC Bus Over Voltage",
+      "title": "DC Input Overvoltage",
+      "description": "DC input voltage on MPPT terminals exceeded the inverter maximum open-circuit voltage rating.",
+      "oem_definition": "DC_V register exceeded maximum rated DC input voltage limit.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "pv",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Too many modules connected in series for cold weather temperature conditions",
+        "Severe DC voltage spike or external surge"
+      ],
+      "recommended_action": "Measure open-circuit voltage (Voc) of each string immediately. Reconfigure string module count if over design limit."
+    },
+    "SMB_COMM_FAULT": {
+      "code": "SMB_COMM_FAULT",
+      "oem_code": "SMB Communication Lost (smb_status = 0)",
+      "title": "String Combiner Box Communication Fault",
+      "description": "Communication with DC String Monitoring Box (SMB) timed out.",
+      "oem_definition": "Logger detected RS485 communication timeout on SMB Modbus ID.",
+      "operational_interpretation": {
+        "severity": "medium",
+        "category": "communication",
+        "requires_technician": true,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "SMB auxiliary power supply offline",
+        "RS485 daisy-chain connection severed or loose terminal block"
+      ],
+      "recommended_action": "Check 24V DC auxiliary power in SMB and verify RS485 communication lines."
+    },
+    "SMB_STRING_FAULT": {
+      "code": "SMB_STRING_FAULT",
+      "oem_code": "SMB Error Register (smb_error1 > 0)",
+      "title": "SMB DC String Disconnect / Blown Fuse",
+      "description": "SMB card detected blown DC fuse or zero-current deviation on active string.",
+      "oem_definition": "smb_error1 bitmask register indicated string channel error.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "pv",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Blown gPV fuse inside combiner box",
+        "Disconnected MC4 plug or open-circuit string",
+        "Module diode failure"
+      ],
+      "recommended_action": "Open SMB enclosure, check continuity across DC fuses, and measure open-circuit string voltage."
+    }
+  }
+}

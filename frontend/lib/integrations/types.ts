@@ -32,7 +32,7 @@ export interface NormalizedAlert {
 }
 
 export interface OemAdapter {
-  provider: "solis" | "growatt" | "sungrow";
+  provider: "solis" | "growatt" | "sungrow" | "feston" | "suryalogix";
   listDevices(plantId: string): Promise<NormalizedDevice[]>;
   fetchTelemetry(deviceId: string, opts?: { fromIso?: string; toIso?: string }): Promise<NormalizedTelemetry[]>;
   fetchAlerts(deviceId: string): Promise<NormalizedAlert[]>;
