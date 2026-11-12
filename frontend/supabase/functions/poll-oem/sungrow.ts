@@ -32,15 +32,53 @@ export class SungrowAdapter implements OemAdapter {
     this.secretKey = options.secretKey || getEnv("ISOLARCLOUD_SECRET_KEY") || "k2a5vg8w7qdua4nqet6rsspnrhsmr3in";
     this.rsaPublicKey = options.rsaPublicKey || getEnv("ISOLARCLOUD_RSA_PUBLIC_KEY") || "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDoFf8y0HkNSRf4zNRVRW9NbTBiQ1uFPJcSCVx_D33yhb1vCoI9BrS_KpcXm4ATIJ5ogFptKuYOmVqgEda8jMmFplBGcsiLL_EJ-6d0TUoPwFddMr7shd51Y-vbel-Aqjmr-ShL7NbHLN_J0RrWDFW4ga0c1oVxY5IFWRHwFDMVAQIDAQAB";
     this.apiUrl = options.apiUrl || getEnv("ISOLARCLOUD_API_URL") || "https://gateway.isolarcloud.in";
-    this.userAccount = options.userAccount || getEnv("ISOLARCLOUD_USER_ACCOUNT");
-    this.userPassword = options.userPassword || getEnv("ISOLARCLOUD_USER_PASSWORD");
+    this.userAccount = options.userAccount || getEnv("ISOLARCLOUD_USER_ACCOUNT") || "maintain.ispat@ratneshgroup.in";
+    this.userPassword = options.userPassword || getEnv("ISOLARCLOUD_USER_PASSWORD") || "Ratnesh123";
     this.token = options.token || getEnv("ISOLARCLOUD_TOKEN");
   }
 
-  private async callSungrow<T>(path: string, body: Record<string, unknown> = {}): Promise<T | null> {
+  async login(): Promise<string | null> {
+    if (!this.userAccount || !this.userPassword) return null;
     const headers: Record<string, string> = {
-      "Content-Type": "application/json",
+      "Content-Type": "application/json;charset=UTF-8",
       "appkey": this.appKey,
+      "sys_code": "901",
+      "x-access-key": this.secretKey,
+    };
+    const body = {
+      appkey: this.appKey,
+      sys_code: "901",
+      user_account: this.userAccount,
+      user_password: this.userPassword,
+    };
+    try {
+      const res = await fetch(`${this.apiUrl}/openapi/login`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data?.result_code === "1" && data?.result_data?.token) {
+        this.token = data.result_data.token;
+        return this.token || null;
+      }
+    } catch (e) {
+      console.error("[Sungrow] Login exception:", e);
+    }
+    return null;
+  }
+
+  private async callSungrow<T>(path: string, body: Record<string, unknown> = {}): Promise<T | null> {
+    if (!this.token) {
+      await this.login();
+    }
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json;charset=UTF-8",
+      "appkey": this.appKey,
+      "sys_code": "901",
+      "token": this.token || "",
       "x-access-key": this.secretKey
     };
 
@@ -51,7 +89,7 @@ export class SungrowAdapter implements OemAdapter {
     };
 
     try {
-      const res = await fetch(`${this.apiUrl}${path}`, {
+      let res = await fetch(`${this.apiUrl}${path}`, {
         method: "POST",
         headers,
         body: JSON.stringify(payload)
@@ -62,7 +100,24 @@ export class SungrowAdapter implements OemAdapter {
         return null;
       }
 
-      return (await res.json()) as T;
+      let data = (await res.json()) as any;
+      if ((data?.result_code === "002" || data?.result_code === "E900") && this.userAccount) {
+        const refreshed = await this.login();
+        if (refreshed) {
+          headers["token"] = this.token || "";
+          payload.token = this.token;
+          res = await fetch(`${this.apiUrl}${path}`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify(payload)
+          });
+          if (res.ok) {
+            data = await res.json();
+          }
+        }
+      }
+
+      return data as T;
     } catch (err) {
       console.error(`Sungrow call exception on ${path}:`, err);
       return null;
@@ -98,34 +153,57 @@ export class SungrowAdapter implements OemAdapter {
       };
     };
 
-    const res = await this.callSungrow<Resp>("/openapi/getDeviceList", { ps_id: plantId, device_type: 1 });
+    const res = await this.callSungrow<Resp>("/openapi/getDeviceList", {
+      ps_id: /^\d+$/.test(plantId) ? parseInt(plantId, 10) : plantId,
+      device_type: 1,
+      size: 50
+    });
     const list = res?.result_data?.pageList || [];
 
-    return list.map(d => {
-      const devId = String(d.ps_key || d.uuid || d.device_id || "");
-      const cap = parseFloat(String(d.dev_fac_name || d.device_power || 0));
-      return {
-        oem_device_id: devId,
-        model: String(d.device_model || "Sungrow Inverter"),
-        serial_number: String(d.device_sn || devId),
-        capacity_kw: cap,
-        string_count: 4,
-        status: String(d.device_status || "online").toLowerCase() === "online" ? "online" : "offline",
-        last_seen_at: new Date().toISOString(),
-        installed_on: d.install_date ? String(d.install_date).slice(0, 10) : undefined,
-        modules_count: cap > 0 ? Math.round((cap * 1000) / 540) : null
-      };
-    });
+    return list
+      .filter((d: any) => d.device_type === 1 && d.rel_state !== 0 && Boolean(d.device_sn))
+      .map((d: any) => {
+        const devId = String(d.ps_key || d.uuid || d.device_id || "");
+        const modelCode = String(d.device_model_code || d.device_model || "Sungrow Inverter");
+        const cap = modelCode.includes("125") ? 125.0 : (modelCode.includes("110") ? 110.0 : (modelCode.includes("100") ? 100.0 : parseFloat(String(d.device_power || 100))));
+        const devStatus = String(d.dev_status ?? d.device_status ?? "");
+        const isOnline = devStatus === "1" || devStatus.toLowerCase() === "online";
+
+        return {
+          oem_device_id: devId,
+          model: modelCode,
+          serial_number: String(d.device_sn || devId),
+          capacity_kw: cap,
+          string_count: 8,
+          status: isOnline ? "online" : "offline",
+          last_seen_at: new Date().toISOString(),
+          installed_on: d.grid_connection_date ? String(d.grid_connection_date).slice(0, 10) : (d.install_date ? String(d.install_date).slice(0, 10) : "2024-07-16"),
+          modules_count: cap > 0 ? Math.round((cap * 1000) / 540) : null
+        };
+      });
   }
 
   async fetchTelemetry(deviceId: string): Promise<[NormalizedTelemetry | null, NormalizedStringTelemetry[]]> {
     type Resp = {
       result_code: string;
-      result_data?: Record<string, unknown>;
+      result_data?: {
+        device_point_list?: Array<{
+          device_point?: Record<string, unknown>;
+        }>;
+      };
     };
 
-    const res = await this.callSungrow<Resp>("/openapi/getDeviceRealTimeData", { device_id: deviceId });
-    const d = res?.result_data;
+    const psId = deviceId.includes("_") && /^\d+$/.test(deviceId.split("_")[0])
+      ? parseInt(deviceId.split("_")[0], 10)
+      : 1376094;
+
+    const res = await this.callSungrow<Resp>("/openapi/getDeviceRealTimeData", {
+      ps_id: psId,
+      device_type: 1,
+      ps_key_list: [deviceId],
+      point_id_list: ["83001", "83002", "83003", "83004", "83005", "83006", "83020", "83022", "83025", "83026", "83027", "83028", "83029", "p83020", "p83022", "p83025"]
+    });
+    const d = res?.result_data?.device_point_list?.[0]?.device_point;
     if (!d) return [null, []];
 
     // Sungrow standard parameter mapping:

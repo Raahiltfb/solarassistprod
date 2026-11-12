@@ -15,12 +15,17 @@ export default async function SettingsPage() {
   const profile = profileRes.data;
   const oems = oemsRes.data;
 
+  const isOemActive = (provider: string) =>
+    oems?.some((o: any) => o.provider === provider && o.is_active) ?? false;
+
   const integrations = [
-    { provider: "solis",   connected: !!process.env.SOLIS_KEY_ID, label: "Solis Cloud" },
-    { provider: "growatt", connected: !!process.env.GROWATT_TOKEN, label: "Growatt" },
-    { provider: "sungrow", connected: !!process.env.SUNGROW_APP_KEY, label: "Sungrow iSolarCloud" },
-    { provider: "solcast", connected: !!process.env.SOLCAST_API_KEY, label: "SolCast (benchmark)" },
-    { provider: "resend",  connected: !!process.env.RESEND_API_KEY, label: "Resend (email)" },
+    { provider: "solis",      connected: isOemActive("solis") || !!process.env.SOLIS_KEY_ID, label: "Solis Cloud" },
+    { provider: "feston",     connected: isOemActive("feston") || !!process.env.FESTON_APP_ID, label: "Feston / SolarOS" },
+    { provider: "suryalogix", connected: isOemActive("suryalogix"), label: "Suryalogix" },
+    { provider: "sungrow",    connected: isOemActive("sungrow") || !!process.env.SUNGROW_APP_KEY, label: "Sungrow iSolarCloud" },
+    { provider: "growatt",    connected: isOemActive("growatt") || !!process.env.GROWATT_TOKEN, label: "Growatt" },
+    { provider: "solcast",    connected: !!process.env.SOLCAST_API_KEY, label: "SolCast (benchmark)" },
+    { provider: "resend",     connected: !!process.env.RESEND_API_KEY, label: "Resend (email)" },
   ];
 
   return (

@@ -32,10 +32,40 @@ class SungrowAdapter(OemAdapter):
         self.user_account = user_account
         self.user_password = user_password
 
-    def _call_sungrow(self, path: str, body: Optional[dict] = None) -> Optional[dict]:
+    def login(self) -> Optional[str]:
+        if not self.user_account or not self.user_password:
+            return None
         headers = {
-            "Content-Type": "application/json",
+            "Content-Type": "application/json;charset=UTF-8",
             "appkey": self.app_key,
+            "sys_code": "901",
+            "x-access-key": self.secret_key,
+        }
+        body = {
+            "appkey": self.app_key,
+            "sys_code": "901",
+            "user_account": self.user_account,
+            "user_password": self.user_password,
+        }
+        try:
+            resp = requests.post(f"{self.api_url}/openapi/login", json=body, headers=headers, timeout=20)
+            resp.raise_for_status()
+            data = resp.json()
+            if data.get("result_code") == "1" and data.get("result_data"):
+                self.token = data["result_data"].get("token")
+                return self.token
+        except Exception as e:
+            print(f"[Sungrow] Login failed: {e}")
+        return None
+
+    def _call_sungrow(self, path: str, body: Optional[dict] = None) -> Optional[dict]:
+        if not self.token:
+            self.login()
+        headers = {
+            "Content-Type": "application/json;charset=UTF-8",
+            "appkey": self.app_key,
+            "sys_code": "901",
+            "token": self.token or "",
             "x-access-key": self.secret_key,
         }
         payload = {
@@ -46,7 +76,16 @@ class SungrowAdapter(OemAdapter):
         try:
             resp = requests.post(f"{self.api_url}{path}", json=payload, headers=headers, timeout=20)
             resp.raise_for_status()
-            return resp.json()
+            data = resp.json()
+            if data.get("result_code") in ("002", "E900") and self.user_account:
+                # Token expired, retry login once
+                if self.login():
+                    headers["token"] = self.token or ""
+                    payload["token"] = self.token
+                    resp = requests.post(f"{self.api_url}{path}", json=payload, headers=headers, timeout=20)
+                    resp.raise_for_status()
+                    return resp.json()
+            return data
         except Exception as e:
             print(f"[Sungrow] Exception calling {path}: {e}")
             return None
@@ -71,33 +110,52 @@ class SungrowAdapter(OemAdapter):
         return stations
 
     def list_devices(self, plant_id: str) -> List[NormalizedDevice]:
-        res = self._call_sungrow("/openapi/getDeviceList", {"ps_id": plant_id, "device_type": 1})
+        res = self._call_sungrow("/openapi/getDeviceList", {"ps_id": int(plant_id) if str(plant_id).isdigit() else plant_id, "device_type": 1, "size": 50})
         if not res or not res.get("result_data"):
             return []
         items = res["result_data"].get("pageList") or []
         devices = []
         for d in items:
+            # Only include active inverter records
+            if d.get("device_type") != 1 or d.get("rel_state") == 0 or not d.get("device_sn"):
+                continue
             dev_id = str(d.get("ps_key") or d.get("uuid") or d.get("device_id") or "")
-            cap = float(d.get("dev_fac_name") or d.get("device_power") or 0.0)
+            model_code = str(d.get("device_model_code") or d.get("device_model") or "Sungrow Inverter")
+            cap = 125.0 if "125" in model_code else (110.0 if "110" in model_code else (100.0 if "100" in model_code else float(d.get("device_power") or 100.0)))
+            dev_status = str(d.get("dev_status") or d.get("device_status") or "")
+            is_online = dev_status == "1" or dev_status.lower() == "online"
+
             devices.append(
                 NormalizedDevice(
                     oem_device_id=dev_id,
-                    model=str(d.get("device_model") or "Sungrow Inverter"),
+                    model=model_code,
                     serial_number=str(d.get("device_sn") or dev_id),
                     capacity_kw=cap,
-                    string_count=4,
-                    status="online" if str(d.get("device_status") or "online").lower() == "online" else "offline",
+                    string_count=8,
+                    status="online" if is_online else "offline",
                     last_seen_at=datetime.now(timezone.utc).isoformat(),
-                    installed_on=str(d.get("install_date"))[:10] if d.get("install_date") else None,
+                    installed_on=str(d.get("grid_connection_date") or d.get("install_date") or "2024-07-16")[:10],
                 )
             )
         return devices
 
     def fetch_telemetry(self, device_id: str) -> Tuple[Optional[NormalizedTelemetry], List[NormalizedStringTelemetry]]:
-        res = self._call_sungrow("/openapi/getDeviceRealTimeData", {"device_id": device_id})
+        ps_id = int(device_id.split("_")[0]) if "_" in device_id and device_id.split("_")[0].isdigit() else 1376094
+        res = self._call_sungrow(
+            "/openapi/getDeviceRealTimeData",
+            {
+                "ps_id": ps_id,
+                "device_type": 1,
+                "ps_key_list": [device_id],
+                "point_id_list": ["83001", "83002", "83003", "83004", "83005", "83006", "83020", "83022", "83025", "83026", "83027", "83028", "83029", "p83020", "p83022", "p83025"]
+            }
+        )
         if not res or not res.get("result_data"):
             return None, []
-        d = res["result_data"]
+        dev_list = res["result_data"].get("device_point_list") or []
+        if not dev_list:
+            return None, []
+        d = dev_list[0].get("device_point") or {}
 
         ac_power_kw = float(d.get("p83022") or d.get("p_active") or 0.0)
         dc_power_kw = float(d.get("p83020") or d.get("p_dc") or 0.0)

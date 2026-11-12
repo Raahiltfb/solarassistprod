@@ -17,3 +17,4 @@ AS $func$
     LIMIT 1
   ) t;
 $func$;
+
