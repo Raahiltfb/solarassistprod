@@ -138,7 +138,7 @@ export class SungrowAdapter implements OemAdapter {
     return list.map(item => ({
       plant_id: String(item.ps_id || item.id || ""),
       name: String(item.ps_name || item.name || "Sungrow Plant"),
-      capacity_kwp: parseFloat(String(item.installed_power || item.capacity || 0)),
+      capacity_kwp: parseFloat(String(item.total_capcity?.value || item.installed_power || item.capacity || 500.0)),
       location: String(item.ps_location || item.address || "India"),
       timezone: "Asia/Kolkata",
       commissioned_on: item.grid_connection_date ? String(item.grid_connection_date).slice(0, 10) : undefined

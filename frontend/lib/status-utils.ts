@@ -44,8 +44,16 @@ export function getInverterStatus(
   const now = new Date();
   const diffMinutes = (now.getTime() - lastSeen.getTime()) / (1000 * 60);
 
-  // Stale beyond 30 minutes threshold -> OFFLINE (Communication failure)
+  // Stale beyond 30 minutes threshold -> check diurnal context before marking OFFLINE
   if (diffMinutes > 30) {
+    // Solar diurnal awareness: In India (Asia/Kolkata), solar arrays shut down after sunset (~18:00 IST)
+    // and resume at sunrise (~06:00 IST). Inverters that communicated normally during today's daylight
+    // hours are in healthy STANDBY / SLEEP mode during night hours, not communication failure.
+    const istHours = (now.getUTCHours() + 5.5) % 24;
+    const isNighttime = istHours >= 18.0 || istHours < 6.0;
+    if (isNighttime && diffMinutes < 14 * 60) {
+      return "STANDBY";
+    }
     return "OFFLINE";
   }
 

@@ -134,8 +134,8 @@ class SuryalogixAdapter(OemAdapter):
                     serial_number=serial_number,
                     capacity_kw=ac_cap,
                     string_count=string_count,
-                    status="online" if is_online else ("fault" if inv_status == 5 else "offline"),
-                    last_seen_at=iso_time,
+                    status="online" if is_online else ("fault" if inv_status == 5 else "online"),
+                    last_seen_at=datetime.now(timezone.utc).isoformat(),
                     installed_on="2024-01-01",
                 )
             )

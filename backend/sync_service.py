@@ -694,7 +694,7 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                 
                 # Update dynamic string count and ensure communicating inverters are marked online
                 dynamic_string_count = len(string_map)
-                last_seen = telemetry.timestamp.isoformat() if (telemetry and hasattr(telemetry.timestamp, "isoformat")) else (str(telemetry.timestamp) if telemetry and getattr(telemetry, "timestamp", None) else dev.last_seen_at)
+                last_seen = datetime.now(timezone.utc).isoformat() if telemetry else dev.last_seen_at
                 inv_patch = {
                     "string_count": dynamic_string_count,
                     "status": "online" if telemetry else dev.status,

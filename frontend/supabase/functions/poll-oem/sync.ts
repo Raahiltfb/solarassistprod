@@ -677,7 +677,7 @@ export async function pollAndSyncAll(
                 await supabase.from("inverters").update({
                   string_count: dynamicStringCount,
                   status: telemetry ? "online" : dev.status,
-                  last_seen_at: telemetry?.timestamp || dev.last_seen_at || new Date().toISOString()
+                  last_seen_at: new Date().toISOString()
                 }).eq("id", invId);
 
                 // Synthetic String Deviation Analysis

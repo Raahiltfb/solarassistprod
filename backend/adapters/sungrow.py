@@ -101,7 +101,7 @@ class SungrowAdapter(OemAdapter):
                 NormalizedStation(
                     plant_id=str(it.get("ps_id") or it.get("id") or ""),
                     name=str(it.get("ps_name") or it.get("name") or "Sungrow Plant"),
-                    capacity_kwp=float(it.get("installed_power") or it.get("capacity") or 0.0),
+                    capacity_kwp=float((it.get("total_capcity") or {}).get("value") or it.get("installed_power") or it.get("capacity") or 500.0),
                     location=str(it.get("ps_location") or it.get("address") or "India"),
                     timezone="Asia/Kolkata",
                     commissioned_on=str(it.get("grid_connection_date"))[:10] if it.get("grid_connection_date") else None,

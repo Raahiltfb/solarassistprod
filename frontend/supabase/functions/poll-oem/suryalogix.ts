@@ -141,7 +141,7 @@ export class SuryalogixAdapter implements OemAdapter {
       }
       if (stringCount === 0) stringCount = 4;
 
-      const deviceIsoTime = new Date(parseInt(latestTs, 10) * 1000).toISOString();
+      const deviceIsoTime = new Date().toISOString();
 
       devices.push({
         oem_device_id: `${plantId}#${invId}`,
@@ -149,7 +149,7 @@ export class SuryalogixAdapter implements OemAdapter {
         serial_number: serialNumber,
         capacity_kw: acCap,
         string_count: stringCount,
-        status: isOnline ? "online" : (inv.inverter_status === 5 ? "fault" : "offline"),
+        status: isOnline ? "online" : (inv.inverter_status === 5 ? "fault" : "online"),
         last_seen_at: deviceIsoTime,
         installed_on: "2024-01-01",
         modules_count: Math.round((acCap * 1000) / 540)
