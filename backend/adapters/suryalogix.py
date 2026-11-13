@@ -162,9 +162,11 @@ class SuryalogixAdapter(OemAdapter):
 
         ac_power_kw = float(inv.get("WT") or 0) / 1000.0
         dc_power_kw = float(inv.get("DC_W") or 0) / 1000.0
-        daily_kwh = float(inv.get("KWH_Day") or (float(inv.get("WHDay") or 0) / 1000.0))
-        total_kwh = float(inv.get("WHTot") or 0)
         ac_cap = float(inv.get("AC_CAP") or 50.0)
+        daily_kwh_raw = float(inv.get("KWH_Day") or (float(inv.get("WHDay") or 0) / 1000.0))
+        # Solar sanity check: daily generation cannot exceed 12 kWh/kWp (e.g. 600 kWh for a 50 kW inverter)
+        daily_kwh = daily_kwh_raw if (0 < daily_kwh_raw <= max(ac_cap * 12.0, 600.0)) else 0.0
+        total_kwh = float(inv.get("WHTot") or 0)
         specific_yield = (daily_kwh / ac_cap) if ac_cap > 0 else 0.0
         temp_c = float(inv.get("TEMP_HS") or inv.get("TEMP_INT") or 35.0)
         inv_status = inv.get("inverter_status")

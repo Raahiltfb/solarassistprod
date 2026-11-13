@@ -493,7 +493,15 @@ export function StringAnomalyDiagnosticSection({
 
               {/* Chart Overlay */}
               <div className="w-full pt-2 h-[280px] min-h-[280px]">
-                {chartMounted ? (
+                {chartData.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center p-6 bg-muted/20 border border-dashed rounded-lg">
+                    <Info className="h-8 w-8 text-muted-foreground mb-2" />
+                    <p className="text-sm font-semibold text-foreground">No Timeseries Telemetry Available</p>
+                    <p className="text-xs text-muted-foreground max-w-sm mt-1">
+                      No string telemetry points were recorded for this channel during the active observation window.
+                    </p>
+                  </div>
+                ) : chartMounted ? (
                   <ResponsiveContainer width="100%" height={280}>
                     <ReLineChart 
                       key={`${selectedAnomalyForChart.id}-${chartMetricMode}`}

@@ -24,7 +24,8 @@ export function getInverterStatus(
     status?: string;
     last_seen_at?: string | null;
   },
-  latestTelemetryTimestamp?: string
+  latestTelemetryTimestamp?: string,
+  hasActiveGenerationToday?: boolean
 ): InverterStatusDisplay {
   let lastSeenStr = inverter.last_seen_at || undefined;
   
@@ -38,14 +39,18 @@ export function getInverterStatus(
 
   const lastSeen = parseUtcDate(lastSeenStr);
   if (!lastSeen) {
+    if (hasActiveGenerationToday) return "ONLINE";
     return "OFFLINE";
   }
 
   const now = new Date();
   const diffMinutes = (now.getTime() - lastSeen.getTime()) / (1000 * 60);
 
-  // Stale beyond 30 minutes threshold -> check diurnal context before marking OFFLINE
-  if (diffMinutes > 30) {
+  // Stale beyond 60 minutes threshold (4 missed 15-min sync intervals) -> check diurnal context before marking OFFLINE
+  if (diffMinutes > 60) {
+    if (hasActiveGenerationToday && diffMinutes < 6 * 60) {
+      return "ONLINE";
+    }
     // Solar diurnal awareness: In India (Asia/Kolkata), solar arrays shut down after sunset (~18:00 IST)
     // and resume at sunrise (~06:00 IST). Inverters that communicated normally during today's daylight
     // hours are in healthy STANDBY / SLEEP mode during night hours, not communication failure.
@@ -72,10 +77,11 @@ export function getInverterStatus(
 
 export function getSiteStatus(
   inverters: Array<{ id?: string; status?: string; last_seen_at?: string | null }>,
-  latestTelemetryMap?: Map<string, any> // inverter_id -> timestamp string or telemetry object
+  latestTelemetryMap?: Map<string, any>, // inverter_id -> timestamp string or telemetry object
+  hasActiveGenerationToday?: boolean
 ): SiteStatusDisplay {
   if (!inverters || inverters.length === 0) {
-    return "OFFLINE";
+    return "ONLINE";
   }
 
   let onlineCount = 0;
@@ -91,7 +97,7 @@ export function getSiteStatus(
         latestTimestamp = val.timestamp || val.last_update;
       }
     }
-    const invStatus = getInverterStatus(inv, latestTimestamp);
+    const invStatus = getInverterStatus(inv, latestTimestamp, hasActiveGenerationToday);
 
     if (invStatus === "OFFLINE") {
       offlineCount++;

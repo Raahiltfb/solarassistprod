@@ -497,12 +497,12 @@ export function NeedsAttentionQueue({
         actionExplanation,
         severity: alert.severity === "critical" ? ("critical" as const) : alert.severity === "high" ? ("high" as const) : ("medium" as const),
         timestamp: alert.triggered_at,
-        actionUrl: alert.ticket_id
-          ? `/tickets/${alert.ticket_id}`
-          : isStringDeviation
+        actionUrl: isStringDeviation
           ? techIntelUrl
+          : alert.ticket_id
+          ? `/tickets/${alert.ticket_id}`
           : "/alerts",
-        actionLabel: alert.ticket_id ? "View Ticket" : "View Alert",
+        actionLabel: isStringDeviation ? "View Deviation" : alert.ticket_id ? "View Ticket" : "View Alert",
         badgeText: `Alert ${alert.severity.toUpperCase()}`,
         badgeVariant: alert.severity === "critical" ? ("destructive" as const) : alert.severity === "high" ? ("warning" as const) : ("secondary" as const),
       };

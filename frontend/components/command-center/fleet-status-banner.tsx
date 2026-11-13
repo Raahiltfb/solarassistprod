@@ -36,7 +36,7 @@ export function FleetStatusBanner({
   unassignedJobsCount,
 }: FleetStatusBannerProps) {
   const isFleetAllNormal = attentionSites === 0 && offlineSites === 0 && openAlertsCount === 0 && overdueCleanings === 0 && openTicketsCount === 0;
-  const totalActionableIssues = attentionSites + offlineSites + openAlertsCount + overdueCleanings + unassignedJobsCount;
+  const totalActionableIssues = attentionSites + openAlertsCount + overdueCleanings + unassignedJobsCount;
 
   return (
     <div className="space-y-4" data-testid="fleet-status-banner">

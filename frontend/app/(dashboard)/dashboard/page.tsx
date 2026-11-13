@@ -523,7 +523,7 @@ export default async function DashboardPage() {
         </div>
 
         <div className="lg:col-span-2">
-          <FleetSiteMatrix sites={enrichedMatrixSites} inverters={inverters} />
+          <FleetSiteMatrix sites={enrichedMatrixSites} inverters={inverters} latestTimestampMap={latestTimestampMap} />
         </div>
       </div>
     </div>

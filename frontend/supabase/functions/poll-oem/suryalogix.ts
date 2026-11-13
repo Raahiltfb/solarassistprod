@@ -178,9 +178,11 @@ export class SuryalogixAdapter implements OemAdapter {
 
     const acPowerKw = (parseFloat(inv.WT) || 0) / 1000.0;
     const dcPowerKw = (parseFloat(inv.DC_W) || 0) / 1000.0;
-    const dailyKwh = parseFloat(inv.KWH_Day) || (parseFloat(inv.WHDay) ? parseFloat(inv.WHDay) / 1000.0 : 0);
-    const totalKwh = parseFloat(inv.WHTot) || 0;
     const acCap = parseFloat(inv.AC_CAP) || 50.0;
+    const dailyKwhRaw = parseFloat(inv.KWH_Day) || (parseFloat(inv.WHDay) ? parseFloat(inv.WHDay) / 1000.0 : 0);
+    // Solar sanity check: daily generation cannot exceed 12 kWh/kWp (e.g. 600 kWh for a 50 kW inverter)
+    const dailyKwh = (dailyKwhRaw > 0 && dailyKwhRaw <= acCap * 12.0) ? dailyKwhRaw : (dailyKwhRaw > 0 && dailyKwhRaw <= 600 ? dailyKwhRaw : 0);
+    const totalKwh = parseFloat(inv.WHTot) || 0;
     const specificYield = acCap > 0 ? dailyKwh / acCap : 0;
     const tempC = parseFloat(inv.TEMP_HS) || parseFloat(inv.TEMP_INT) || 35.0;
     const isOnline = inv.inverter_status === 4 || acPowerKw > 0 || dcPowerKw > 0;

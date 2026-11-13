@@ -31,6 +31,7 @@ interface FleetStringHealthOverviewProps {
   activeSiteId: string;
   onSelectSite: (siteId: string) => void;
   onInspectString?: (siteId: string, stringId: string) => void;
+  siteIssuesMap?: Record<string, { anomalyCount: number; isOffline: boolean; stringErrors: number; alertsCount: number }>;
 }
 
 export function FleetStringHealthOverview({
@@ -38,6 +39,7 @@ export function FleetStringHealthOverview({
   fleetAnomalies,
   activeSiteId,
   onSelectSite,
+  siteIssuesMap,
 }: FleetStringHealthOverviewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<
@@ -60,8 +62,14 @@ export function FleetStringHealthOverview({
   // Total metrics
   const totalSites = sites.length;
   const sitesWithIssues = useMemo(() => {
-    return sites.filter((s) => (siteAnomalyMap.get(s.id) || []).length > 0);
-  }, [sites, siteAnomalyMap]);
+    return sites.filter((s) => {
+      const issue = siteIssuesMap?.[s.id];
+      if (issue && (issue.isOffline || (issue.anomalyCount ?? 0) > 0 || (issue.alertsCount ?? 0) > 0)) {
+        return true;
+      }
+      return (siteAnomalyMap.get(s.id) || []).length > 0;
+    });
+  }, [sites, siteAnomalyMap, siteIssuesMap]);
 
   const healthySitesCount = Math.max(0, totalSites - sitesWithIssues.length);
 
@@ -103,7 +111,8 @@ export function FleetStringHealthOverview({
     return sites
       .filter((site) => {
         const siteAnoms = siteAnomalyMap.get(site.id) || [];
-        const hasIssues = siteAnoms.length > 0;
+        const issue = siteIssuesMap?.[site.id];
+        const hasIssues = (siteAnoms.length > 0) || Boolean(issue && (issue.isOffline || (issue.anomalyCount ?? 0) > 0 || (issue.alertsCount ?? 0) > 0));
 
         // Text search
         const matchesSearch =
@@ -123,7 +132,7 @@ export function FleetStringHealthOverview({
           return siteAnoms.some((a) => a.type === "string_disconnected");
         }
         if (filterType === "offline") {
-          return siteAnoms.some((a) => a.type === "inverter_offline");
+          return siteAnoms.some((a) => a.type === "inverter_offline") || Boolean(issue?.isOffline);
         }
         return true;
       })

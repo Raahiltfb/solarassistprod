@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { LayoutDashboard, Activity, Building2, Bell, Ticket, SprayCan, Wrench, Navigation, BarChart3, Users, Settings, LogOut, User as UserIcon } from "lucide-react";
+import { LayoutDashboard, Activity, Building2, Bell, Ticket, SprayCan, Wrench, Navigation, BarChart3, Users, Settings, LogOut, User as UserIcon, MoreHorizontal } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ROLE_LABELS } from "@/lib/permissions";
 import type { Profile } from "@/lib/types";
@@ -230,37 +230,80 @@ export function Shell({ profile, children }: { profile: Profile; children: React
         </main>
 
         {/* Fixed Mobile Bottom Navigation Bar (Native Mobile PWA feel) */}
-        <nav
-          className={cn(
-            "md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur border-t h-16 safe-area-pb shadow-lg",
-            items.length <= 5 ? "flex justify-around items-center px-1" : "flex items-center overflow-x-auto scrollbar-none no-scrollbar px-2 gap-1"
-          )}
-          data-testid="mobile-nav"
-        >
-          {items.map((it) => {
-            const Active =
-              pathname === it.href ||
-              (it.href !== "/dashboard" && pathname.startsWith(it.href + "/")) ||
-              it.subPaths?.some((sp) => pathname === sp || pathname.startsWith(sp + "/"));
-            return (
-              <Link
-                key={it.href}
-                href={it.href}
-                prefetch={true}
-                className={cn(
-                  "flex flex-col items-center justify-center h-full py-1 text-[11px] font-medium transition-colors gap-1",
-                  items.length <= 5 ? "flex-1 min-w-0 px-1" : "shrink-0 min-w-[64px] max-w-[76px] px-1.5",
-                  Active ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <it.icon className={cn("h-5 w-5 shrink-0", Active ? "text-primary stroke-[2.5]" : "text-muted-foreground")} />
-                <span className="w-full text-center text-[10px] leading-tight truncate">
-                  {(it as any).mobileLabel || it.label}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
+        {(() => {
+          const isOverflow = items.length > 5;
+          const primaryItems = isOverflow ? items.filter((it) => ["/dashboard", "/service-requests", "/sites", "/diagnostics"].includes(it.href)) : items;
+          const moreItems = isOverflow ? items.filter((it) => !primaryItems.some((pi) => pi.href === it.href)) : [];
+          const isMoreActive = moreItems.some((it) => 
+            pathname === it.href || 
+            (it.href !== "/dashboard" && pathname.startsWith(it.href + "/")) ||
+            it.subPaths?.some((sp) => pathname === sp || pathname.startsWith(sp + "/"))
+          );
+
+          return (
+            <nav
+              className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur border-t h-16 safe-area-pb shadow-lg grid grid-flow-col auto-cols-fr items-center px-1"
+              data-testid="mobile-nav"
+            >
+              {primaryItems.map((it) => {
+                const Active =
+                  pathname === it.href ||
+                  (it.href !== "/dashboard" && pathname.startsWith(it.href + "/")) ||
+                  it.subPaths?.some((sp) => pathname === sp || pathname.startsWith(sp + "/"));
+                return (
+                  <Link
+                    key={it.href}
+                    href={it.href}
+                    prefetch={true}
+                    className={cn(
+                      "flex flex-col items-center justify-center h-full py-1 text-[11px] font-medium transition-colors gap-1 min-w-0 px-1",
+                      Active ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <it.icon className={cn("h-5 w-5 shrink-0", Active ? "text-primary stroke-[2.5]" : "text-muted-foreground")} />
+                    <span className="w-full text-center text-[10px] leading-tight truncate">
+                      {(it as any).mobileLabel || it.label}
+                    </span>
+                  </Link>
+                );
+              })}
+
+              {isOverflow && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className={cn(
+                        "flex flex-col items-center justify-center h-full py-1 text-[11px] font-medium transition-colors gap-1 min-w-0 px-1 focus:outline-none",
+                        isMoreActive ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <MoreHorizontal className={cn("h-5 w-5 shrink-0", isMoreActive ? "text-primary stroke-[2.5]" : "text-muted-foreground")} />
+                      <span className="w-full text-center text-[10px] leading-tight truncate">More</span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" side="top" sideOffset={12} className="w-56 mb-2">
+                    <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">More Features</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {moreItems.map((it) => {
+                      const itemActive =
+                        pathname === it.href ||
+                        (it.href !== "/dashboard" && pathname.startsWith(it.href + "/")) ||
+                        it.subPaths?.some((sp) => pathname === sp || pathname.startsWith(sp + "/"));
+                      return (
+                        <DropdownMenuItem key={it.href} asChild className={cn(itemActive && "bg-primary/10 text-primary font-semibold")}>
+                          <Link href={it.href} className="flex items-center gap-2.5 py-2 cursor-pointer">
+                            <it.icon className={cn("h-4 w-4", itemActive ? "text-primary" : "text-muted-foreground")} />
+                            <span>{it.label}</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </nav>
+          );
+        })()}
       </div>
     </div>
   );

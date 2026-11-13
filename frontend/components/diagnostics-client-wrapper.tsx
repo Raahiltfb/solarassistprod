@@ -30,7 +30,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { analyzeStringAnomalies, StringAnomaly } from "@/lib/string-anomaly-engine";
-import { getInverterStatus, getSiteStatus } from "@/lib/status-utils";
+import { getInverterStatus, getSiteStatus, parseUtcDate } from "@/lib/status-utils";
 
 export function DiagnosticsClientWrapper({
   sites,
@@ -179,29 +179,32 @@ export function DiagnosticsClientWrapper({
         (alt.code && alt.code.toUpperCase().includes("STRING")) ||
         (alt.title && alt.title.toUpperCase().includes("STRING"));
 
+      // ONLY process genuine string deviation alerts that match a real string in the database.
+      // Generic OEM plant alarms (like 1D4C3 Inefficient Power Plants or connectivity alarms)
+      // are tracked via alertsCount / siteIssuesMap and must NOT be fabricated into phantom string rows with blank graphs.
       if (!isStringDeviation) continue;
 
-      // Only include database alerts that have genuine string telemetry metrics attached.
-      // Alerts lacking specific current metrics or with zero expected current must not create phantom anomalies.
-      if (!alt.metrics?.expected_current || Number(alt.metrics.expected_current) <= 0 || alt.metrics.deviation_pct === undefined) {
-        continue;
-      }
+      const invObj = allInverters.find((i) => i.id === alt.inverter_id) || allInverters.find((i) => i.site_id === alt.site_id);
+      const strIdx = Number(alt.metrics?.string_index || 1);
+      
+      const matchedString = allStrings.find(
+        (s) => s.inverter_id === invObj?.id && s.string_index === strIdx
+      );
+      if (!matchedString && !alt.device_id) continue;
+      const targetStringId = matchedString?.id || alt.device_id;
 
-      const strIdx = alt.metrics?.string_index || 1;
-      const key = `${alt.site_id}:${alt.inverter_id}:${strIdx}`;
+      const key = `${alt.site_id}:${invObj?.id || "site"}:${strIdx}`;
       if (existingKeys.has(key)) continue;
 
       const siteObj = sites.find((s) => s.id === alt.site_id);
-      const invObj = allInverters.find((i) => i.id === alt.inverter_id);
-      const invName = invObj?.serial_number ? `SN: ${invObj.serial_number}` : "Inverter";
-
-      const devPct = Number(alt.metrics.deviation_pct);
+      const invName = invObj?.serial_number ? `SN: ${invObj.serial_number}` : "Main Inverter";
+      const devPct = Number(alt.metrics?.deviation_pct || -25);
 
       dbAlertAnomalies.push({
         id: `alert-${alt.id}`,
-        string_id: alt.device_id || `str-alert-${alt.id}`,
+        string_id: targetStringId,
         string_index: strIdx,
-        inverter_id: alt.inverter_id || "",
+        inverter_id: invObj?.id || alt.inverter_id || "",
         inverter_name: invName,
         site_id: alt.site_id,
         site_name: siteObj?.name || alt.sites?.name || "Site",
@@ -379,19 +382,27 @@ export function DiagnosticsClientWrapper({
   // Calculate high-level site health summary
   const totalInverters = siteInverters.length || 1;
 
+  // Check if site has actively generated solar current today during daylight
+  const hasActiveGenerationToday = siteStringTelemetry.some((st) => {
+    const dt = parseUtcDate(st.timestamp);
+    if (!dt) return false;
+    const hoursAgo = (Date.now() - dt.getTime()) / (1000 * 3600);
+    return hoursAgo < 14 && Number(st.current_a || 0) > 0.5;
+  });
+
   const offlineInvertersCount = siteInverters.filter((inv) => {
     const invLatestTel = fleetLatestTelemetryMap.get(inv.id)?.timestamp || latestTelemetryMap.get(inv.id)?.timestamp;
-    const invStatus = getInverterStatus(inv, invLatestTel);
+    const invStatus = getInverterStatus(inv, invLatestTel, hasActiveGenerationToday);
     return invStatus === "OFFLINE";
   }).length;
 
-  const isSiteOffline = siteInverters.length > 0 && offlineInvertersCount === siteInverters.length;
+  const isSiteOffline = siteInverters.length > 0 && offlineInvertersCount === siteInverters.length && !hasActiveGenerationToday;
   const invertersAffectedSet = new Set([
     ...anomalies.map((a) => a.inverter_id),
     ...siteInverters
       .filter((inv) => {
         const invLatestTel = fleetLatestTelemetryMap.get(inv.id)?.timestamp || latestTelemetryMap.get(inv.id)?.timestamp;
-        return getInverterStatus(inv, invLatestTel) === "OFFLINE";
+        return getInverterStatus(inv, invLatestTel, hasActiveGenerationToday) === "OFFLINE";
       })
       .map((i) => i.id),
   ]);
@@ -497,6 +508,7 @@ export function DiagnosticsClientWrapper({
           fleetAnomalies={fleetAnomalies}
           activeSiteId={selectedSite.id}
           onSelectSite={handleSelectSiteFromFleet}
+          siteIssuesMap={siteIssuesMap}
         />
       )}
 

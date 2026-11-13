@@ -22,17 +22,24 @@ export interface ExtendedSiteMatrix extends Site {
 interface FleetSiteMatrixProps {
   sites: ExtendedSiteMatrix[];
   inverters: Inverter[];
+  latestTimestampMap?: Record<string, string> | Map<string, any>;
 }
 
-export function FleetSiteMatrix({ sites, inverters }: FleetSiteMatrixProps) {
+export function FleetSiteMatrix({ sites, inverters, latestTimestampMap }: FleetSiteMatrixProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "normal" | "attention" | "offline">("all");
 
   // Map site statuses dynamically using getSiteStatus utility
   const sitesWithStatus = useMemo(() => {
+    const tsMap = latestTimestampMap instanceof Map 
+      ? latestTimestampMap 
+      : latestTimestampMap 
+      ? new Map(Object.entries(latestTimestampMap)) 
+      : undefined;
+
     return sites.map((site) => {
       const siteInverters = inverters.filter((inv) => inv.site_id === site.id);
-      const computedStatus = getSiteStatus(siteInverters);
+      const computedStatus = getSiteStatus(siteInverters, tsMap);
 
       return {
         ...site,
@@ -40,7 +47,7 @@ export function FleetSiteMatrix({ sites, inverters }: FleetSiteMatrixProps) {
         invertersCount: siteInverters.length,
       };
     });
-  }, [sites, inverters]);
+  }, [sites, inverters, latestTimestampMap]);
 
   // Filtered sites based on search and status pills
   const filteredSites = useMemo(() => {

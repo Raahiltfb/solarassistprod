@@ -10,15 +10,15 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  ShieldCheck, 
-  Image as ImageIcon, 
-  AlertTriangle, 
-  CheckCircle2, 
-  ExternalLink, 
-  Eye, 
-  Camera, 
-  Sparkles 
+import {
+  ShieldCheck,
+  Image as ImageIcon,
+  AlertTriangle,
+  CheckCircle2,
+  ExternalLink,
+  Eye,
+  Camera,
+
 } from "lucide-react";
 
 export interface EvidenceItem {
@@ -122,17 +122,16 @@ export function ClientEvidenceViewer({
               key={idx}
               type="button"
               onClick={() => handleOpenPhoto(it)}
-              className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-md border transition-all ${
-                isAfter
-                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
-                  : isBefore
+              className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-md border transition-all ${isAfter
+                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
+                : isBefore
                   ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/20"
                   : isSafety
-                  ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/20"
-                  : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 hover:bg-rose-500/20"
-              }`}
+                    ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/20"
+                    : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 hover:bg-rose-500/20"
+                }`}
             >
-              {isAfter && <Sparkles className="h-3 w-3" />}
+              {isAfter && <ShieldCheck className="h-3 w-3" />}
               {isBefore && <ImageIcon className="h-3 w-3" />}
               {isSafety && <ShieldCheck className="h-3 w-3" />}
               {isDamage && <AlertTriangle className="h-3 w-3" />}
@@ -173,7 +172,7 @@ export function ClientEvidenceViewer({
                 onClick={() => setActivePhoto(it)}
                 className="text-xs h-7 gap-1.5"
               >
-                {it.category === "after" && <Sparkles className="h-3.5 w-3.5 text-emerald-400" />}
+                {it.category === "after" && <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />}
                 {it.category === "before" && <ImageIcon className="h-3.5 w-3.5" />}
                 {it.category === "safety" && <ShieldCheck className="h-3.5 w-3.5 text-blue-400" />}
                 {it.category === "damage" && <AlertTriangle className="h-3.5 w-3.5 text-rose-400" />}
