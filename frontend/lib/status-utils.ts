@@ -24,9 +24,21 @@ export function getInverterStatus(
     status?: string;
     last_seen_at?: string | null;
   },
-  latestTelemetryTimestamp?: string,
+  latestTelemetry?: string | { timestamp?: string; last_update?: string; online_status?: boolean },
   hasActiveGenerationToday?: boolean
 ): InverterStatusDisplay {
+  let latestTelemetryTimestamp: string | undefined;
+  let isTelemetryOnline: boolean | undefined;
+
+  if (typeof latestTelemetry === "string") {
+    latestTelemetryTimestamp = latestTelemetry;
+  } else if (latestTelemetry && typeof latestTelemetry === "object") {
+    latestTelemetryTimestamp = latestTelemetry.timestamp || latestTelemetry.last_update;
+    if (typeof latestTelemetry.online_status === "boolean") {
+      isTelemetryOnline = latestTelemetry.online_status;
+    }
+  }
+
   let lastSeenStr = inverter.last_seen_at || undefined;
   
   if (latestTelemetryTimestamp) {
@@ -46,23 +58,19 @@ export function getInverterStatus(
   const now = new Date();
   const diffMinutes = (now.getTime() - lastSeen.getTime()) / (1000 * 60);
 
-  // Stale beyond 90 minutes threshold (6 missed 15-min sync intervals) -> check diurnal context before marking OFFLINE
-  if (diffMinutes > 90) {
-    if (hasActiveGenerationToday && diffMinutes < 14 * 60) {
-      return "ONLINE";
-    }
-    // Solar diurnal awareness: In India (Asia/Kolkata), solar arrays shut down after sunset (~18:00 IST)
-    // and resume at sunrise (~06:00 IST). Inverters that communicated normally during today's daylight
-    // hours are in healthy STANDBY / SLEEP mode during night hours, not communication failure.
-    const istHours = (now.getUTCHours() + 5.5) % 24;
-    const isNighttime = istHours >= 18.0 || istHours < 6.0;
-    if (isNighttime && diffMinutes < 14 * 60) {
-      return "STANDBY";
-    }
+  // If OEM telemetry explicitly reports offline / disconnected state and data is beyond 20 mins
+  if (isTelemetryOnline === false && diffMinutes > 20 && !hasActiveGenerationToday) {
     return "OFFLINE";
   }
 
   const dbStatus = inverter.status?.toLowerCase();
+  if (dbStatus === "offline" || dbStatus === "comm_error" || dbStatus === "disconnected") {
+    // If database explicitly recorded an offline/communication error and there is no active generation
+    if (!hasActiveGenerationToday) {
+      return "OFFLINE";
+    }
+  }
+
   if (dbStatus === "fault") {
     return "FAULT";
   }
@@ -72,6 +80,23 @@ export function getInverterStatus(
   if (dbStatus === "no grid" || dbStatus === "no_grid") {
     return "NO GRID";
   }
+
+  // Stale beyond 60 minutes threshold (4 missed 15-min sync intervals) during daylight
+  if (diffMinutes > 60) {
+    if (hasActiveGenerationToday && diffMinutes < 14 * 60) {
+      return "ONLINE";
+    }
+    // Solar diurnal awareness: In India (Asia/Kolkata), solar arrays shut down after sunset (~18:30 IST)
+    // and resume at sunrise (~06:00 IST). Inverters that communicated normally during today's daylight
+    // hours are in healthy STANDBY / SLEEP mode during night hours, not communication failure.
+    const istHours = (now.getUTCHours() + 5.5) % 24;
+    const isNighttime = istHours >= 18.5 || istHours < 6.0;
+    if (isNighttime && diffMinutes < 14 * 60) {
+      return "STANDBY";
+    }
+    return "OFFLINE";
+  }
+
   return "ONLINE";
 }
 
@@ -93,16 +118,16 @@ export function getSiteStatus(
   let offlineCount = 0;
 
   for (const inv of inverters) {
-    let latestTimestamp: string | undefined;
+    let telInput: any = undefined;
     if (latestTelemetryMap && inv.id) {
       const val = latestTelemetryMap.get(inv.id);
       if (typeof val === "string") {
-        latestTimestamp = val;
+        telInput = val;
       } else if (val && typeof val === "object") {
-        latestTimestamp = val.timestamp || val.last_update;
+        telInput = val;
       }
     }
-    const invStatus = getInverterStatus(inv, latestTimestamp, hasActiveGenerationToday);
+    const invStatus = getInverterStatus(inv, telInput, hasActiveGenerationToday);
 
     if (invStatus === "OFFLINE") {
       offlineCount++;

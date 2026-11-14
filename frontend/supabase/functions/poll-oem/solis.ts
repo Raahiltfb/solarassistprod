@@ -126,10 +126,26 @@ export class SolisAdapter implements OemAdapter {
         const serialNumber = d.sn;
         if (!invOemId || !serialNumber) continue;
 
+        const ts = d.dataTimestamp || d.updateTime;
+        let lastSeenAt: string | undefined = undefined;
+        let diffMinutes = 9999;
+        if (ts) {
+          const parsedMs = parseInt(ts);
+          if (!isNaN(parsedMs) && parsedMs > 0) {
+            lastSeenAt = new Date(parsedMs).toISOString();
+            diffMinutes = (Date.now() - parsedMs) / (1000 * 60);
+          }
+        }
+
         const stateVal = d.state;
         const pacVal = parseFloat(d.pac || "0.0");
         let status = "offline";
-        if (stateVal === 1 || stateVal === "1" || pacVal > 0) {
+
+        if (diffMinutes > 60) {
+          const istHours = (new Date().getUTCHours() + 5.5) % 24;
+          const isNighttime = istHours >= 18.5 || istHours < 6.0;
+          status = (isNighttime && diffMinutes < 14 * 60) ? "standby" : "offline";
+        } else if (stateVal === 1 || stateVal === "1" || pacVal > 0) {
           status = "online";
         } else if (stateVal === 3 || stateVal === "3") {
           status = "fault";
@@ -144,9 +160,6 @@ export class SolisAdapter implements OemAdapter {
         
         let dcInputType = d.dcInputType || d.dcInputtype;
         const stringCount = (dcInputType !== undefined && dcInputType !== null) ? (parseInt(dcInputType) + 1) : 8;
-
-        const ts = d.dataTimestamp || d.updateTime;
-        const lastSeenAt = ts ? new Date(parseInt(ts)).toISOString() : new Date().toISOString();
 
         devices.push({
           oem_device_id: invOemId,
@@ -176,30 +189,22 @@ export class SolisAdapter implements OemAdapter {
     const efficiencyPct = parseFloat(invData.efficiency || "95.0");
     const temperatureC = parseFloat(invData.inverterTemperature || "35.0");
 
-    const stateVal = invData.state;
-    const onlineStatus = (stateVal === 1 || stateVal === "1");
-
-    const capacityKw = parseFloat(invData.power || "0.0");
-    const dailyGenerationKwh = energyKwh;
-
-    // Normalizing eTotal (lifetime generation)
-    const rawEtotal = parseFloat(invData.eTotal || "0.0");
-    const eTotalStr = String(invData.eTotalStr || "kWh").toUpperCase();
-    let totalGenerationKwh = rawEtotal;
-    if (eTotalStr.includes("M")) {
-      totalGenerationKwh = rawEtotal * 1000.0;
-    } else if (eTotalStr.includes("G")) {
-      totalGenerationKwh = rawEtotal * 1000000.0;
-    }
-
-    // Specific Yield (kWh/kWp)
-    let specificYield = parseFloat(invData.fullHour || "0.0");
-    if (specificYield === 0.0 && capacityKw > 0) {
-      specificYield = Math.round((dailyGenerationKwh / capacityKw) * 100) / 100;
-    }
-
     const ts = invData.dataTimestamp || invData.updateTime;
-    const lastSeenAt = ts ? new Date(parseInt(ts)).toISOString() : new Date().toISOString();
+    let lastSeenAt = new Date().toISOString();
+    let diffMinutes = 0;
+    if (ts) {
+      const parsedMs = parseInt(ts);
+      if (!isNaN(parsedMs) && parsedMs > 0) {
+        lastSeenAt = new Date(parsedMs).toISOString();
+        diffMinutes = (Date.now() - parsedMs) / (1000 * 60);
+      }
+    }
+
+    const stateVal = invData.state;
+    let onlineStatus = (stateVal === 1 || stateVal === "1") || acPowerKw > 0.05;
+    if (stateVal === 2 || stateVal === "2" || diffMinutes > 60) {
+      onlineStatus = false;
+    }
 
     const frequencyHz = parseFloat(invData.fac || "0.0");
     const reactivePowerKvar = parseFloat(invData.reactivePower || "0.0");

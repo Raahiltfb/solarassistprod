@@ -98,3 +98,4 @@ create policy cvi_all on public.cleaning_visit_items for all using (
 );
 
 notify pgrst, 'reload schema';
+

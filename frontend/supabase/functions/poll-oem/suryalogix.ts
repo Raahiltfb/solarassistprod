@@ -134,14 +134,36 @@ export class SuryalogixAdapter implements OemAdapter {
       const dcPower = (parseFloat(inv.DC_W) || 0) / 1000.0;
       const isOnline = inv.inverter_status === 4 || acPower > 0 || dcPower > 0;
 
-      // Count active MPPT channels
+      // Count hardware channels based on configuration and discovered channels
       let stringCount = 0;
-      for (let i = 1; i <= 12; i++) {
-        if (inv[`MPP_V${i}`] > 0 || inv[`MPP_I${i}`] > 0) stringCount++;
+      const mppData = typeof inv.MPP_DATA === "string" ? (() => { try { return JSON.parse(inv.MPP_DATA); } catch { return {}; } })() : (inv.MPP_DATA || {});
+      for (let i = 1; i <= 18; i++) {
+        if (parseFloat(inv[`MPP_V${i}`]) > 0 || parseFloat(inv[`MPP_I${i}`]) > 0 || parseFloat(mppData[`v${i}`]) > 0 || parseFloat(mppData[`i${i}`]) > 0) {
+          stringCount = Math.max(stringCount, i);
+        }
       }
-      if (stringCount === 0) stringCount = 4;
 
-      const deviceIsoTime = new Date().toISOString();
+      // Check SMB channel count if present
+      if (entry?.smb) {
+        for (const smb of Object.values<any>(entry.smb)) {
+          for (let s = 1; s <= 20; s++) {
+            if (parseFloat(smb[`I${s}`]) > 0 || parseFloat(smb.V) > 0) {
+              stringCount = Math.max(stringCount, s);
+            }
+          }
+        }
+      }
+
+      // Authoritative site topology: Omya Warehouse inverters I2-I5 are 18-string hardware installations
+      if (plantId === "dHVSQWF5TVZoUHF3UmlZS2trUTk5b2YzN2Y2VGcyN2dvQktTMGU0SU5xQT0=" && ["I2", "I3", "I4", "I5"].includes(invId)) {
+        stringCount = Math.max(stringCount, 18);
+      } else if (stringCount === 0) {
+        stringCount = 4;
+      }
+
+      const deviceIsoTime = new Date(parseInt(latestTs, 10) * 1000).toISOString();
+      const diffMins = (Date.now() - parseInt(latestTs, 10) * 1000) / 60000;
+      const effectiveStatus = (isOnline && diffMins < 60) ? "online" : (inv.inverter_status === 5 ? "fault" : (diffMins < 60 ? "standby" : "offline"));
 
       devices.push({
         oem_device_id: `${plantId}#${invId}`,
@@ -149,7 +171,7 @@ export class SuryalogixAdapter implements OemAdapter {
         serial_number: serialNumber,
         capacity_kw: acCap,
         string_count: stringCount,
-        status: isOnline ? "online" : (inv.inverter_status === 5 ? "fault" : "online"),
+        status: effectiveStatus,
         last_seen_at: deviceIsoTime,
         installed_on: "2024-01-01",
         modules_count: Math.round((acCap * 1000) / 540)
@@ -226,17 +248,18 @@ export class SuryalogixAdapter implements OemAdapter {
       }
     };
 
-    // Extract individual string/MPPT metrics
+    // Extract individual string/MPPT metrics preserving exact hardware channel indices
     const stringTelemetries: NormalizedStringTelemetry[] = [];
-    let mppIdx = 1;
-    for (let i = 1; i <= 12; i++) {
-      const v = parseFloat(inv[`MPP_V${i}`]) || 0;
-      const c = parseFloat(inv[`MPP_I${i}`]) || 0;
+    const mppData = typeof inv.MPP_DATA === "string" ? (() => { try { return JSON.parse(inv.MPP_DATA); } catch { return {}; } })() : (inv.MPP_DATA || {});
+
+    for (let i = 1; i <= 18; i++) {
+      const v = parseFloat(inv[`MPP_V${i}`]) || parseFloat(mppData[`v${i}`]) || 0;
+      const c = parseFloat(inv[`MPP_I${i}`]) || parseFloat(mppData[`i${i}`]) || 0;
       const w = parseFloat(inv[`MPP_W${i}`]) || (v * c);
       if (v > 10.0 || c > 0.05 || w > 10.0) {
         const pKw = w / 1000.0;
         stringTelemetries.push({
-          string_index: mppIdx++,
+          string_index: i,
           voltage_v: v,
           current_a: c,
           power_kw: pKw,
@@ -246,22 +269,30 @@ export class SuryalogixAdapter implements OemAdapter {
       }
     }
 
-    // If no MPP channels had readings, check SMB object if present
-    if (stringTelemetries.length === 0 && entry?.smb) {
-      for (const [_, smb] of Object.entries<any>(entry.smb)) {
+    // Include SMB channels if present (e.g. Omya Warehouse inverters I2-I5)
+    if (entry?.smb) {
+      for (const [smbKey, smb] of Object.entries<any>(entry.smb)) {
         const smbV = parseFloat(smb.V) || parseFloat(inv.DC_V) || 0;
-        for (let s = 1; s <= 18; s++) {
+        for (let s = 1; s <= 20; s++) {
           const sI = parseFloat(smb[`I${s}`]) || 0;
           if (sI > 0.05 || smbV > 50) {
             const sKw = (smbV * sI) / 1000.0;
-            stringTelemetries.push({
+            const smbItem: NormalizedStringTelemetry = {
               string_index: s,
               voltage_v: smbV,
               current_a: sI,
               power_kw: sKw,
               status: sKw > 0.05 ? "normal" : (smbV > 20.0 ? "low_current" : "offline"),
-              metrics: { smb_channel: s }
-            });
+              metrics: { smb_channel: s, smb_box: smbKey }
+            };
+            const existingIdx = stringTelemetries.findIndex((st) => st.string_index === s);
+            if (existingIdx >= 0) {
+              if (sI > 0 && stringTelemetries[existingIdx].current_a === 0) {
+                stringTelemetries[existingIdx] = smbItem;
+              }
+            } else {
+              stringTelemetries.push(smbItem);
+            }
           }
         }
       }

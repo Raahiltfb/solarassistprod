@@ -718,22 +718,10 @@ export async function pollAndSyncAll(
                   }
                 }
 
-                // Pruning and creation of dynamic string telemetry
+                // Creation of dynamic string telemetry without pruning authoritative strings
                 const stringTelemetryBatch: any[] = [];
                 for (const st of stringTelemetries) {
                   let stringId = stringMap[st.string_index];
-                  const isActive = (st.voltage_v > 0.0 || st.current_a > 0.0);
-
-                  // Prune inactive placeholder strings if inverter is actively generating in daytime
-                  if (!isActive && stringId && telemetry && telemetry.ac_power_kw > 1.0) {
-                    await supabase.from("strings").delete().eq("id", stringId);
-                    delete stringMap[st.string_index];
-                    continue;
-                  }
-
-                  if (!isActive && !stringId) {
-                    continue;
-                  }
 
                   if (!stringId) {
                     const stringCap = dev.string_count > 0 ? Math.round((invCapacity / dev.string_count) * 100) / 100 : 0.0;
@@ -782,13 +770,38 @@ export async function pollAndSyncAll(
                   }
                 }
 
-                // Update dynamic string count and ensure communicating inverters are marked online
-                const dynamicStringCount = Object.keys(stringMap).length;
-                await supabase.from("inverters").update({
-                  string_count: dynamicStringCount,
-                  status: telemetry ? "online" : dev.status,
-                  last_seen_at: new Date().toISOString()
-                }).eq("id", invId);
+                // Canonical inverter communication status and hardware string preservation
+                const actualTimestamp = telemetry?.timestamp || telemetry?.last_update || dev.last_seen_at;
+                let calculatedStatus = dev.status;
+
+                if (telemetry) {
+                  const telDate = telemetry.timestamp ? new Date(telemetry.timestamp) : null;
+                  const nowMs = Date.now();
+                  const diffMins = telDate && !isNaN(telDate.getTime()) ? (nowMs - telDate.getTime()) / (1000 * 60) : 999;
+
+                  if (diffMins > 60) {
+                    calculatedStatus = "offline";
+                  } else if (telemetry.online_status === false) {
+                    calculatedStatus = "offline";
+                  } else if (telemetry.ac_power_kw > 0.05) {
+                    calculatedStatus = "online";
+                  } else {
+                    const istHours = (new Date().getUTCHours() + 5.5) % 24;
+                    calculatedStatus = (istHours >= 18.5 || istHours < 6.0) ? "standby" : (dev.status || "standby");
+                  }
+                }
+
+                const finalStringCount = Math.max(dev.string_count || 0, Object.keys(stringMap).length, 1);
+                const updatePayload: Record<string, any> = {
+                  string_count: finalStringCount,
+                  status: calculatedStatus
+                };
+
+                if (actualTimestamp) {
+                  updatePayload.last_seen_at = actualTimestamp;
+                }
+
+                await supabase.from("inverters").update(updatePayload).eq("id", invId);
 
                 // Synthetic String Deviation Analysis
                 const synthAlerts = await analyzeStringsForAnomalies(
