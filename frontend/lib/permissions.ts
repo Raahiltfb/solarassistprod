@@ -8,7 +8,8 @@ export type Permission =
   | "work_order.view" | "work_order.create" | "work_order.assign" | "work_order.update" | "work_order.manage"
   | "route.view" | "route.manage"
   | "user.view" | "user.manage"
-  | "org.manage" | "report.view" | "settings.manage";
+  | "org.manage" | "report.view" | "settings.manage"
+  | "financial.view";
 
 const PERMISSIONS: Record<Role, Permission[]> = {
   super_admin: [
@@ -18,6 +19,7 @@ const PERMISSIONS: Record<Role, Permission[]> = {
     "work_order.view", "work_order.create", "work_order.assign", "work_order.update", "work_order.manage",
     "route.view", "route.manage",
     "user.view", "user.manage", "org.manage", "report.view", "settings.manage",
+    "financial.view",
   ],
   epc_admin: [
     "site.view", "site.manage", "alert.view", "alert.ack", "alert.manage",

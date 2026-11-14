@@ -28,8 +28,8 @@ const LOGIN_OPTIONS = [
       { label: "Tech 6 · Team C (tech6@solarassist.dev)", email: "tech6@solarassist.dev" },
       { label: "Tech 7 · Team D (tech7@solarassist.dev)", email: "tech7@solarassist.dev" },
       { label: "Tech 8 · Team D (tech8@solarassist.dev)", email: "tech8@solarassist.dev" },
-      { label: "Tech 9 · Team E Pune (tech9@solarassist.dev)", email: "tech9@solarassist.dev" },
-      { label: "Tech 10 · Team E Pune (tech10@solarassist.dev)", email: "tech10@solarassist.dev" },
+      { label: "Tech 9 · Team E (tech9@solarassist.dev)", email: "tech9@solarassist.dev" },
+      { label: "Tech 10 · Team E (tech10@solarassist.dev)", email: "tech10@solarassist.dev" },
     ],
   },
   {

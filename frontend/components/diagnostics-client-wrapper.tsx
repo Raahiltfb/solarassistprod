@@ -249,8 +249,35 @@ export function DiagnosticsClientWrapper({
       const siteAnoms = fleetAnomalies.filter((a) => a.site_id === s.id);
       const siteInvs = allInverters.filter((i) => i.site_id === s.id);
       const siteAlts = activeAlerts.filter((a) => a.site_id === s.id);
+      const siteInverterIds = new Set(siteInvs.map((i) => i.id));
 
-      const siteStatus = getSiteStatus(siteInvs, fleetLatestTelemetryMap);
+      const siteTel = allTelemetry.filter((t) => t.site_id === s.id || siteInverterIds.has(t.inverter_id));
+      const siteStrTel = allStringTelemetry.filter((st) => {
+        const strObj = allStrings.find((str) => str.id === st.string_id);
+        return strObj && siteInverterIds.has(strObj.inverter_id);
+      });
+
+      const hasGenToday =
+        siteStrTel.some((st) => {
+          const dt = parseUtcDate(st.timestamp);
+          if (!dt) return false;
+          const hoursAgo = (Date.now() - dt.getTime()) / (1000 * 3600);
+          return hoursAgo < 16 && (Number(st.current_a || 0) > 0.05 || Number(st.power_kw || 0) > 0.05);
+        }) ||
+        siteTel.some((t) => {
+          const dt = parseUtcDate(t.timestamp || t.last_update);
+          if (!dt) return false;
+          const hoursAgo = (Date.now() - dt.getTime()) / (1000 * 3600);
+          return hoursAgo < 16 && (Number(t.daily_generation_kwh || 0) > 0.1 || Number(t.ac_power_kw || 0) > 0.05);
+        }) ||
+        siteInvs.some((inv) => {
+          const dt = parseUtcDate(inv.last_seen_at);
+          if (!dt) return false;
+          const hoursAgo = (Date.now() - dt.getTime()) / (1000 * 3600);
+          return hoursAgo < 1.5;
+        });
+
+      const siteStatus = getSiteStatus(siteInvs, fleetLatestTelemetryMap, hasGenToday);
       const isOffline = siteStatus === "OFFLINE";
 
       const strErrors = siteAnoms.filter((a) => a.type !== "inverter_offline").length;
@@ -262,7 +289,7 @@ export function DiagnosticsClientWrapper({
       };
     }
     return map;
-  }, [sites, fleetAnomalies, allInverters, activeAlerts, fleetLatestTelemetryMap]);
+  }, [sites, fleetAnomalies, allInverters, activeAlerts, fleetLatestTelemetryMap, allTelemetry, allStringTelemetry, allStrings]);
 
   const [siteFilterMode, setSiteFilterMode] = useState<"all" | "attention" | "healthy">("all");
   const [siteSortBy, setSiteSortBy] = useState<"attention" | "name" | "capacity">("attention");
@@ -382,13 +409,26 @@ export function DiagnosticsClientWrapper({
   // Calculate high-level site health summary
   const totalInverters = siteInverters.length || 1;
 
-  // Check if site has actively generated solar current today during daylight
-  const hasActiveGenerationToday = siteStringTelemetry.some((st) => {
-    const dt = parseUtcDate(st.timestamp);
-    if (!dt) return false;
-    const hoursAgo = (Date.now() - dt.getTime()) / (1000 * 3600);
-    return hoursAgo < 14 && Number(st.current_a || 0) > 0.5;
-  });
+  // Check if site has actively generated solar current today during daylight or recent telemetry
+  const hasActiveGenerationToday =
+    siteStringTelemetry.some((st) => {
+      const dt = parseUtcDate(st.timestamp);
+      if (!dt) return false;
+      const hoursAgo = (Date.now() - dt.getTime()) / (1000 * 3600);
+      return hoursAgo < 16 && (Number(st.current_a || 0) > 0.05 || Number(st.power_kw || 0) > 0.05);
+    }) ||
+    siteTelemetry.some((t) => {
+      const dt = parseUtcDate(t.timestamp || t.last_update);
+      if (!dt) return false;
+      const hoursAgo = (Date.now() - dt.getTime()) / (1000 * 3600);
+      return hoursAgo < 16 && (Number(t.daily_generation_kwh || 0) > 0.1 || Number(t.ac_power_kw || 0) > 0.05);
+    }) ||
+    siteInverters.some((inv) => {
+      const dt = parseUtcDate(inv.last_seen_at);
+      if (!dt) return false;
+      const hoursAgo = (Date.now() - dt.getTime()) / (1000 * 3600);
+      return hoursAgo < 1.5;
+    });
 
   const offlineInvertersCount = siteInverters.filter((inv) => {
     const invLatestTel = fleetLatestTelemetryMap.get(inv.id)?.timestamp || latestTelemetryMap.get(inv.id)?.timestamp;

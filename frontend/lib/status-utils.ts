@@ -46,9 +46,9 @@ export function getInverterStatus(
   const now = new Date();
   const diffMinutes = (now.getTime() - lastSeen.getTime()) / (1000 * 60);
 
-  // Stale beyond 60 minutes threshold (4 missed 15-min sync intervals) -> check diurnal context before marking OFFLINE
-  if (diffMinutes > 60) {
-    if (hasActiveGenerationToday && diffMinutes < 6 * 60) {
+  // Stale beyond 90 minutes threshold (6 missed 15-min sync intervals) -> check diurnal context before marking OFFLINE
+  if (diffMinutes > 90) {
+    if (hasActiveGenerationToday && diffMinutes < 14 * 60) {
       return "ONLINE";
     }
     // Solar diurnal awareness: In India (Asia/Kolkata), solar arrays shut down after sunset (~18:00 IST)

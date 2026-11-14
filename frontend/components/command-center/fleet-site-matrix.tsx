@@ -39,7 +39,13 @@ export function FleetSiteMatrix({ sites, inverters, latestTimestampMap }: FleetS
 
     return sites.map((site) => {
       const siteInverters = inverters.filter((inv) => inv.site_id === site.id);
-      const computedStatus = getSiteStatus(siteInverters, tsMap);
+      const hasGenToday = siteInverters.some((inv) => {
+        const dt = inv.last_seen_at ? new Date(inv.last_seen_at) : null;
+        if (!dt || isNaN(dt.getTime())) return false;
+        const hoursAgo = (Date.now() - dt.getTime()) / (1000 * 3600);
+        return hoursAgo < 1.5;
+      });
+      const computedStatus = getSiteStatus(siteInverters, tsMap, hasGenToday);
 
       return {
         ...site,

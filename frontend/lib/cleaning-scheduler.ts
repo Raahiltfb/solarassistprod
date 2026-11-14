@@ -76,26 +76,20 @@ function isCompatibleRegion(loc1?: string, loc2?: string): boolean {
 }
 
 export function isPuneLocation(location?: string | null): boolean {
-  if (!location) return false;
-  const l = location.toLowerCase();
-  return l.includes("pune") || l.includes("pimpri") || l.includes("chinchwad");
+  return false;
 }
 
 export function isPuneCluster(cluster: GeographicCluster): boolean {
-  return cluster.sites.some((s) => isPuneLocation(s.location));
+  return false;
 }
 
 export function isPuneTeam(team: TechnicianTeam): boolean {
-  const n = (team.name || "").toLowerCase();
-  const b = (team.base_address || "").toLowerCase();
-  return n.includes("pune") || b.includes("pune");
+  return false;
 }
 
 export function isTeamRegionPermitted(cluster: GeographicCluster, team: TechnicianTeam): boolean {
-  const isPune = isPuneCluster(cluster);
-  const isPuneTm = isPuneTeam(team);
-  if (isPune && !isPuneTm) return false;
-  if (!isPune && isPuneTm) return false;
+  // Teams are represented simply as teams, without fixed geographical service-area locks.
+  // The site coordinator decides which team gets assigned to which cleaning job based on the operational schedule.
   return true;
 }
 

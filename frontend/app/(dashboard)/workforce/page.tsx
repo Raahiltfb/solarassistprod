@@ -74,7 +74,7 @@ export default function WorkforcePage() {
     const { error } = await sb.from("technician_teams").insert({
       org_id: "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
       name: teamForm.name,
-      base_address: teamForm.base_address || "Navi Mumbai Hub",
+      base_address: teamForm.base_address || "Operating Base",
       color_code: teamForm.color_code,
       is_active: true,
     });
@@ -238,7 +238,7 @@ export default function WorkforcePage() {
                   <CardContent className="pt-4 space-y-4 text-xs">
                     <div className="flex items-center justify-between text-muted-foreground">
                       <span className="flex items-center gap-1">
-                        <MapPin className="h-3.5 w-3.5" /> {team.base_address || "Navi Mumbai Hub"}
+                        <MapPin className="h-3.5 w-3.5" /> {team.base_address || "Operating Base"}
                       </span>
                       <Badge variant="outline" className="text-[10px] uppercase">
                         {team.is_active ? "Active" : "Inactive"}
@@ -332,7 +332,7 @@ export default function WorkforcePage() {
                         </TableCell>
 
                         <TableCell className="py-3.5 px-4 text-muted-foreground">
-                          {tech.base_address || "Navi Mumbai"}
+                          {tech.base_address || "Field Location"}
                         </TableCell>
 
                         <TableCell className="py-3.5 px-4 text-center font-mono font-semibold">
@@ -378,7 +378,7 @@ export default function WorkforcePage() {
               <Input
                 value={teamForm.name}
                 onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })}
-                placeholder="e.g. Team 5 (North Mumbai)"
+                placeholder="e.g. Team F"
               />
             </div>
             <div className="space-y-1.5">
@@ -386,7 +386,7 @@ export default function WorkforcePage() {
               <Input
                 value={teamForm.base_address}
                 onChange={(e) => setTeamForm({ ...teamForm, base_address: e.target.value })}
-                placeholder="e.g. Thane West Hub"
+                placeholder="e.g. Operating Base Station"
               />
             </div>
             <div className="space-y-1.5">

@@ -111,7 +111,7 @@ export default function CleaningTeamsPage() {
             Cleaning Teams &amp; Shift Capacity
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Operational 2-person module cleaning crews, regional hub locks, and daily planning capacity assumptions.
+            Operational 2-person module cleaning crews and daily planning capacity assumptions.
           </p>
         </div>
       </div>
@@ -122,7 +122,7 @@ export default function CleaningTeamsPage() {
           <CardContent className="p-4 space-y-1">
             <span className="text-[11px] font-bold uppercase text-muted-foreground">Active Field Crews</span>
             <div className="text-2xl font-bold font-mono text-foreground">{teams.length} Teams</div>
-            <span className="text-xs text-muted-foreground">4 Mumbai/MMR · 1 Pune Dedicated</span>
+            <span className="text-xs text-muted-foreground">Operational Cleaning Crews</span>
           </CardContent>
         </Card>
 
@@ -155,7 +155,6 @@ export default function CleaningTeamsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {teams.map((team) => {
           const members = team.technician_team_members || [];
-          const isPune = (team.name || "").toLowerCase().includes("pune");
           const teamVisits = cleaningVisits.filter((cv) => cv.assigned_team_id === team.id);
           const completedVisits = teamVisits.filter((cv) => cv.status === "completed");
 
@@ -170,11 +169,6 @@ export default function CleaningTeamsPage() {
                     />
                     <div>
                       <CardTitle className="text-base font-bold">{team.name}</CardTitle>
-                      {isPune && (
-                        <span className="text-[10px] text-pink-600 dark:text-pink-400 font-semibold uppercase tracking-wider">
-                          Solely Pune &amp; Pimpri Cluster
-                        </span>
-                      )}
                     </div>
                   </div>
                   <Button
@@ -189,10 +183,10 @@ export default function CleaningTeamsPage() {
                 <CardContent className="pt-4 space-y-4 text-xs">
                   <div className="flex items-center justify-between text-muted-foreground">
                     <span className="flex items-center gap-1 font-mono">
-                      <MapPin className="h-3.5 w-3.5 text-primary" /> {team.base_address || "Hub"}
+                      <MapPin className="h-3.5 w-3.5 text-primary" /> {team.base_address || "Operating Base"}
                     </span>
                     <Badge variant="outline" className="text-[10px] uppercase font-mono">
-                      {isPune ? "Pune Metro" : "Mumbai & MMR"}
+                      {members.length} Crew · 480m / day
                     </Badge>
                   </div>
 

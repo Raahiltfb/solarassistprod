@@ -26,7 +26,6 @@ export default function CleaningPoliciesPage() {
 
   // Filters
   const [search, setSearch] = useState("");
-  const [regionFilter, setRegionFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
   // Dialogs
@@ -59,12 +58,6 @@ export default function CleaningPoliciesPage() {
       site.name.toLowerCase().includes(search.toLowerCase()) ||
       (site.location && site.location.toLowerCase().includes(search.toLowerCase()));
 
-    const isPune = (site.location || "").toLowerCase().includes("pune") || (site.location || "").toLowerCase().includes("pimpri");
-    const matchesRegion =
-      regionFilter === "all" ||
-      (regionFilter === "pune" && isPune) ||
-      (regionFilter === "mumbai" && !isPune);
-
     const rule = ruleMap.get(site.id);
     const matchesStatus =
       statusFilter === "all" ||
@@ -72,7 +65,7 @@ export default function CleaningPoliciesPage() {
       (statusFilter === "standard" && rule?.is_configured && !rule?.is_override) ||
       (statusFilter === "unconfigured" && (!rule || !rule.is_configured));
 
-    return matchesSearch && matchesRegion && matchesStatus;
+    return matchesSearch && matchesStatus;
   });
 
   const configuredCount = sites.filter((s) => ruleMap.get(s.id)?.is_configured).length;
@@ -155,17 +148,6 @@ export default function CleaningPoliciesPage() {
               />
             </div>
 
-            <Select value={regionFilter} onValueChange={setRegionFilter}>
-              <SelectTrigger className="text-xs h-9">
-                <SelectValue placeholder="All Regions" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Regions</SelectItem>
-                <SelectItem value="mumbai">Mumbai, MMR &amp; Navi Mumbai (Teams A–D)</SelectItem>
-                <SelectItem value="pune">Pune &amp; Pimpri (Team E)</SelectItem>
-              </SelectContent>
-            </Select>
-
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="text-xs h-9">
                 <SelectValue placeholder="All Policy Types" />
@@ -220,7 +202,6 @@ export default function CleaningPoliciesPage() {
               ) : (
                 filteredSites.map((site) => {
                   const rule = ruleMap.get(site.id);
-                  const isPune = (site.location || "").toLowerCase().includes("pune") || (site.location || "").toLowerCase().includes("pimpri");
                   const allowedDaysStr = rule?.allowed_weekdays && rule.allowed_weekdays.length > 0
                     ? rule.allowed_weekdays.map((d) => DAY_NAMES[d - 1]).join(", ")
                     : "Mon–Sat";
@@ -232,16 +213,7 @@ export default function CleaningPoliciesPage() {
                           <div className="text-foreground">{site.name}</div>
                           <div className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
                             <MapPin className="h-3 w-3 shrink-0" />
-                            {site.location || "Maharashtra"}
-                            {isPune ? (
-                              <Badge variant="outline" className="text-[9px] px-1 py-0 border-pink-400 text-pink-700 bg-pink-500/10">
-                                Team E (Pune)
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-[9px] px-1 py-0">
-                                Teams A–D
-                              </Badge>
-                            )}
+                            {site.location || "Fleet Installation"}
                           </div>
                         </div>
                       </TableCell>
