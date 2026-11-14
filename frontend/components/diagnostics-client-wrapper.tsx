@@ -427,7 +427,7 @@ export function DiagnosticsClientWrapper({
       const dt = parseUtcDate(inv.last_seen_at);
       if (!dt) return false;
       const hoursAgo = (Date.now() - dt.getTime()) / (1000 * 3600);
-      return hoursAgo < 1.5;
+      return hoursAgo < 14 && inv.status === "online";
     });
 
   const offlineInvertersCount = siteInverters.filter((inv) => {

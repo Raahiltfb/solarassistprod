@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SubNav } from "@/components/sub-nav";
 import { formatDate } from "@/lib/utils";
 import { CleaningEvidenceLinks } from "@/components/cleaning-evidence-links";
-import { Search, Calendar, Camera, CheckCircle2, Clock, ShieldAlert, ArrowUpRight, MapPin } from "lucide-react";
+import { Search, Calendar, Camera, CheckCircle2, Clock, ShieldAlert, ArrowUpRight, MapPin, Building2 } from "lucide-react";
 import type { CleaningVisit, CleaningLog, Site, TechnicianTeam } from "@/lib/types";
 
 export default function CleaningVisitsPage() {
@@ -37,7 +37,7 @@ export default function CleaningVisitsPage() {
     const [{ data: vData }, { data: lData }, { data: tData }] = await Promise.all([
       sb
         .from("cleaning_visits")
-        .select("*, sites(id, name, location, cleaning_cycle_days, last_cleaned_on), technician_teams(id, name, color_code)")
+        .select("*, sites(id, name, location, cleaning_cycle_days, last_cleaned_on), cleaning_locations(id, name, address), technician_teams(id, name, color_code), cleaning_visit_items(id, status)")
         .eq("cycle_period", cyclePeriod)
         .order("target_due_date", { ascending: true }),
       sb
@@ -59,8 +59,8 @@ export default function CleaningVisitsPage() {
   }, [cyclePeriod]);
 
   const filteredVisits = visits.filter((v) => {
-    const siteName = v.sites?.name || "";
-    const siteLoc = v.sites?.location || "";
+    const siteName = v.cleaning_locations?.name || v.sites?.name || "";
+    const siteLoc = v.cleaning_locations?.address || v.sites?.location || "";
     const matchesSearch =
       !search ||
       siteName.toLowerCase().includes(search.toLowerCase()) ||
@@ -256,13 +256,29 @@ export default function CleaningVisitsPage() {
                       return (
                         <TableRow key={cv.id} className="hover:bg-muted/30">
                           <TableCell className="py-3.5 px-6 font-semibold">
-                            <div>
-                              <div className="text-foreground">{cv.sites?.name || "Solar Site"}</div>
-                              <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                <MapPin className="h-3 w-3 shrink-0" />
-                                {cv.sites?.location || "Maharashtra"}
+                            {cv.cleaning_locations ? (
+                              <div className="space-y-0.5">
+                                <Link href="/cleaning/locations" className="text-foreground hover:underline flex items-center gap-1.5 font-bold">
+                                  <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                                  <span>{cv.cleaning_locations.name}</span>
+                                </Link>
+                                <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                  <Badge variant="outline" className="text-[9px] px-1 py-0 bg-primary/5 text-primary border-primary/20">
+                                    Coordinated Group ({cv.cleaning_visit_items?.length || 0} units)
+                                  </Badge>
+                                  <span>•</span>
+                                  <span>{cv.cleaning_locations.address}</span>
+                                </div>
                               </div>
-                            </div>
+                            ) : (
+                              <div>
+                                <div className="text-foreground">{cv.sites?.name || "Solar Site"}</div>
+                                <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                  <MapPin className="h-3 w-3 shrink-0" />
+                                  {cv.sites?.location || "Maharashtra"}
+                                </div>
+                              </div>
+                            )}
                           </TableCell>
 
                           <TableCell className="py-3.5 px-4 font-mono text-muted-foreground">

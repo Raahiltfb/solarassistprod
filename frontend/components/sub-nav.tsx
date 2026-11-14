@@ -14,6 +14,7 @@ const HUB_TABS = {
     { href: "/cleaning", label: "Overview", icon: LayoutDashboard },
     { href: "/cleaning/planner", label: "Monthly Planner", icon: Calendar },
     { href: "/cleaning/visits", label: "Visits & History", icon: CheckCircle2 },
+    { href: "/cleaning/locations", label: "Location Groups", icon: Building2 },
     { href: "/cleaning/teams", label: "Teams & Capacity", icon: Users },
     { href: "/cleaning/policies", label: "Site Policies", icon: Settings },
   ],

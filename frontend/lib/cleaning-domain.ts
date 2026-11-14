@@ -53,7 +53,8 @@ export function isValidStateTransition(
 export interface CleaningVisit {
   id: string;
   org_id: string;
-  site_id: string;
+  site_id: string | null;
+  cleaning_location_id?: string | null;
   plan_id: string | null;
   cycle_period: string; // Format: YYYY-MM
   visit_sequence_in_month: number;
@@ -78,4 +79,7 @@ export interface CleaningVisit {
   acknowledged_by: string | null;
   created_at: string;
   updated_at: string;
+  sites?: any;
+  cleaning_locations?: any;
+  items?: any[];
 }

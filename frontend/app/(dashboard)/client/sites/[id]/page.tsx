@@ -129,8 +129,9 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
 
   const capacityKwp = Number(site.capacity_kwp || 0);
   const todaySpecificYield = capacityKwp > 0 ? (todayYield / capacityKwp) : 0;
-  const siteStatus = getSiteStatus(inverters, latestTelemetryTimestampMap);
-  const isSiteNormal = siteStatus === "ONLINE";
+  const isCleaningOnly = site.service_tier === "cleaning_only";
+  const siteStatus = getSiteStatus(inverters, latestTelemetryTimestampMap, undefined, site.service_tier);
+  const isSiteNormal = isCleaningOnly || siteStatus === "ONLINE";
 
   // Financial Savings
   const savingsResult = calculateFinancialSavings(lifetimeYield, site.grid_tariff_inr_per_kwh);
@@ -266,93 +267,166 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
         </div>
 
         {/* Headline Customer KPI Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: Energy Produced Today */}
-          <Card className="hover:shadow-sm transition-shadow">
-            <CardHeader className="pb-2">
-              <CardDescription className="text-xs font-medium uppercase tracking-wider flex items-center justify-between">
-                <span>Energy Produced Today</span>
-                <Sun className="h-4 w-4 text-emerald-500" />
-              </CardDescription>
-              <CardTitle className="text-3xl font-bold font-mono text-foreground mt-1">
-                {kWh(todayYield)}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-xs text-muted-foreground">
-                Clean electricity units generated today at {site.name}
-              </p>
-            </CardContent>
-          </Card>
+        {isCleaningOnly ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="hover:shadow-sm transition-shadow">
+              <CardHeader className="pb-2">
+                <CardDescription className="text-xs font-medium uppercase tracking-wider flex items-center justify-between">
+                  <span>Contract Service Tier</span>
+                  <SprayCan className="h-4 w-4 text-amber-500" />
+                </CardDescription>
+                <CardTitle className="text-xl font-bold text-foreground mt-1">
+                  Cleaning Only
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-xs text-muted-foreground">
+                  Module wash, soiling inspection, and photographic proof of work.
+                </p>
+              </CardContent>
+            </Card>
 
-          {/* Card 2: Today's Specific Yield */}
-          <Card className="hover:shadow-sm transition-shadow">
-            <CardHeader className="pb-2">
-              <CardDescription className="text-xs font-medium uppercase tracking-wider flex items-center justify-between">
-                <span>Today's Specific Yield</span>
-                <Activity className="h-4 w-4 text-amber-500" />
-              </CardDescription>
-              <CardTitle className="text-3xl font-bold font-mono text-foreground mt-1">
-                {todaySpecificYield.toFixed(2)} <span className="text-sm font-sans font-normal text-muted-foreground">kWh/kWp</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-xs text-muted-foreground flex items-start gap-1">
-                <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-                <span>Electricity generated relative to installed solar capacity.</span>
-              </p>
-            </CardContent>
-          </Card>
+            <Card className="hover:shadow-sm transition-shadow">
+              <CardHeader className="pb-2">
+                <CardDescription className="text-xs font-medium uppercase tracking-wider flex items-center justify-between">
+                  <span>Cleaning Frequency</span>
+                  <Calendar className="h-4 w-4 text-primary" />
+                </CardDescription>
+                <CardTitle className="text-2xl font-bold font-mono text-foreground mt-1">
+                  Every {cycleDays} Days
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-xs text-muted-foreground">
+                  Preventive cleaning interval agreed in contract.
+                </p>
+              </CardContent>
+            </Card>
 
-          {/* Card 3: System Health with Explainability */}
-          <Card className="hover:shadow-sm transition-shadow">
-            <CardHeader className="pb-2">
-              <CardDescription className="text-xs font-medium uppercase tracking-wider flex items-center justify-between">
-                <span>System Health</span>
-                <ShieldCheck className="h-4 w-4 text-emerald-500" />
-              </CardDescription>
-              <CardTitle className="text-3xl font-bold font-mono text-foreground mt-1">
-                {healthResult.score} <span className="text-sm font-sans font-normal text-muted-foreground">/ 100</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0 space-y-2">
-              <p className="text-xs text-muted-foreground leading-normal">
-                {healthResult.summary}
-              </p>
-              <ClientHealthBreakdownModal
-                healthResult={healthResult}
-                siteName={site.name}
-                trigger={
-                  <button type="button" className="text-xs text-primary font-medium hover:underline flex items-center gap-1">
-                    <span>View explainable factors</span>
-                    <ArrowUpRight className="h-3 w-3" />
-                  </button>
-                }
-              />
-            </CardContent>
-          </Card>
+            <Card className="hover:shadow-sm transition-shadow">
+              <CardHeader className="pb-2">
+                <CardDescription className="text-xs font-medium uppercase tracking-wider flex items-center justify-between">
+                  <span>Last Cleaned Date</span>
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                </CardDescription>
+                <CardTitle className="text-xl font-bold font-mono text-foreground mt-1">
+                  {site.last_cleaned_on ? formatDate(site.last_cleaned_on) : "Pending Cycle"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-xs text-muted-foreground">
+                  Verified with before/after photos and technician checklist.
+                </p>
+              </CardContent>
+            </Card>
 
-          {/* Card 4: Estimated Savings */}
-          <Card className="hover:shadow-sm transition-shadow">
-            <CardHeader className="pb-2">
-              <CardDescription className="text-xs font-medium uppercase tracking-wider flex items-center justify-between">
-                <span>Estimated Lifetime Savings</span>
-                <Coins className="h-4 w-4 text-emerald-500" />
-              </CardDescription>
-              <CardTitle className="text-3xl font-bold font-mono text-foreground mt-1">
-                {savingsResult ? savingsResult.formatted : "Not configured"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-xs text-muted-foreground">
-                {site.grid_tariff_inr_per_kwh ? `Calculated at ₹${site.grid_tariff_inr_per_kwh}/kWh tariff` : "Set grid tariff to view financial savings"}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+            <Card className="hover:shadow-sm transition-shadow">
+              <CardHeader className="pb-2">
+                <CardDescription className="text-xs font-medium uppercase tracking-wider flex items-center justify-between">
+                  <span>Next Scheduled Clean</span>
+                  <Clock className="h-4 w-4 text-blue-500" />
+                </CardDescription>
+                <CardTitle className="text-xl font-bold font-mono text-foreground mt-1">
+                  {cleanRes.scheduledDate ? formatDate(cleanRes.scheduledDate) : "Planned in cycle"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-xs text-muted-foreground">
+                  {cleanRes.isScheduled ? "Dispatched to field cleaning crew" : "Within scheduled cycle window"}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Card 1: Energy Produced Today */}
+            <Card className="hover:shadow-sm transition-shadow">
+              <CardHeader className="pb-2">
+                <CardDescription className="text-xs font-medium uppercase tracking-wider flex items-center justify-between">
+                  <span>Energy Produced Today</span>
+                  <Sun className="h-4 w-4 text-emerald-500" />
+                </CardDescription>
+                <CardTitle className="text-3xl font-bold font-mono text-foreground mt-1">
+                  {kWh(todayYield)}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-xs text-muted-foreground">
+                  Clean electricity units generated today at {site.name}
+                </p>
+              </CardContent>
+            </Card>
 
-        {/* Solar Inverters Equipment Breakdown */}
-        <Card>
+            {/* Card 2: Today's Specific Yield */}
+            <Card className="hover:shadow-sm transition-shadow">
+              <CardHeader className="pb-2">
+                <CardDescription className="text-xs font-medium uppercase tracking-wider flex items-center justify-between">
+                  <span>Today's Specific Yield</span>
+                  <Activity className="h-4 w-4 text-amber-500" />
+                </CardDescription>
+                <CardTitle className="text-3xl font-bold font-mono text-foreground mt-1">
+                  {todaySpecificYield.toFixed(2)} <span className="text-sm font-sans font-normal text-muted-foreground">kWh/kWp</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-xs text-muted-foreground flex items-start gap-1">
+                  <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                  <span>Electricity generated relative to installed solar capacity.</span>
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Card 3: System Health with Explainability */}
+            <Card className="hover:shadow-sm transition-shadow">
+              <CardHeader className="pb-2">
+                <CardDescription className="text-xs font-medium uppercase tracking-wider flex items-center justify-between">
+                  <span>System Health</span>
+                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                </CardDescription>
+                <CardTitle className="text-3xl font-bold font-mono text-foreground mt-1">
+                  {healthResult.score} <span className="text-sm font-sans font-normal text-muted-foreground">/ 100</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 space-y-2">
+                <p className="text-xs text-muted-foreground leading-normal">
+                  {healthResult.summary}
+                </p>
+                <ClientHealthBreakdownModal
+                  healthResult={healthResult}
+                  siteName={site.name}
+                  trigger={
+                    <button type="button" className="text-xs text-primary font-medium hover:underline flex items-center gap-1">
+                      <span>View explainable factors</span>
+                      <ArrowUpRight className="h-3 w-3" />
+                    </button>
+                  }
+                />
+              </CardContent>
+            </Card>
+
+            {/* Card 4: Estimated Savings */}
+            <Card className="hover:shadow-sm transition-shadow">
+              <CardHeader className="pb-2">
+                <CardDescription className="text-xs font-medium uppercase tracking-wider flex items-center justify-between">
+                  <span>Estimated Lifetime Savings</span>
+                  <Coins className="h-4 w-4 text-emerald-500" />
+                </CardDescription>
+                <CardTitle className="text-3xl font-bold font-mono text-foreground mt-1">
+                  {savingsResult ? savingsResult.formatted : "Not configured"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-xs text-muted-foreground">
+                  {site.grid_tariff_inr_per_kwh ? `Calculated at ₹${site.grid_tariff_inr_per_kwh}/kWh tariff` : "Set grid tariff to view financial savings"}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Solar Inverters Equipment Breakdown (Only for monitored sites) */}
+        {!isCleaningOnly && (
+          <Card>
           <CardHeader className="pb-3 border-b">
             <div className="flex items-center justify-between">
               <div>
@@ -407,6 +481,7 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
             )}
           </CardContent>
         </Card>
+        )}
       </section>
 
       {/* QUESTION 2: Is anything wrong, and what is being done about it? */}
@@ -441,11 +516,13 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
                 </div>
                 <div className="space-y-0.5">
                   <div className="text-sm font-semibold text-foreground flex items-center gap-2">
-                    <span>Zero Active Technical Exceptions</span>
-                    <Badge variant="success" className="text-[10px] py-0 px-2">24/7 Monitored</Badge>
+                    <span>{isCleaningOnly ? "Zero Cleaning or Physical Module Exceptions" : "Zero Active Technical Exceptions"}</span>
+                    <Badge variant="success" className="text-[10px] py-0 px-2">{isCleaningOnly ? "Scheduled Care" : "24/7 Monitored"}</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    All inverter channels, string DC current ratios, and ground insulation resistances are operating within nominal limits at {site.name}. Solar Assist 24/7 automated O&M supervision is active.
+                    {isCleaningOnly
+                      ? `Module surfaces, framing, and rooftop layout at ${site.name} have no reported damage or physical defects. Field washing is proceeding on schedule.`
+                      : `All inverter channels, string DC current ratios, and ground insulation resistances are operating within nominal limits at ${site.name}. Solar Assist 24/7 automated O&M supervision is active.`}
                   </p>
                 </div>
               </div>

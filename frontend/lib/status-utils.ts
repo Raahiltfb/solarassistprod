@@ -78,8 +78,13 @@ export function getInverterStatus(
 export function getSiteStatus(
   inverters: Array<{ id?: string; status?: string; last_seen_at?: string | null }>,
   latestTelemetryMap?: Map<string, any>, // inverter_id -> timestamp string or telemetry object
-  hasActiveGenerationToday?: boolean
+  hasActiveGenerationToday?: boolean,
+  serviceTier?: string
 ): SiteStatusDisplay {
+  if (serviceTier === "cleaning_only") {
+    return "ONLINE"; // Cleaning-only sites do not have inverters or telemetry and must not generate offline alerts
+  }
+
   if (!inverters || inverters.length === 0) {
     return "ONLINE";
   }

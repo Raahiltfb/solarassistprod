@@ -221,7 +221,7 @@ export default async function DashboardPage() {
     sb
       .from("sites")
       .select(
-        "id, org_id, name, location, latitude, longitude, capacity_kwp, commissioned_on, cleaning_cycle_days, last_cleaned_on, next_cleaning_date, cleaning_schedule_type, cleaning_schedule_notes, client_id, client_org_id, grid_tariff_inr_per_kwh, status, timezone, created_at"
+        "id, org_id, name, location, latitude, longitude, capacity_kwp, commissioned_on, cleaning_cycle_days, last_cleaned_on, next_cleaning_date, cleaning_schedule_type, cleaning_schedule_notes, client_id, client_org_id, grid_tariff_inr_per_kwh, status, timezone, service_tier, created_at"
       )
       .order("name"),
     sb
@@ -315,8 +315,11 @@ export default async function DashboardPage() {
   const offlineSitesList: any[] = [];
 
   for (const site of sites) {
+    if (site.service_tier === "cleaning_only") {
+      continue; // Exclude cleaning-only sites from technical monitoring/telemetry status
+    }
     const siteInvs = siteInvertersMap.get(site.id) ?? [];
-    const status = getSiteStatus(siteInvs, latestTimestampMap);
+    const status = getSiteStatus(siteInvs, latestTimestampMap, undefined, site.service_tier);
 
     const siteTickets = tickets.filter((t) => t.site_id === site.id && t.status !== "resolved" && t.status !== "closed");
     const siteAlerts = alerts.filter((a) => a.site_id === site.id && (a.status === "open" || a.status === "acknowledged"));

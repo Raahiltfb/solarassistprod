@@ -60,7 +60,7 @@ export default async function FleetOverviewPage() {
     teamsRes,
     techsRes,
   ] = await Promise.all([
-    sb.from("sites").select("id, name, capacity_kwp, location, last_cleaned_on, next_cleaning_date, cleaning_cycle_days").order("name"),
+    sb.from("sites").select("id, name, capacity_kwp, location, last_cleaned_on, next_cleaning_date, cleaning_cycle_days, service_tier").order("name"),
     sb.from("inverters").select("id, site_id, status, last_seen_at"),
     sb.from("tickets").select("id, status, priority, created_at, site_id").neq("status", "closed"),
     sb.from("alerts").select("id, status, severity, site_id, code").eq("status", "open"),
@@ -117,12 +117,15 @@ export default async function FleetOverviewPage() {
   const totalCapacityMwp = (totalCapacityKwp / 1000).toFixed(2);
   const totalGenerationMwh = (totalGenerationKwh / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 });
 
+  // Filter monitored sites vs cleaning-only sites
+  const monitoredSites = sites.filter((s) => s.service_tier !== "cleaning_only");
+
   // Inverter and site connectivity
   let onlineSites = 0;
   let offlineSites = 0;
-  for (const site of sites) {
+  for (const site of monitoredSites) {
     const siteInvs = inverters.filter((inv) => inv.site_id === site.id);
-    const status = getSiteStatus(siteInvs, latestTimestampMap);
+    const status = getSiteStatus(siteInvs, latestTimestampMap, undefined, site.service_tier);
     if (status === "OFFLINE") {
       offlineSites++;
     } else {

@@ -68,7 +68,7 @@ const NAV = [
     mobileLabel: "Cleaning",
     icon: SprayCan,
     roles: ["super_admin", "epc_admin"],
-    subPaths: ["/cleaning/planner", "/cleaning/visits", "/cleaning/teams", "/cleaning/policies"],
+    subPaths: ["/cleaning/planner", "/cleaning/visits", "/cleaning/locations", "/cleaning/teams", "/cleaning/policies"],
   },
   {
     href: "/sites",
@@ -232,7 +232,7 @@ export function Shell({ profile, children }: { profile: Profile; children: React
         {/* Fixed Mobile Bottom Navigation Bar (Native Mobile PWA feel) */}
         {(() => {
           const isOverflow = items.length > 5;
-          const primaryItems = isOverflow ? items.filter((it) => ["/dashboard", "/service-requests", "/sites", "/diagnostics"].includes(it.href)) : items;
+          const primaryItems = isOverflow ? items.filter((it) => ["/dashboard", "/cleaning", "/sites", "/diagnostics"].includes(it.href)) : items;
           const moreItems = isOverflow ? items.filter((it) => !primaryItems.some((pi) => pi.href === it.href)) : [];
           const isMoreActive = moreItems.some((it) => 
             pathname === it.href || 

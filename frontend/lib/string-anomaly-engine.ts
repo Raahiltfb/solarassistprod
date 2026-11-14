@@ -1,5 +1,5 @@
 import { Site, Inverter } from "./types";
-import { getInverterStatus } from "./status-utils";
+import { getInverterStatus, parseUtcDate } from "./status-utils";
 
 export type AnomalyType = 
   | "string_disconnected" 
@@ -226,6 +226,8 @@ export function analyzeStringAnomalies(
   for (const inv of inverters) {
     // Determine latest telemetry timestamp for this inverter from incoming telemetry stream or inv.last_seen_at
     let latestTs: string | undefined = inv.last_seen_at || undefined;
+    let invHasActiveGeneration = false;
+
     for (const [strId, pts] of stringTelemetryPointsMap.entries()) {
       const s = stringMap.get(strId);
       if (s && s.inverter_id === inv.id && pts.length > 0) {
@@ -233,11 +235,29 @@ export function analyzeStringAnomalies(
         if (ptTs && (!latestTs || new Date(ptTs).getTime() > new Date(latestTs).getTime())) {
           latestTs = ptTs;
         }
+        if (
+          pts.some((p) => {
+            const dt = parseUtcDate(p.timestamp);
+            if (!dt) return false;
+            const hoursAgo = (Date.now() - dt.getTime()) / (1000 * 3600);
+            return hoursAgo < 16 && (Number(p.current_a || 0) > 0.05 || Number(p.power_kw || 0) > 0.05);
+          })
+        ) {
+          invHasActiveGeneration = true;
+        }
       }
     }
 
-    const invStatus = getInverterStatus(inv, latestTs);
-    const isOffline = invStatus === "OFFLINE";
+    // If inverter status in DB is online and it communicated today (< 14 hours), treat as having active communication/generation
+    if (inv.last_seen_at) {
+      const dt = parseUtcDate(inv.last_seen_at);
+      if (dt && (Date.now() - dt.getTime()) < 14 * 3600 * 1000 && inv.status === "online") {
+        invHasActiveGeneration = true;
+      }
+    }
+
+    const invStatus = getInverterStatus(inv, latestTs, invHasActiveGeneration);
+    const isOffline = invStatus === "OFFLINE" && !invHasActiveGeneration;
 
     if (isOffline) {
       const siteObj = siteMap.get(inv.site_id);

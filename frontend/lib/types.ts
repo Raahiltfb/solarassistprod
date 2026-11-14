@@ -56,8 +56,41 @@ export interface Site {
   client_org_id: string | null;
   grid_tariff_inr_per_kwh: number | null;
   status: "active" | "inactive" | "commissioning";
+  service_tier: "full_om" | "cleaning_only";
+  cleaning_location_id?: string | null;
   timezone: string;
   created_at: string;
+}
+
+export interface CleaningLocation {
+  id: string;
+  org_id: string;
+  name: string;
+  address: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  sites?: Site[];
+  total_installations?: number;
+  total_capacity_kwp?: number;
+}
+
+export type CleaningVisitItemStatus = "pending" | "completed" | "incomplete" | "skipped" | "issue";
+
+export interface CleaningVisitItem {
+  id: string;
+  cleaning_visit_id: string;
+  site_id: string;
+  status: CleaningVisitItemStatus;
+  notes?: string | null;
+  completed_at?: string | null;
+  before_photo_url?: string | null;
+  after_photo_url?: string | null;
+  created_at: string;
+  updated_at: string;
+  sites?: Site;
 }
 
 export interface Inverter {

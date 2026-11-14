@@ -13,17 +13,19 @@ import { SubNav } from "@/components/sub-nav";
 export default async function SitesPage() {
   const sb = await createClient();
 
-  const [sitesRes, invertersRes, alertsRes, rulesRes] = await Promise.all([
+  const [sitesRes, invertersRes, alertsRes, rulesRes, locsRes] = await Promise.all([
     sb.from("sites").select("*").order("name"),
     sb.from("inverters").select("id, status, site_id, capacity_kw, last_seen_at"),
     sb.from("alerts").select("id, site_id").eq("status", "open"),
     sb.from("site_cleaning_rules").select("*"),
+    sb.from("cleaning_locations").select("id, name"),
   ]);
 
   const sites = sitesRes.data ?? [];
   const inverters = invertersRes.data ?? [];
   const alerts = alertsRes.data ?? [];
   const rules = rulesRes.data ?? [];
+  const locations = locsRes.data ?? [];
 
   const inverterIds = inverters.map((inv) => inv.id);
 
@@ -88,7 +90,7 @@ export default async function SitesPage() {
       }
     }
 
-    const siteStatus = getSiteStatus(siteInvs, latestTelemetryTimestampMap);
+    const siteStatus = getSiteStatus(siteInvs, latestTelemetryTimestampMap, undefined, s.service_tier);
     siteStatusMap[s.id] = siteStatus;
     siteAlertsMap[s.id] = alertsCount;
 
@@ -129,6 +131,7 @@ export default async function SitesPage() {
           <SitesConfigurationTable
             sites={sites}
             rules={rules}
+            locations={locations}
             siteStatusMap={siteStatusMap}
             siteAlertsMap={siteAlertsMap}
           />

@@ -23,6 +23,8 @@ export default async function TechnicalIntelligencePage({
   if (profile?.org_id && profile.role !== "super_admin") {
     siteList = siteList.filter((s) => s.org_id === profile.org_id);
   }
+  // Exclude cleaning-only sites from technical telemetry and string diagnostics
+  siteList = siteList.filter((s) => s.service_tier !== "cleaning_only");
 
   const selectedSite = siteList.find((s) => s.id === site_id) || siteList[0] || null;
 

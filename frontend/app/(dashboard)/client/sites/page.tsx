@@ -123,25 +123,28 @@ export default async function ClientSitesListPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {sites.map((s) => {
           const siteInvs = siteInverters.get(s.id) ?? [];
-          const siteStatus = getSiteStatus(siteInvs, latestTelemetryTimestampMap);
+          const isCleaningOnly = s.service_tier === "cleaning_only";
+          const siteStatus = getSiteStatus(siteInvs, latestTelemetryTimestampMap, undefined, s.service_tier);
 
           let currentPower = 0;
           let todayGeneration = 0;
           let lifetimeGeneration = 0;
 
-          for (const inv of siteInvs) {
-            const tel = latestInvTelemetryMap.get(inv.id);
-            if (tel) {
-              currentPower += Number(tel.ac_power_kw || 0);
-              todayGeneration += Number(tel.daily_generation_kwh || 0);
-              lifetimeGeneration += Number(tel.total_generation_kwh || 0);
+          if (!isCleaningOnly) {
+            for (const inv of siteInvs) {
+              const tel = latestInvTelemetryMap.get(inv.id);
+              if (tel) {
+                currentPower += Number(tel.ac_power_kw || 0);
+                todayGeneration += Number(tel.daily_generation_kwh || 0);
+                lifetimeGeneration += Number(tel.total_generation_kwh || 0);
+              }
             }
           }
 
           const capacity = Number(s.capacity_kwp || 0);
           const todaySpecificYield = capacity > 0 ? (todayGeneration / capacity) : 0;
           const savingsResult = calculateFinancialSavings(todayGeneration, s.grid_tariff_inr_per_kwh);
-          const isSiteNormal = siteStatus === "ONLINE";
+          const isSiteNormal = isCleaningOnly || siteStatus === "ONLINE";
           const cleanRes = resolveSiteCleaning(s, { visits: upcomingVisits, workOrders, todayStr });
 
           return (
@@ -154,7 +157,12 @@ export default async function ClientSitesListPage() {
                         {s.name}
                       </CardTitle>
                     </Link>
-                    <div className="shrink-0">
+                    <div className="shrink-0 flex items-center gap-1.5">
+                      {isCleaningOnly && (
+                        <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 text-[10px]">
+                          Cleaning Only
+                        </Badge>
+                      )}
                       <span
                         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap border ${
                           isSiteNormal
@@ -167,7 +175,7 @@ export default async function ClientSitesListPage() {
                             isSiteNormal ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
                           }`}
                         />
-                        <span>{isSiteNormal ? "Operating Normally" : "Attention Needed"}</span>
+                        <span>{isSiteNormal ? (isCleaningOnly ? "Cleaning Active" : "Operating Normally") : "Attention Needed"}</span>
                       </span>
                     </div>
                   </div>
@@ -177,34 +185,55 @@ export default async function ClientSitesListPage() {
                   </p>
                 </CardHeader>
                 <CardContent className="pt-4 space-y-4 text-xs">
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                    <div>
-                      <div className="text-muted-foreground text-xs">System Size</div>
-                      <div className="font-semibold font-mono">{capacity.toLocaleString()} kWp</div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground text-xs">Current Power Output</div>
-                      <div className="font-semibold font-mono">{currentPower.toFixed(2)} kW</div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground text-xs">Energy Produced Today</div>
-                      <div className="font-semibold font-mono text-emerald-600 dark:text-emerald-400">{todayGeneration.toFixed(1)} kWh</div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground text-xs">Today's Specific Yield</div>
-                      <div className="font-semibold font-mono">{todaySpecificYield.toFixed(2)} kWh/kWp</div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground text-xs">Lifetime Output</div>
-                      <div className="font-semibold font-mono">{(lifetimeGeneration / 1000).toFixed(1)} MWh</div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground text-xs">Estimated Savings Today</div>
-                      <div className="font-semibold font-mono">
-                        {savingsResult ? savingsResult.formatted : "Not configured"}
+                  {isCleaningOnly ? (
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                      <div>
+                        <div className="text-muted-foreground text-xs">Installation Capacity</div>
+                        <div className="font-semibold font-mono">{capacity.toLocaleString()} kWp</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground text-xs">Contract Plan</div>
+                        <div className="font-semibold text-amber-600 dark:text-amber-400">Cleaning Only O&amp;M</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground text-xs">Cleaning Frequency</div>
+                        <div className="font-semibold font-mono">Every {s.cleaning_cycle_days || 30} Days</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground text-xs">Last Washed</div>
+                        <div className="font-semibold font-mono">{s.last_cleaned_on ? formatDate(s.last_cleaned_on) : "Pending Cycle"}</div>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                      <div>
+                        <div className="text-muted-foreground text-xs">System Size</div>
+                        <div className="font-semibold font-mono">{capacity.toLocaleString()} kWp</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground text-xs">Current Power Output</div>
+                        <div className="font-semibold font-mono">{currentPower.toFixed(2)} kW</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground text-xs">Energy Produced Today</div>
+                        <div className="font-semibold font-mono text-emerald-600 dark:text-emerald-400">{todayGeneration.toFixed(1)} kWh</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground text-xs">Today's Specific Yield</div>
+                        <div className="font-semibold font-mono">{todaySpecificYield.toFixed(2)} kWh/kWp</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground text-xs">Lifetime Output</div>
+                        <div className="font-semibold font-mono">{(lifetimeGeneration / 1000).toFixed(1)} MWh</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground text-xs">Estimated Savings Today</div>
+                        <div className="font-semibold font-mono">
+                          {savingsResult ? savingsResult.formatted : "Not configured"}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="pt-2 border-t flex items-center justify-between text-[11px] text-muted-foreground">
                     <div>
