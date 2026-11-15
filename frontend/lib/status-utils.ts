@@ -51,50 +51,46 @@ export function getInverterStatus(
 
   const lastSeen = parseUtcDate(lastSeenStr);
   if (!lastSeen) {
-    if (hasActiveGenerationToday) return "ONLINE";
     return "OFFLINE";
   }
 
   const now = new Date();
   const diffMinutes = (now.getTime() - lastSeen.getTime()) / (1000 * 60);
 
-  // If OEM telemetry explicitly reports offline / disconnected state and data is beyond 20 mins
-  if (isTelemetryOnline === false && diffMinutes > 20 && !hasActiveGenerationToday) {
+  // Solar diurnal awareness: In India (Asia/Kolkata UTC+5:30), solar arrays shut down after sunset (~18:30 IST)
+  // and resume at sunrise (~06:00 IST). Inverters that communicated normally during today's daylight
+  // hours are in healthy STANDBY / SLEEP mode during night hours, not communication failure.
+  const istHours = (now.getUTCHours() + 5.5) % 24;
+  const isNighttime = istHours >= 18.5 || istHours < 6.0;
+
+  // If OEM telemetry explicitly reports offline / disconnected state
+  if (isTelemetryOnline === false) {
     return "OFFLINE";
   }
 
   const dbStatus = inverter.status?.toLowerCase();
   if (dbStatus === "offline" || dbStatus === "comm_error" || dbStatus === "disconnected") {
-    // If database explicitly recorded an offline/communication error and there is no active generation
-    if (!hasActiveGenerationToday) {
-      return "OFFLINE";
-    }
+    return "OFFLINE";
   }
 
   if (dbStatus === "fault") {
     return "FAULT";
   }
-  if (dbStatus === "standby") {
-    return "STANDBY";
-  }
   if (dbStatus === "no grid" || dbStatus === "no_grid") {
     return "NO GRID";
   }
 
-  // Stale beyond 60 minutes threshold (4 missed 15-min sync intervals) during daylight
-  if (diffMinutes > 60) {
-    if (hasActiveGenerationToday && diffMinutes < 14 * 60) {
-      return "ONLINE";
-    }
-    // Solar diurnal awareness: In India (Asia/Kolkata), solar arrays shut down after sunset (~18:30 IST)
-    // and resume at sunrise (~06:00 IST). Inverters that communicated normally during today's daylight
-    // hours are in healthy STANDBY / SLEEP mode during night hours, not communication failure.
-    const istHours = (now.getUTCHours() + 5.5) % 24;
-    const isNighttime = istHours >= 18.5 || istHours < 6.0;
+  // Freshness threshold accounting for 15-min polling interval + retry jitter:
+  // If no communication for > 45 minutes (3 missed sync cycles):
+  if (diffMinutes > 45) {
     if (isNighttime && diffMinutes < 14 * 60) {
       return "STANDBY";
     }
     return "OFFLINE";
+  }
+
+  if (dbStatus === "standby") {
+    return "STANDBY";
   }
 
   return "ONLINE";

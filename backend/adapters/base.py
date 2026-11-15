@@ -54,9 +54,9 @@ class NormalizedTelemetry(BaseModel):
 
 class NormalizedStringTelemetry(BaseModel):
     string_index: int
-    voltage_v: float
-    current_a: float
-    power_kw: float
+    voltage_v: Optional[float] = None
+    current_a: Optional[float] = None
+    power_kw: Optional[float] = None
     status: str
     metrics: dict = Field(default_factory=dict)
 

@@ -256,15 +256,29 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ id:
                             <TableBody>
                               {invStrings.map((str) => {
                                 const st = latestStringTelemetry.get(str.id);
+                                const hasV = st && st.voltage_v !== null && st.voltage_v !== undefined;
+                                const hasC = st && st.current_a !== null && st.current_a !== undefined;
+                                const hasP = st && st.power_kw !== null && st.power_kw !== undefined;
+                                const stStatus = st?.status || str.status || "ok";
+                                const isMissing = !st || stStatus === "missing_measurement" || (!hasV && !hasC);
+
                                 return (
                                   <TableRow key={str.id}>
                                     <TableCell className="py-1.5 text-xs font-medium">#{str.string_index}</TableCell>
-                                    <TableCell className="py-1.5 text-xs text-right font-mono">{st ? `${Number(st.voltage_v).toFixed(1)} V` : "—"}</TableCell>
-                                    <TableCell className="py-1.5 text-xs text-right font-mono">{st ? `${Number(st.current_a).toFixed(2)} A` : "—"}</TableCell>
-                                    <TableCell className="py-1.5 text-xs text-right font-mono">{st ? `${Number(st.power_kw).toFixed(2)} kW` : "—"}</TableCell>
+                                    <TableCell className="py-1.5 text-xs text-right font-mono">{hasV ? `${Number(st.voltage_v).toFixed(1)} V` : "—"}</TableCell>
+                                    <TableCell className="py-1.5 text-xs text-right font-mono">{hasC ? `${Number(st.current_a).toFixed(2)} A` : "—"}</TableCell>
+                                    <TableCell className="py-1.5 text-xs text-right font-mono">{hasP ? `${Number(st.power_kw).toFixed(2)} kW` : "—"}</TableCell>
                                     <TableCell className="py-1.5 text-xs">
-                                      <Badge variant={str.status === "ok" ? "success" : "warning"} className="text-[10px] py-0 px-1.5 capitalize font-normal">
-                                        {st?.status || str.status}
+                                      <Badge 
+                                        variant={
+                                          isMissing ? "secondary" : 
+                                          stStatus === "normal" || stStatus === "ok" ? "success" : 
+                                          stStatus === "low_current" ? "warning" : 
+                                          "destructive"
+                                        } 
+                                        className="text-[10px] py-0 px-1.5 capitalize font-normal"
+                                      >
+                                        {isMissing ? "Unavailable" : stStatus.replace("_", " ")}
                                       </Badge>
                                     </TableCell>
                                   </TableRow>

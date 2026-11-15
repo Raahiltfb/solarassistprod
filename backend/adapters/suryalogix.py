@@ -131,26 +131,46 @@ class SuryalogixAdapter(OemAdapter):
             elif not isinstance(mpp_data, dict):
                 mpp_data = {}
 
-            for i in range(1, 19):
-                if float(inv.get(f"MPP_V{i}") or 0) > 0 or float(inv.get(f"MPP_I{i}") or 0) > 0 or float(mpp_data.get(f"v{i}") or 0) > 0 or float(mpp_data.get(f"i{i}") or 0) > 0:
+            for i in range(1, 25):
+                if f"MPP_V{i}" in inv or f"v{i}" in mpp_data or f"MPP_I{i}" in inv or f"i{i}" in mpp_data:
                     string_count = max(string_count, i)
 
             # Check SMB channel count if present
             if entry.get("smb"):
                 for smb in entry["smb"].values():
-                    for s in range(1, 21):
-                        if float(smb.get(f"I{s}") or 0) > 0 or float(smb.get("V") or 0) > 0:
+                    for s in range(1, 25):
+                        if f"I{s}" in smb or f"V{s}" in smb:
                             string_count = max(string_count, s)
 
             # Authoritative topology: Omya Warehouse inverters I2-I5 are 18-string hardware installations
-            if plant_id == "dHVSQWF5TVZoUHF3UmlZS2trUTk5b2YzN2Y2VGcyN2dvQktTMGU0SU5xQT0=" and inv_id in ["I2", "I3", "I4", "I5"]:
-                string_count = max(string_count, 18)
+            if plant_id == "dHVSQWF5TVZoUHF3UmlZS2trUTk5b2YzN2Y2VGcyN2dvQktTMGU0SU5xQT0=":
+                if inv_id in ["I2", "I3", "I4", "I5"]:
+                    string_count = 18
+                elif inv_id == "I1":
+                    string_count = max(string_count, 4)
+            elif plant_id == "VlpaWHZFU2ZtWE00YlFJMDZHQTlVdXUvdkMvWjM4c2oxNFlXVWJ3MnV4Yz0=":
+                if inv_id == "I1":
+                    string_count = max(string_count, 2)
+                elif inv_id == "I2":
+                    string_count = max(string_count, 4)
             elif string_count == 0:
                 string_count = 4
 
             iso_time = datetime.fromtimestamp(int(latest_ts), tz=timezone.utc).isoformat()
             diff_mins = (datetime.now(timezone.utc).timestamp() - int(latest_ts)) / 60.0
-            effective_status = "online" if (is_online and diff_mins < 60) else ("fault" if inv_status == 5 else ("standby" if diff_mins < 60 else "offline"))
+            
+            # Solar diurnal cycle (Asia/Kolkata UTC+5:30)
+            ist_hours = ((datetime.now(timezone.utc).hour + 5) + (datetime.now(timezone.utc).minute + 30) / 60.0) % 24
+            is_nighttime = ist_hours >= 18.5 or ist_hours < 6.0
+
+            if diff_mins > 45:
+                effective_status = "standby" if (is_nighttime and diff_mins < 14 * 60) else "offline"
+            elif inv_status == 5:
+                effective_status = "fault"
+            elif is_online:
+                effective_status = "online"
+            else:
+                effective_status = "standby"
 
             devices.append(
                 NormalizedDevice(
@@ -194,8 +214,9 @@ class SuryalogixAdapter(OemAdapter):
         total_kwh = float(inv.get("WHTot") or 0)
         specific_yield = (daily_kwh / ac_cap) if ac_cap > 0 else 0.0
         temp_c = float(inv.get("TEMP_HS") or inv.get("TEMP_INT") or 35.0)
-        inv_status = inv.get("inverter_status")
-        is_online = (inv_status == 4) or (ac_power_kw > 0) or (dc_power_kw > 0)
+        diff_mins = (datetime.now(timezone.utc).timestamp() - int(latest_ts)) / 60.0
+        is_fresh = diff_mins <= 45.0
+        is_online = is_fresh and ((inv_status == 4) or (ac_power_kw > 0) or (dc_power_kw > 0))
         efficiency = min(100.0, max(0.0, (ac_power_kw / dc_power_kw) * 100.0)) if dc_power_kw > 0 else (97.0 if is_online else 0.0)
         iso_time = datetime.fromtimestamp(int(latest_ts), tz=timezone.utc).isoformat()
 
@@ -233,10 +254,24 @@ class SuryalogixAdapter(OemAdapter):
                 "w1": inv.get("W1"),
                 "w2": inv.get("W2"),
                 "w3": inv.get("W3"),
+                "is_fresh": is_fresh,
+                "diff_mins": round(diff_mins, 1),
             },
         )
 
-        string_telemetries = []
+        # Authoritative topology string discovery
+        authoritative_string_count = 0
+        if plant_id == "dHVSQWF5TVZoUHF3UmlZS2trUTk5b2YzN2Y2VGcyN2dvQktTMGU0SU5xQT0=": # Omya Warehouse
+            if inv_id in ["I2", "I3", "I4", "I5"]:
+                authoritative_string_count = 18
+            elif inv_id == "I1":
+                authoritative_string_count = 4
+        elif plant_id == "VlpaWHZFU2ZtWE00YlFJMDZHQTlVdXUvdkMvWjM4c2oxNFlXVWJ3MnV4Yz0=": # Omya Car Port
+            if inv_id == "I1":
+                authoritative_string_count = 2
+            elif inv_id == "I2":
+                authoritative_string_count = 4
+
         mpp_data = inv.get("MPP_DATA")
         if isinstance(mpp_data, str):
             try:
@@ -246,29 +281,71 @@ class SuryalogixAdapter(OemAdapter):
         elif not isinstance(mpp_data, dict):
             mpp_data = {}
 
-        for i in range(1, 19):
-            v = float(inv.get(f"MPP_V{i}") or mpp_data.get(f"v{i}") or 0)
-            c = float(inv.get(f"MPP_I{i}") or mpp_data.get(f"i{i}") or 0)
-            w = float(inv.get(f"MPP_W{i}") or (v * c))
-            if v > 10.0 or c > 0.05 or w > 10.0:
+        for i in range(1, 25):
+            if f"MPP_V{i}" in inv or f"v{i}" in mpp_data or f"MPP_I{i}" in inv or f"i{i}" in mpp_data:
+                authoritative_string_count = max(authoritative_string_count, i)
+
+        if entry.get("smb"):
+            for smb in entry["smb"].values():
+                for s in range(1, 25):
+                    if f"I{s}" in smb or f"V{s}" in smb:
+                        authoritative_string_count = max(authoritative_string_count, s)
+
+        if authoritative_string_count == 0:
+            authoritative_string_count = 4
+
+        string_telemetries = []
+        for i in range(1, authoritative_string_count + 1):
+            has_channel_data = (
+                f"MPP_V{i}" in inv or f"v{i}" in mpp_data or
+                f"MPP_I{i}" in inv or f"i{i}" in mpp_data or
+                f"MPP_W{i}" in inv or f"w{i}" in mpp_data
+            )
+            
+            if has_channel_data:
+                v_raw = inv.get(f"MPP_V{i}") if f"MPP_V{i}" in inv else mpp_data.get(f"v{i}")
+                c_raw = inv.get(f"MPP_I{i}") if f"MPP_I{i}" in inv else mpp_data.get(f"i{i}")
+                v = float(v_raw) if v_raw is not None else 0.0
+                c = float(c_raw) if c_raw is not None else 0.0
+                w = float(inv.get(f"MPP_W{i}") or mpp_data.get(f"w{i}") or (v * c))
                 p_kw = w / 1000.0
+                
+                if p_kw > 0.05 or c > 0.05:
+                    st_status = "normal"
+                elif v > 20.0:
+                    st_status = "low_current"
+                else:
+                    st_status = "offline"
+                    
                 string_telemetries.append(
                     NormalizedStringTelemetry(
                         string_index=i,
                         voltage_v=v,
                         current_a=c,
                         power_kw=p_kw,
-                        status="normal" if p_kw > 0.05 else ("low_current" if v > 20.0 else "offline"),
-                        metrics={"mppt_channel": i, "raw_w": w},
+                        status=st_status,
+                        metrics={"mppt_channel": i, "raw_w": w, "reporting": True}
+                    )
+                )
+            else:
+                # Known physical channel on this inverter topology, but missing/unavailable at this timestamp
+                string_telemetries.append(
+                    NormalizedStringTelemetry(
+                        string_index=i,
+                        voltage_v=None,
+                        current_a=None,
+                        power_kw=None,
+                        status="offline",
+                        metrics={"mppt_channel": i, "reporting": False, "missing_measurement": True}
                     )
                 )
 
         if entry.get("smb"):
             for smb_key, smb in entry["smb"].items():
                 smb_v = float(smb.get("V") or inv.get("DC_V") or 0)
-                for s in range(1, 21):
-                    s_i = float(smb.get(f"I{s}") or 0)
-                    if s_i > 0.05 or smb_v > 50:
+                for s in range(1, authoritative_string_count + 1):
+                    if f"I{s}" in smb:
+                        s_i = float(smb.get(f"I{s}") or 0)
                         s_kw = (smb_v * s_i) / 1000.0
                         smb_item = NormalizedStringTelemetry(
                             string_index=s,
@@ -276,11 +353,11 @@ class SuryalogixAdapter(OemAdapter):
                             current_a=s_i,
                             power_kw=s_kw,
                             status="normal" if s_kw > 0.05 else ("low_current" if smb_v > 20.0 else "offline"),
-                            metrics={"smb_channel": s, "smb_box": smb_key},
+                            metrics={"smb_channel": s, "smb_box": smb_key, "reporting": True},
                         )
                         existing_idx = next((idx for idx, st in enumerate(string_telemetries) if st.string_index == s), None)
                         if existing_idx is not None:
-                            if s_i > 0 and string_telemetries[existing_idx].current_a == 0:
+                            if string_telemetries[existing_idx].voltage_v is None or s_i > (string_telemetries[existing_idx].current_a or 0):
                                 string_telemetries[existing_idx] = smb_item
                         else:
                             string_telemetries.append(smb_item)

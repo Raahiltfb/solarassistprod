@@ -111,29 +111,36 @@ class SolisAdapter(OemAdapter):
                 inv_data = inv_detail_res.get("data", {}) if inv_detail_res.get("code") == "0" else {}
                 
                 ts = inv_data.get("dataTimestamp") or inv_data.get("updateTime") or d.get("dataTimestamp")
+                last_seen_dt = None
                 if ts:
                     try:
                         ts_int = int(ts)
                         last_seen_dt = datetime.fromtimestamp(ts_int / 1000.0, tz=timezone.utc)
                     except (ValueError, TypeError):
-                        last_seen_dt = datetime.now(timezone.utc)
-                else:
-                    last_seen_dt = datetime.now(timezone.utc)
+                        last_seen_dt = None
                 
-                last_seen_at = last_seen_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+                last_seen_at = last_seen_dt.strftime("%Y-%m-%dT%H:%M:%SZ") if last_seen_dt else "2024-01-01T00:00:00Z"
                 
-                state_val = inv_data.get("state")
-                pac_val = float(inv_data.get("pac") or 0.0)
+                state_val = inv_data.get("state") if inv_data.get("state") is not None else d.get("state")
+                pac_val = float(inv_data.get("pac") or d.get("pac") or 0.0)
                 
-                # Evaluate connectivity vs operating condition
-                # State 1 = Generating, State 2 = Stopped/Standby (e.g. night), State 3 = Fault
-                is_fresh = (datetime.now(timezone.utc) - last_seen_dt).total_seconds() <= 1800
-                if not is_fresh:
+                now_utc = datetime.now(timezone.utc)
+                diff_seconds = (now_utc - last_seen_dt).total_seconds() if last_seen_dt else 999999
+                diff_mins = diff_seconds / 60.0
+
+                # Solar diurnal cycle (Asia/Kolkata UTC+5:30)
+                ist_hours = ((now_utc.hour + 5) + (now_utc.minute + 30) / 60.0) % 24
+                is_nighttime = ist_hours >= 18.5 or ist_hours < 6.0
+
+                # State 1 = Generating, State 2 = Stopped/Standby, State 3 = Fault, State 4 = Offline / Disconnected
+                if state_val in (4, "4") or state_val in (5, "5"):
                     status = "offline"
-                elif state_val == 1 or state_val == "1" or pac_val > 0:
-                    status = "online"
-                elif state_val == 3 or state_val == "3":
+                elif diff_mins > 45:
+                    status = "standby" if (is_nighttime and diff_mins < 14 * 60) else "offline"
+                elif state_val in (3, "3"):
                     status = "fault"
+                elif state_val in (1, "1") or pac_val > 0:
+                    status = "online"
                 else:
                     status = "standby"
                 
@@ -191,14 +198,24 @@ class SolisAdapter(OemAdapter):
             specific_yield = round(daily_generation_kwh / capacity_kw, 2)
         
         ts = inv_data.get("dataTimestamp") or inv_data.get("updateTime")
+        last_seen_dt = None
         if ts:
             try:
                 last_seen_dt = datetime.fromtimestamp(int(ts) / 1000.0, tz=timezone.utc)
             except (ValueError, TypeError):
-                last_seen_dt = datetime.now(timezone.utc)
-        else:
-            last_seen_dt = datetime.now(timezone.utc)
-        last_seen_at = last_seen_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+                last_seen_dt = None
+                
+        now_utc = datetime.now(timezone.utc)
+        last_seen_at = last_seen_dt.strftime("%Y-%m-%dT%H:%M:%SZ") if last_seen_dt else now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+        diff_seconds = (now_utc - last_seen_dt).total_seconds() if last_seen_dt else 999999
+        is_fresh = diff_seconds <= 45 * 60
+        
+        state_val = inv_data.get("state")
+        online_status = (
+            is_fresh and 
+            (state_val in (1, "1") or ac_power_kw > 0) and 
+            state_val not in (4, "4", 5, "5")
+        )
         
         frequency_hz = float(inv_data.get("fac") or 0.0)
         reactive_power_kvar = float(inv_data.get("reactivePower") or 0.0)

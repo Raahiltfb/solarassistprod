@@ -271,12 +271,12 @@ def analyze_strings_for_anomalies(inv_id, site_id, org_id, string_telemetries, t
     # Active strings: strings producing voltage/current above genuine solar operating threshold
     active_st_list = [
         st for st in string_telemetries 
-        if st.power_kw is not None and st.voltage_v > 50.0 and st.current_a > 0.2
+        if st.power_kw is not None and (st.voltage_v or 0.0) > 50.0 and (st.current_a or 0.0) > 0.2
     ]
     if len(active_st_list) < 2:
         return active_keys
 
-    powers = [st.power_kw for st in active_st_list]
+    powers = [st.power_kw for st in active_st_list if st.power_kw is not None]
     powers.sort()
     mid = len(powers) // 2
     median_power = (powers[mid] + powers[~mid]) / 2.0
@@ -284,19 +284,20 @@ def analyze_strings_for_anomalies(inv_id, site_id, org_id, string_telemetries, t
     if median_power < MIN_STRING_POWER_KW:
         return active_keys
 
-    currents = [st.current_a for st in active_st_list]
+    currents = [st.current_a for st in active_st_list if st.current_a is not None]
     currents.sort()
-    median_current = (currents[mid] + currents[~mid]) / 2.0
+    mid_c = len(currents) // 2
+    median_current = (currents[mid_c] + currents[~mid_c]) / 2.0 if currents else 0.0
         
     anomalous_strings = []
     for st in active_st_list:
-        if st.power_kw < medianPower * (1 - STRING_DEVIATION_THRESHOLD) and (median_power - st.power_kw) >= 0.35:
+        if st.power_kw is not None and st.power_kw < median_power * (1 - STRING_DEVIATION_THRESHOLD) and (median_power - st.power_kw) >= 0.35:
             deviation = (median_power - st.power_kw) / median_power * 100
             anomalous_strings.append({
                 "index": st.string_index,
                 "power": st.power_kw,
-                "current": st.current_a,
-                "voltage": st.voltage_v,
+                "current": st.current_a or 0.0,
+                "voltage": st.voltage_v or 0.0,
                 "deviation": deviation
             })
             
@@ -374,7 +375,7 @@ def analyze_strings_for_anomalies(inv_id, site_id, org_id, string_telemetries, t
         try:
             supabase_post("alerts", [synth_payload], headers_override={"Prefer": "return=representation"})
         except Exception:
-            pass
+            base_synth = {
                 "site_id": site_id,
                 "inverter_id": inv_id,
                 "code": code,
@@ -605,48 +606,46 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                     metrics["telemetry_inserted_count"] += 1
                     logger.info(f"Processed Telemetry for Inverter {inv_id}")
                         
-                # Strings lookup and creation
-                existing_strings = supabase_get("strings", params={"inverter_id": f"eq.{inv_id}"})
+                # Determine authoritative string count for this inverter
+                target_string_count = dev.string_count or 0
+                if string_telemetries:
+                    max_st_idx = max([st.string_index for st in string_telemetries] + [0])
+                    target_string_count = max(target_string_count, max_st_idx)
+                
+                # Authoritative topology: Omya Warehouse inverters I2-I5 are 18-string hardware installations
+                is_omya_wh = (
+                    getattr(station, "plant_id", "") == "dHVSQWF5TVZoUHF3UmlZS2trUTk5b2YzN2Y2VGcyN2dvQktTMGU0SU5xQT0=" or
+                    "warehouse" in getattr(station, "name", "").lower()
+                )
+                if is_omya_wh and (getattr(dev, "model", "") in ["I2", "I3", "I4", "I5"] or any(inv_tag in getattr(dev, "serial_number", "") for inv_tag in ["I2", "I3", "I4", "I5"])):
+                    target_string_count = max(target_string_count, 18)
+
+                # Strings lookup and authoritative seeding
+                existing_strings = supabase_get("strings", params={"inverter_id": f"eq.{inv_id}", "order": "string_index.asc"})
                 string_map = {s["string_index"]: s["id"] for s in existing_strings}
                 
-                # Dynamic MPPT Discovery: Seed String 1 if no strings exist yet for this inverter
-                if not string_map:
-                    string_cap = round(inv_capacity / (dev.string_count or 1), 2) if (dev.string_count or 1) > 0 else inv_capacity
-                    str_payload = {
-                        "inverter_id": inv_id,
-                        "string_index": 1,
-                        "capacity_kw": string_cap,
-                        "status": "ok"
-                    }
-                    if getattr(dev, "modules_count", None):
-                        str_payload["modules_count"] = dev.modules_count
-                    res_str = supabase_post("strings", [str_payload], headers_override={"Prefer": "return=representation"})
-                    if res_str:
-                        string_map[1] = res_str[0]["id"]
-                        logger.info(f"Dynamically discovered and created initial String Index 1 for Inverter {inv_id}")
+                # Seed all known channels (1..target_string_count) so the topology is permanent and never collapses
+                string_cap = round(inv_capacity / (target_string_count or 1), 2) if (target_string_count or 1) > 0 else inv_capacity
+                for idx in range(1, target_string_count + 1):
+                    if idx not in string_map:
+                        str_payload = {
+                            "inverter_id": inv_id,
+                            "string_index": idx,
+                            "capacity_kw": string_cap,
+                            "status": "ok"
+                        }
+                        if getattr(dev, "modules_count", None):
+                            str_payload["modules_count"] = dev.modules_count
+                        res_str = supabase_post("strings", [str_payload], headers_override={"Prefer": "return=representation"})
+                        if res_str:
+                            string_map[idx] = res_str[0]["id"]
+                            logger.info(f"Authoritatively seeded String Index {idx} for Inverter {inv_id}")
 
-                # String Telemetry sync (100% Dynamic & Safe Pruning)
+                # String Telemetry sync (Permanent topology, zero destructive pruning)
                 string_telemetry_batch = []
                 for st in string_telemetries:
                     string_id = string_map.get(st.string_index)
-                    
-                    # A string channel is active if it generates voltage or current
-                    is_active = (st.voltage_v > 0.0 or st.current_a > 0.0)
-                    
-                    # Prune legacy placeholder strings if daytime active generation is running but this string is 0
-                    if not is_active and string_id and telemetry and telemetry.ac_power_kw > 1.0:
-                        supabase_delete("strings", params={"id": f"eq.{string_id}"})
-                        string_map.pop(st.string_index, None)
-                        logger.info(f"Safely pruned legacy placeholder string Index {st.string_index} for Inverter {inv_id}")
-                        continue
-                        
-                    # If unconnected and not in DB, skip completely (prevents fake channels)
-                    if not is_active and not string_id:
-                        continue
-                        
-                    # If active but not in DB, create it dynamically
                     if not string_id:
-                        string_cap = round(inv_capacity / (dev.string_count or 1), 2) if (dev.string_count or 1) > 0 else 0.0
                         str_payload = {
                             "inverter_id": inv_id,
                             "string_index": st.string_index,
@@ -656,19 +655,21 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                         if getattr(dev, "modules_count", None):
                             str_payload["modules_count"] = dev.modules_count
                         res_str = supabase_post("strings", [str_payload], headers_override={"Prefer": "return=representation"})
-                        string_id = res_str[0]["id"]
-                        string_map[st.string_index] = string_id
-                    # Accumulate string telemetry for batch upsert
-                    string_telemetry_batch.append({
-                        "string_id": string_id,
-                        "timestamp": telemetry.timestamp,
-                        "voltage_v": st.voltage_v,
-                        "current_a": st.current_a,
-                        "power_kw": st.power_kw,
-                        "status": st.status
-                    })
+                        if res_str:
+                            string_id = res_str[0]["id"]
+                            string_map[st.string_index] = string_id
+                        
+                    if string_id and telemetry:
+                        string_telemetry_batch.append({
+                            "string_id": string_id,
+                            "timestamp": telemetry.timestamp,
+                            "voltage_v": st.voltage_v,
+                            "current_a": st.current_a,
+                            "power_kw": st.power_kw,
+                            "status": st.status
+                        })
 
-                # Batch upsert all active string telemetry for this inverter in one HTTP request
+                # Batch upsert all string telemetry for this inverter in one HTTP request
                 if string_telemetry_batch:
                     if dist_lock:
                         dist_lock.assert_active_owner()
@@ -692,13 +693,20 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                             raise
                     metrics["string_telemetry_inserted_count"] += len(string_telemetry_batch)
                 
-                # Update dynamic string count and ensure communicating inverters are marked online
-                dynamic_string_count = len(string_map)
-                last_seen = datetime.now(timezone.utc).isoformat() if telemetry else dev.last_seen_at
+                # Inverter status & last seen:
+                # Do NOT overwrite last_seen_at with datetime.now() when polling!
+                # Use actual hardware/OEM data timestamp
+                inv_last_seen = telemetry.timestamp if telemetry else dev.last_seen_at
+                
+                if telemetry:
+                    inv_status = "online" if telemetry.online_status else dev.status
+                else:
+                    inv_status = dev.status
+
                 inv_patch = {
-                    "string_count": dynamic_string_count,
-                    "status": "online" if telemetry else dev.status,
-                    "last_seen_at": last_seen
+                    "string_count": max(len(string_map), target_string_count),
+                    "status": inv_status,
+                    "last_seen_at": inv_last_seen
                 }
                 supabase_patch("inverters", inv_patch, params={"id": f"eq.{inv_id}"})
                 

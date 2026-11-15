@@ -207,15 +207,29 @@ export default async function InverterDetailsPage({ params }: { params: Promise<
                 <TableBody>
                   {strings.map((str) => {
                     const st = latestStringTelemetry.get(str.id);
+                    const hasV = st && st.voltage_v !== null && st.voltage_v !== undefined;
+                    const hasC = st && st.current_a !== null && st.current_a !== undefined;
+                    const hasP = st && st.power_kw !== null && st.power_kw !== undefined;
+                    const stStatus = st?.status || str.status || "ok";
+                    const isMissing = !st || stStatus === "missing_measurement" || (!hasV && !hasC);
+
                     return (
                       <TableRow key={str.id}>
                         <TableCell className="font-semibold">String #{str.string_index}</TableCell>
-                        <TableCell className="text-right font-mono">{st ? `${Number(st.voltage_v).toFixed(1)} V` : "—"}</TableCell>
-                        <TableCell className="text-right font-mono">{st ? `${Number(st.current_a).toFixed(2)} A` : "—"}</TableCell>
-                        <TableCell className="text-right font-mono">{st ? `${Number(st.power_kw).toFixed(2)} kW` : "—"}</TableCell>
+                        <TableCell className="text-right font-mono">{hasV ? `${Number(st.voltage_v).toFixed(1)} V` : "—"}</TableCell>
+                        <TableCell className="text-right font-mono">{hasC ? `${Number(st.current_a).toFixed(2)} A` : "—"}</TableCell>
+                        <TableCell className="text-right font-mono">{hasP ? `${Number(st.power_kw).toFixed(2)} kW` : "—"}</TableCell>
                         <TableCell>
-                          <Badge variant={str.status === "ok" ? "success" : "warning"} className="capitalize">
-                            {st?.status || str.status}
+                          <Badge 
+                            variant={
+                              isMissing ? "secondary" : 
+                              stStatus === "normal" || stStatus === "ok" ? "success" : 
+                              stStatus === "low_current" ? "warning" : 
+                              "destructive"
+                            } 
+                            className="capitalize"
+                          >
+                            {isMissing ? "Unavailable" : stStatus.replace("_", " ")}
                           </Badge>
                         </TableCell>
                       </TableRow>

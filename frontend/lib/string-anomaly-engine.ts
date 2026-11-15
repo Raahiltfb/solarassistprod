@@ -257,7 +257,7 @@ export function analyzeStringAnomalies(
     }
 
     const invStatus = getInverterStatus(inv, latestTs, invHasActiveGeneration);
-    const isOffline = invStatus === "OFFLINE" && !invHasActiveGeneration;
+    const isOffline = invStatus === "OFFLINE";
 
     if (isOffline) {
       const siteObj = siteMap.get(inv.site_id);

@@ -151,14 +151,14 @@ export function StringAnalyticsSection({
   const activeMetricConfig = defaultMetrics.find((m) => m.key === metric) || defaultMetrics[0];
 
   // Group telemetry records by timestamp for Recharts overlay
-  const timeMap = new Map<string, Record<string, number>>();
+  const timeMap = new Map<string, Record<string, number | null>>();
   for (const r of telemetry) {
     const strObj = strings.find((s) => s.id === r.string_id);
     if (!strObj) continue;
     
     const label = `String #${strObj.string_index}`;
     const existing = timeMap.get(r.timestamp) ?? {};
-    existing[label] = Number(r[metric] || 0);
+    existing[label] = r[metric] !== null && r[metric] !== undefined ? Number(r[metric]) : null;
     timeMap.set(r.timestamp, existing);
   }
 
@@ -508,9 +508,12 @@ export function StringAnalyticsSection({
                   }}
                   formatter={(value: any, name: any) => {
                     const isIssueName = String(name).includes("⚠️");
+                    const isNoData = value === null || value === undefined;
                     return [
                       <span>
-                        <span className="font-mono font-bold">{Number(value).toFixed(2)} {activeMetricConfig.unit}</span>
+                        <span className="font-mono font-bold">
+                          {isNoData ? "— (No Data)" : `${Number(value).toFixed(2)} ${activeMetricConfig.unit}`}
+                        </span>
                         {isIssueName && (
                           <span className="ml-1.5 px-1 py-0.5 text-[9px] rounded bg-amber-500/20 text-amber-700 dark:text-amber-400 font-bold">
                             ANOMALY
@@ -541,6 +544,7 @@ export function StringAnalyticsSection({
                       type="monotone" 
                       name={lineName}
                       dataKey={`String #${str.string_index}`}
+                      connectNulls={false}
                       stroke={
                         isIssue 
                           ? (anomaly.severity === "critical" || anomaly.type === "string_disconnected" ? "#ef4444" : "#f59e0b")
