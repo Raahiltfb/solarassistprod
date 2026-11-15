@@ -61,18 +61,39 @@ export function getInverterStatus(
   const now = new Date();
   const diffMinutes = (now.getTime() - lastSeen.getTime()) / (1000 * 60);
 
-  // Solar diurnal awareness: In India (Asia/Kolkata UTC+5:30), solar arrays shut down after sunset (~18:30 IST)
+  // Solar diurnal awareness: In India (Asia/Kolkata UTC+5:30), solar arrays shut down at sunset (~17:30 IST)
   // and resume at sunrise (~06:00 IST). Inverters that communicated normally during today's daylight
-  // hours are in healthy STANDBY / SLEEP mode during night hours, not communication failure.
+  // hours (diffMinutes < 14 hours) enter healthy STANDBY / SLEEP mode during night hours, not communication failure.
   const istHours = (now.getUTCHours() + 5.5) % 24;
-  const isNighttime = istHours >= 18.5 || istHours < 6.0;
+  const isNighttime = istHours >= 17.5 || istHours < 6.0;
 
-  // 1. Explicit telemetry offline flag
+  // 1. Long-term offline or multi-day communication failure:
+  // If no communication for > 14 hours, it missed today's entire daylight generation cycle
+  // and is genuinely disconnected/offline regardless of day or night.
+  if (diffMinutes >= 14 * 60) {
+    return "OFFLINE";
+  }
+
+  // 2. Solar diurnal cycle: During night hours (17:30 IST to 06:00 IST),
+  // inverters that were active today are in healthy nighttime STANDBY.
+  if (isNighttime) {
+    const dbStatus = inverter.status?.toLowerCase();
+    if (dbStatus === "fault") {
+      return "FAULT";
+    }
+    if (dbStatus === "no grid" || dbStatus === "no_grid") {
+      return "NO GRID";
+    }
+    return "STANDBY";
+  }
+
+  // 3. Daylight hours (06:00 to 17:30 IST):
+  // Explicit telemetry offline flag
   if (isTelemetryOnline === false) {
     return "OFFLINE";
   }
 
-  // 2. Explicit database status offline flag
+  // Explicit database status offline flag
   const dbStatus = inverter.status?.toLowerCase();
   if (dbStatus === "offline" || dbStatus === "comm_error" || dbStatus === "disconnected") {
     return "OFFLINE";
@@ -85,12 +106,9 @@ export function getInverterStatus(
     return "NO GRID";
   }
 
-  // 3. Freshness threshold accounting for 15-min polling interval + retry jitter:
-  // If no communication for > 45 minutes (3 missed sync cycles):
+  // Freshness threshold accounting for 15-min polling interval + retry jitter:
+  // If no communication for > 45 minutes during daylight hours:
   if (diffMinutes > 45) {
-    if (isNighttime && diffMinutes < 14 * 60) {
-      return "STANDBY";
-    }
     return "OFFLINE";
   }
 
@@ -98,8 +116,8 @@ export function getInverterStatus(
     return "STANDBY";
   }
 
-  // During active daylight hours, if an inverter reports 0 kW power and is flagged standby/idle:
-  if (!isNighttime && telemetryAcPower === 0 && dbStatus !== "online") {
+  // During active daylight hours, if an inverter reports 0 kW power:
+  if (telemetryAcPower !== undefined && telemetryAcPower <= 0.001) {
     return "STANDBY";
   }
 

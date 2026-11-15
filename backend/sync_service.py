@@ -699,7 +699,7 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                 inv_last_seen = telemetry.timestamp if telemetry else dev.last_seen_at
                 
                 ist_hours = ((datetime.now(timezone.utc).hour + 5) + (datetime.now(timezone.utc).minute + 30) / 60.0) % 24
-                is_nighttime = ist_hours >= 18.5 or ist_hours < 6.0
+                is_nighttime = ist_hours >= 17.5 or ist_hours < 6.0
 
                 if telemetry:
                     tel_date = None
@@ -711,16 +711,20 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                         pass
                     diff_mins = (datetime.now(timezone.utc) - tel_date).total_seconds() / 60.0 if tel_date else 999
 
-                    if not telemetry.online_status or dev.status == "offline":
+                    if diff_mins >= 14 * 60:
+                        inv_status = "offline"
+                    elif is_nighttime:
+                        inv_status = "fault" if dev.status == "fault" else "standby"
+                    elif not telemetry.online_status or dev.status == "offline":
                         inv_status = "offline"
                     elif diff_mins > 45:
-                        inv_status = "standby" if (is_nighttime and diff_mins < 14 * 60) else "offline"
+                        inv_status = "offline"
                     elif dev.status == "fault":
                         inv_status = "fault"
                     elif telemetry.ac_power_kw > 0.05:
                         inv_status = "online"
                     else:
-                        inv_status = "standby" if is_nighttime else "offline"
+                        inv_status = "standby"
                 else:
                     inv_status = dev.status or "offline"
 

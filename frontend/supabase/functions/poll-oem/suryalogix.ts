@@ -164,21 +164,23 @@ export class SuryalogixAdapter implements OemAdapter {
       const deviceIsoTime = new Date(parseInt(latestTs, 10) * 1000).toISOString();
       const diffMins = (Date.now() - parseInt(latestTs, 10) * 1000) / 60000;
       const istHours = (new Date().getUTCHours() + 5.5) % 24;
-      const isNighttime = istHours >= 18.5 || istHours < 6.0;
+      const isNighttime = istHours >= 17.5 || istHours < 6.0;
 
       let effectiveStatus = "offline";
-      if (inv.inverter_status === 8 || inv.inverter_status === "8") {
+      if (diffMins >= 14 * 60) {
         effectiveStatus = "offline";
       } else if (inv.inverter_status === 5 || inv.inverter_status === "5") {
         effectiveStatus = "fault";
-      } else if (diffMins > 45) {
-        effectiveStatus = (isNighttime && diffMins < 14 * 60) ? "standby" : "offline";
-      } else if (isOnline && (acPower > 0.05 || dcPower > 0.05)) {
-        effectiveStatus = "online";
       } else if (isNighttime) {
         effectiveStatus = "standby";
-      } else {
+      } else if (inv.inverter_status === 8 || inv.inverter_status === "8") {
         effectiveStatus = "offline";
+      } else if (diffMins > 45) {
+        effectiveStatus = "offline";
+      } else if (isOnline && (acPower > 0.05 || dcPower > 0.05)) {
+        effectiveStatus = "online";
+      } else {
+        effectiveStatus = "standby";
       }
 
       devices.push({
@@ -225,8 +227,8 @@ export class SuryalogixAdapter implements OemAdapter {
     const tempC = parseFloat(inv.TEMP_HS) || parseFloat(inv.TEMP_INT) || 35.0;
     const diffMins = (Date.now() - parseInt(latestTs, 10) * 1000) / 60000;
     const istHours = (new Date().getUTCHours() + 5.5) % 24;
-    const isNighttime = istHours >= 18.5 || istHours < 6.0;
-    const isHardwareOffline = inv.inverter_status === 8 || inv.inverter_status === "8" || (!isNighttime && acPowerKw <= 0.01 && dcPowerKw <= 0.01);
+    const isNighttime = istHours >= 17.5 || istHours < 6.0;
+    const isHardwareOffline = (inv.inverter_status === 8 || inv.inverter_status === "8") && !isNighttime;
     const isFresh = diffMins <= 45;
     const isOnline = isFresh && !isHardwareOffline && (inv.inverter_status === 4 || acPowerKw > 0.05 || dcPowerKw > 0.05);
     const efficiency = dcPowerKw > 0 ? Math.min(100, Math.max(0, (acPowerKw / dcPowerKw) * 100)) : (isOnline ? 97.0 : 0);

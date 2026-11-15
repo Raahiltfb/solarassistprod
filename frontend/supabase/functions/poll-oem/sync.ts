@@ -779,18 +779,22 @@ export async function pollAndSyncAll(
                   const nowMs = Date.now();
                   const diffMins = telDate && !isNaN(telDate.getTime()) ? (nowMs - telDate.getTime()) / (1000 * 60) : 999;
                   const istHours = (new Date().getUTCHours() + 5.5) % 24;
-                  const isNighttime = istHours >= 18.5 || istHours < 6.0;
+                  const isNighttime = istHours >= 17.5 || istHours < 6.0;
 
-                  if (telemetry.online_status === false || dev.status === "offline") {
+                  if (diffMins >= 14 * 60) {
+                    calculatedStatus = "offline";
+                  } else if (isNighttime) {
+                    calculatedStatus = dev.status === "fault" ? "fault" : "standby";
+                  } else if (telemetry.online_status === false || dev.status === "offline") {
                     calculatedStatus = "offline";
                   } else if (diffMins > 45) {
-                    calculatedStatus = (isNighttime && diffMins < 14 * 60) ? "standby" : "offline";
+                    calculatedStatus = "offline";
                   } else if (dev.status === "fault") {
                     calculatedStatus = "fault";
                   } else if (telemetry.ac_power_kw > 0.05) {
                     calculatedStatus = "online";
                   } else {
-                    calculatedStatus = isNighttime ? "standby" : "offline";
+                    calculatedStatus = "standby";
                   }
                 }
 
