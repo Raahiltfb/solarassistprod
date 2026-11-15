@@ -103,7 +103,7 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ id:
   let communicatingCount = 0;
   for (const inv of inverters) {
     const tel = latestTelemetryMap.get(inv.id);
-    const status = getInverterStatus(inv, tel?.timestamp);
+    const status = getInverterStatus(inv, tel);
     if (status !== "OFFLINE") {
       communicatingCount++;
     }
@@ -192,7 +192,7 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ id:
                     </div>
                     <div className="flex items-center gap-2">
                       {(() => {
-                        const invStatus = getInverterStatus(inv, tel?.timestamp);
+                        const invStatus = getInverterStatus(inv, tel);
                         return (
                           <Badge variant={invStatus === "ONLINE" ? "success" : invStatus === "OFFLINE" ? "destructive" : "warning"} className="capitalize">
                             {invStatus === "NO GRID" ? "Online (No Grid)" : invStatus.toLowerCase()}

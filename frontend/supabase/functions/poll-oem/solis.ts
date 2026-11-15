@@ -141,18 +141,19 @@ export class SolisAdapter implements OemAdapter {
         const pacVal = parseFloat(d.pac || "0.0");
         let status = "offline";
 
-        if (diffMinutes > 60) {
-          const istHours = (new Date().getUTCHours() + 5.5) % 24;
-          const isNighttime = istHours >= 18.5 || istHours < 6.0;
+        const istHours = (new Date().getUTCHours() + 5.5) % 24;
+        const isNighttime = istHours >= 18.5 || istHours < 6.0;
+
+        if (stateVal === 4 || stateVal === "4" || stateVal === 5 || stateVal === "5") {
+          status = "offline";
+        } else if (diffMinutes > 45) {
           status = (isNighttime && diffMinutes < 14 * 60) ? "standby" : "offline";
-        } else if (stateVal === 1 || stateVal === "1" || pacVal > 0) {
-          status = "online";
         } else if (stateVal === 3 || stateVal === "3") {
           status = "fault";
-        } else if (stateVal === 2 || stateVal === "2") {
-          status = "offline";
+        } else if (stateVal === 1 || stateVal === "1" || pacVal > 0) {
+          status = "online";
         } else {
-          status = pacVal === 0 ? "standby" : "online";
+          status = "standby";
         }
 
         const model = d.machine || d.model || "Solis Inverter";
@@ -190,8 +191,8 @@ export class SolisAdapter implements OemAdapter {
     const temperatureC = parseFloat(invData.inverterTemperature || "35.0");
 
     const ts = invData.dataTimestamp || invData.updateTime;
-    let lastSeenAt = new Date().toISOString();
-    let diffMinutes = 0;
+    let lastSeenAt = "2024-01-01T00:00:00Z";
+    let diffMinutes = 99999;
     if (ts) {
       const parsedMs = parseInt(ts);
       if (!isNaN(parsedMs) && parsedMs > 0) {
@@ -201,8 +202,9 @@ export class SolisAdapter implements OemAdapter {
     }
 
     const stateVal = invData.state;
-    let onlineStatus = (stateVal === 1 || stateVal === "1") || acPowerKw > 0.05;
-    if (stateVal === 2 || stateVal === "2" || diffMinutes > 60) {
+    const isFresh = diffMinutes <= 45;
+    let onlineStatus = isFresh && ((stateVal === 1 || stateVal === "1") || acPowerKw > 0.05);
+    if (stateVal === 2 || stateVal === "2" || stateVal === 4 || stateVal === "4" || stateVal === 5 || stateVal === "5" || !isFresh) {
       onlineStatus = false;
     }
 

@@ -357,11 +357,21 @@ export class FestonAdapter implements OemAdapter {
 
         const sn = String(d.deviceSn || d.deviceId);
         const rawModel = String(d.productId || "Feston Hybrid Inverter");
-        const connectStatus = Number(d.connectStatus);
-        const status = connectStatus === 1 ? "online" : connectStatus === 2 ? "alert" : "offline";
-
+        const stateVal = d.deviceState !== undefined ? Number(d.deviceState) : Number(d.connectStatus);
         const colTime = d.collectionTime;
-        const lastSeen = colTime && typeof colTime === "number" ? new Date(colTime * 1000).toISOString() : new Date().toISOString();
+        const lastSeen = colTime && typeof colTime === "number" ? new Date(colTime * 1000).toISOString() : "2024-01-01T00:00:00Z";
+        const diffMins = colTime && typeof colTime === "number" ? (Date.now() - colTime * 1000) / 60000 : 99999;
+        
+        let status = "offline";
+        if (stateVal === 3 || stateVal === 3 || diffMins > 45) {
+          status = "offline";
+        } else if (stateVal === 2) {
+          status = "alert";
+        } else if (stateVal === 1 && diffMins <= 45) {
+          status = "online";
+        } else {
+          status = "offline";
+        }
 
         devices.push({
           oem_device_id: sn,
@@ -446,8 +456,22 @@ export class FestonAdapter implements OemAdapter {
         let eff = dcKw > 0.05 ? Math.round((acKw / dcKw) * 10000) / 100 : 98.2;
         eff = Math.min(Math.max(eff, 0.0), 100.0);
 
+        const dataTsRaw = resOrig.zd || resOrig.zv || resOrig.c;
+        let tsIso = nowIso;
+        let diffMinutes = 0;
+        if (dataTsRaw) {
+          const parsedSec = Number(dataTsRaw);
+          if (!isNaN(parsedSec) && parsedSec > 0) {
+            tsIso = new Date(parsedSec * 1000).toISOString();
+            diffMinutes = (Date.now() - parsedSec * 1000) / 60000;
+          }
+        }
+
+        const isFresh = diffMinutes <= 45;
+        const isOnline = isFresh && acKw > 0.05 && resOrig.INV_ST1 !== "3";
+
         const telemetry: NormalizedTelemetry = {
-          timestamp: nowIso,
+          timestamp: tsIso,
           ac_power_kw: Math.round(acKw * 1000) / 1000,
           dc_power_kw: Math.round(dcKw * 1000) / 1000,
           energy_kwh: Math.round(totalKwh * 100) / 100,
@@ -456,8 +480,8 @@ export class FestonAdapter implements OemAdapter {
           daily_generation_kwh: Math.round(dailyKwh * 100) / 100,
           total_generation_kwh: Math.round(totalKwh * 100) / 100,
           specific_yield: 0.0,
-          online_status: acKw > 0.05,
-          last_update: nowIso,
+          online_status: isOnline,
+          last_update: tsIso,
           frequency_hz: Math.round(freq * 100) / 100,
           power_factor: pf,
           current_r_a: Math.round(i1 * 100) / 100,

@@ -124,7 +124,7 @@ export default async function ClientSitesListPage() {
         {sites.map((s) => {
           const siteInvs = siteInverters.get(s.id) ?? [];
           const isCleaningOnly = s.service_tier === "cleaning_only";
-          const siteStatus = getSiteStatus(siteInvs, latestTelemetryTimestampMap, undefined, s.service_tier);
+          const siteStatus = getSiteStatus(siteInvs, latestInvTelemetryMap, undefined, s.service_tier);
 
           let currentPower = 0;
           let todayGeneration = 0;

@@ -24,11 +24,12 @@ export function getInverterStatus(
     status?: string;
     last_seen_at?: string | null;
   },
-  latestTelemetry?: string | { timestamp?: string; last_update?: string; online_status?: boolean },
+  latestTelemetry?: string | { timestamp?: string; last_update?: string; online_status?: boolean; ac_power_kw?: number; dc_power_kw?: number },
   hasActiveGenerationToday?: boolean
 ): InverterStatusDisplay {
   let latestTelemetryTimestamp: string | undefined;
   let isTelemetryOnline: boolean | undefined;
+  let telemetryAcPower: number | undefined;
 
   if (typeof latestTelemetry === "string") {
     latestTelemetryTimestamp = latestTelemetry;
@@ -36,6 +37,9 @@ export function getInverterStatus(
     latestTelemetryTimestamp = latestTelemetry.timestamp || latestTelemetry.last_update;
     if (typeof latestTelemetry.online_status === "boolean") {
       isTelemetryOnline = latestTelemetry.online_status;
+    }
+    if (latestTelemetry.ac_power_kw !== undefined && latestTelemetry.ac_power_kw !== null) {
+      telemetryAcPower = Number(latestTelemetry.ac_power_kw);
     }
   }
 
@@ -63,11 +67,12 @@ export function getInverterStatus(
   const istHours = (now.getUTCHours() + 5.5) % 24;
   const isNighttime = istHours >= 18.5 || istHours < 6.0;
 
-  // If OEM telemetry explicitly reports offline / disconnected state
+  // 1. Explicit telemetry offline flag
   if (isTelemetryOnline === false) {
     return "OFFLINE";
   }
 
+  // 2. Explicit database status offline flag
   const dbStatus = inverter.status?.toLowerCase();
   if (dbStatus === "offline" || dbStatus === "comm_error" || dbStatus === "disconnected") {
     return "OFFLINE";
@@ -80,7 +85,7 @@ export function getInverterStatus(
     return "NO GRID";
   }
 
-  // Freshness threshold accounting for 15-min polling interval + retry jitter:
+  // 3. Freshness threshold accounting for 15-min polling interval + retry jitter:
   // If no communication for > 45 minutes (3 missed sync cycles):
   if (diffMinutes > 45) {
     if (isNighttime && diffMinutes < 14 * 60) {
@@ -90,6 +95,11 @@ export function getInverterStatus(
   }
 
   if (dbStatus === "standby") {
+    return "STANDBY";
+  }
+
+  // During active daylight hours, if an inverter reports 0 kW power and is flagged standby/idle:
+  if (!isNighttime && telemetryAcPower === 0 && dbStatus !== "online") {
     return "STANDBY";
   }
 

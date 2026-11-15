@@ -367,7 +367,24 @@ class FestonAdapter(OemAdapter):
                     sn = str(d.get("deviceSn") or dev_id)
                     model = str(d.get("productId") or "SUN-G Inverter")
                     state = d.get("deviceState", 1)
-                    status = "online" if state == 1 else ("alert" if state == 2 else "offline")
+                    
+                    col_time = d.get("collectionTime")
+                    diff_mins = 99999
+                    if col_time and isinstance(col_time, (int, float)):
+                        col_dt = datetime.fromtimestamp(col_time, tz=timezone.utc)
+                        last_seen_at = col_dt.isoformat()
+                        diff_mins = (datetime.now(timezone.utc) - col_dt).total_seconds() / 60.0
+                    else:
+                        last_seen_at = "2024-01-01T00:00:00Z"
+
+                    if state == 3 or state == "3" or diff_mins > 45:
+                        status = "offline"
+                    elif state == 2 or state == "2":
+                        status = "alert"
+                    elif (state == 1 or state == "1") and diff_mins <= 45:
+                        status = "online"
+                    else:
+                        status = "offline"
 
                     devices.append(NormalizedDevice(
                         oem_device_id=dev_id,
@@ -376,7 +393,7 @@ class FestonAdapter(OemAdapter):
                         capacity_kw=0.0,
                         string_count=2,
                         status=status,
-                        last_seen_at=datetime.now(timezone.utc).isoformat()
+                        last_seen_at=last_seen_at
                     ))
             logger.info(f"Discovered {len(devices)} inverter device(s) for plant {plant_id} via SolarOS Platform.")
             return devices
@@ -492,8 +509,25 @@ class FestonAdapter(OemAdapter):
             eff = round((ac_kw / dc_kw * 100.0), 2) if dc_kw > 0.05 else 98.2
             eff = min(max(eff, 0.0), 100.0)
 
+            data_ts_raw = res_orig.get("zd") or res_orig.get("zv") or res_orig.get("c")
+            if data_ts_raw:
+                try:
+                    data_ts_int = int(data_ts_raw)
+                    data_dt = datetime.fromtimestamp(data_ts_int, tz=timezone.utc)
+                    ts_iso = data_dt.isoformat()
+                    diff_mins = (datetime.now(timezone.utc) - data_dt).total_seconds() / 60.0
+                except Exception:
+                    ts_iso = now_iso
+                    diff_mins = 99999
+            else:
+                ts_iso = now_iso
+                diff_mins = 0.0
+
+            is_fresh = diff_mins <= 45.0
+            is_online = bool(is_fresh and ac_kw > 0.05 and res_orig.get("INV_ST1") not in ["3", 3])
+
             telemetry = NormalizedTelemetry(
-                timestamp=now_iso,
+                timestamp=ts_iso,
                 ac_power_kw=round(ac_kw, 3),
                 dc_power_kw=round(dc_kw, 3),
                 energy_kwh=round(total_kwh, 2),
@@ -502,8 +536,8 @@ class FestonAdapter(OemAdapter):
                 daily_generation_kwh=round(daily_kwh, 2),
                 total_generation_kwh=round(total_kwh, 2),
                 specific_yield=0.0,
-                online_status=bool(ac_kw > 0.05),
-                last_update=now_iso,
+                online_status=is_online,
+                last_update=ts_iso,
                 frequency_hz=round(freq, 2),
                 power_factor=pf,
                 current_r_a=round(i1, 2),

@@ -130,7 +130,7 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
   const capacityKwp = Number(site.capacity_kwp || 0);
   const todaySpecificYield = capacityKwp > 0 ? (todayYield / capacityKwp) : 0;
   const isCleaningOnly = site.service_tier === "cleaning_only";
-  const siteStatus = getSiteStatus(inverters, latestTelemetryTimestampMap, undefined, site.service_tier);
+  const siteStatus = getSiteStatus(inverters, latestInvTelemetryMap, undefined, site.service_tier);
   const isSiteNormal = isCleaningOnly || siteStatus === "ONLINE";
 
   // Financial Savings

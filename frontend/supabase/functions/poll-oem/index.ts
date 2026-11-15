@@ -21,11 +21,28 @@ Deno.serve(async (req) => {
 
     let isAuthorized = false;
 
+    const apiKeyHeader = req.headers.get("apikey");
+    if (apiKeyHeader && (apiKeyHeader === serviceKey || apiKeyHeader === anonKey)) {
+      isAuthorized = true;
+    }
+
     if (authHeader) {
       const parts = authHeader.split(" ");
       const token = parts.length > 1 ? parts[1] : parts[0];
       if (token && (token === serviceKey || token === cronSecret || token === anonKey)) {
         isAuthorized = true;
+      } else if (token && token.includes(".")) {
+        try {
+          const parts = token.split(".");
+          if (parts.length === 3) {
+            const payload = JSON.parse(atob(parts[1]));
+            if (payload.role === "service_role" || payload.role === "anon") {
+              isAuthorized = true;
+            }
+          }
+        } catch (_) {
+          // ignore parsing error
+        }
       }
     }
 

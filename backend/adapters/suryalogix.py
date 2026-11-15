@@ -163,14 +163,18 @@ class SuryalogixAdapter(OemAdapter):
             ist_hours = ((datetime.now(timezone.utc).hour + 5) + (datetime.now(timezone.utc).minute + 30) / 60.0) % 24
             is_nighttime = ist_hours >= 18.5 or ist_hours < 6.0
 
-            if diff_mins > 45:
-                effective_status = "standby" if (is_nighttime and diff_mins < 14 * 60) else "offline"
-            elif inv_status == 5:
+            if inv_status == 8 or str(inv_status) == "8":
+                effective_status = "offline"
+            elif inv_status == 5 or str(inv_status) == "5":
                 effective_status = "fault"
-            elif is_online:
+            elif diff_mins > 45:
+                effective_status = "standby" if (is_nighttime and diff_mins < 14 * 60) else "offline"
+            elif is_online and (ac_power > 0.05 or dc_power > 0.05):
                 effective_status = "online"
-            else:
+            elif is_nighttime:
                 effective_status = "standby"
+            else:
+                effective_status = "offline"
 
             devices.append(
                 NormalizedDevice(
@@ -215,8 +219,11 @@ class SuryalogixAdapter(OemAdapter):
         specific_yield = (daily_kwh / ac_cap) if ac_cap > 0 else 0.0
         temp_c = float(inv.get("TEMP_HS") or inv.get("TEMP_INT") or 35.0)
         diff_mins = (datetime.now(timezone.utc).timestamp() - int(latest_ts)) / 60.0
+        ist_hours = ((datetime.now(timezone.utc).hour + 5) + (datetime.now(timezone.utc).minute + 30) / 60.0) % 24
+        is_nighttime = ist_hours >= 18.5 or ist_hours < 6.0
+        is_hardware_offline = inv_status == 8 or str(inv_status) == "8" or (not is_nighttime and ac_power_kw <= 0.01 and dc_power_kw <= 0.01)
         is_fresh = diff_mins <= 45.0
-        is_online = is_fresh and ((inv_status == 4) or (ac_power_kw > 0) or (dc_power_kw > 0))
+        is_online = is_fresh and not is_hardware_offline and ((inv_status == 4) or (ac_power_kw > 0.05) or (dc_power_kw > 0.05))
         efficiency = min(100.0, max(0.0, (ac_power_kw / dc_power_kw) * 100.0)) if dc_power_kw > 0 else (97.0 if is_online else 0.0)
         iso_time = datetime.fromtimestamp(int(latest_ts), tz=timezone.utc).isoformat()
 

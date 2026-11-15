@@ -201,7 +201,7 @@ export default async function ClientPortfolioPage() {
 
   for (const site of sites) {
     const siteInvs = siteInverters.get(site.id) ?? [];
-    const siteStatus = getSiteStatus(siteInvs, latestTelemetryTimestampMap);
+    const siteStatus = getSiteStatus(siteInvs, latestInvTelemetryMap);
     if (siteStatus === "ONLINE") {
       onlineSitesCount++;
     } else {
@@ -496,7 +496,7 @@ export default async function ClientPortfolioPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {sites.map((s) => {
               const siteInvs = siteInverters.get(s.id) ?? [];
-              const siteStatus = getSiteStatus(siteInvs, latestTelemetryTimestampMap);
+              const siteStatus = getSiteStatus(siteInvs, latestInvTelemetryMap);
 
               let sitePower = 0;
               let siteTodayYield = 0;

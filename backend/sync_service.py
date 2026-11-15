@@ -698,10 +698,31 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                 # Use actual hardware/OEM data timestamp
                 inv_last_seen = telemetry.timestamp if telemetry else dev.last_seen_at
                 
+                ist_hours = ((datetime.now(timezone.utc).hour + 5) + (datetime.now(timezone.utc).minute + 30) / 60.0) % 24
+                is_nighttime = ist_hours >= 18.5 or ist_hours < 6.0
+
                 if telemetry:
-                    inv_status = "online" if telemetry.online_status else dev.status
+                    tel_date = None
+                    try:
+                        ts_str = telemetry.timestamp or telemetry.last_update
+                        if ts_str:
+                            tel_date = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+                    except Exception:
+                        pass
+                    diff_mins = (datetime.now(timezone.utc) - tel_date).total_seconds() / 60.0 if tel_date else 999
+
+                    if not telemetry.online_status or dev.status == "offline":
+                        inv_status = "offline"
+                    elif diff_mins > 45:
+                        inv_status = "standby" if (is_nighttime and diff_mins < 14 * 60) else "offline"
+                    elif dev.status == "fault":
+                        inv_status = "fault"
+                    elif telemetry.ac_power_kw > 0.05:
+                        inv_status = "online"
+                    else:
+                        inv_status = "standby" if is_nighttime else "offline"
                 else:
-                    inv_status = dev.status
+                    inv_status = dev.status or "offline"
 
                 inv_patch = {
                     "string_count": max(len(string_map), target_string_count),

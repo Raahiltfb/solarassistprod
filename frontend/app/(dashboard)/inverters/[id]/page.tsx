@@ -117,7 +117,7 @@ export default async function InverterDetailsPage({ params }: { params: Promise<
   const activeAlertsCount = alerts.filter((a) => a.status === "open").length;
   const unresolvedTicketsCount = tickets.filter((t) => ["open", "in_progress", "on_hold"].includes(t.status)).length;
 
-  const invStatus = getInverterStatus(inverter, latestTelemetry?.timestamp);
+  const invStatus = getInverterStatus(inverter, latestTelemetry);
 
   return (
     <div className="space-y-6" data-testid="inverter-detail-page">

@@ -125,7 +125,7 @@ export default async function FleetOverviewPage() {
   let offlineSites = 0;
   for (const site of monitoredSites) {
     const siteInvs = inverters.filter((inv) => inv.site_id === site.id);
-    const status = getSiteStatus(siteInvs, latestTimestampMap, undefined, site.service_tier);
+    const status = getSiteStatus(siteInvs, latestTelemetryMap, undefined, site.service_tier);
     if (status === "OFFLINE") {
       offlineSites++;
     } else {
@@ -133,7 +133,7 @@ export default async function FleetOverviewPage() {
     }
   }
 
-  const onlineInverters = inverters.filter((i) => getSiteStatus([i], latestTimestampMap) !== "OFFLINE").length;
+  const onlineInverters = inverters.filter((i) => getSiteStatus([i], latestTelemetryMap) !== "OFFLINE").length;
   const offlineInverters = inverters.length - onlineInverters;
   const fleetAvailability = inverters.length > 0 ? ((onlineInverters / inverters.length) * 100).toFixed(1) : "100.0";
 
@@ -151,7 +151,7 @@ export default async function FleetOverviewPage() {
   let attentionSites = 0;
   for (const site of sites) {
     const siteInvs = inverters.filter((inv) => inv.site_id === site.id);
-    const status = getSiteStatus(siteInvs, latestTimestampMap);
+    const status = getSiteStatus(siteInvs, latestTelemetryMap, undefined, site.service_tier);
     const hasOpenTicket = openTickets.some((t) => t.site_id === site.id);
     const hasOpenAlert = alerts.some((a) => a.site_id === site.id);
     if (status === "OFFLINE" || status === "PARTIALLY ONLINE" || hasOpenTicket || hasOpenAlert) {

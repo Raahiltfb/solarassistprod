@@ -319,13 +319,13 @@ export default async function DashboardPage() {
       continue; // Exclude cleaning-only sites from technical monitoring/telemetry status
     }
     const siteInvs = siteInvertersMap.get(site.id) ?? [];
-    const status = getSiteStatus(siteInvs, latestTimestampMap, undefined, site.service_tier);
+    const status = getSiteStatus(siteInvs, latestTelemetryMap, undefined, site.service_tier);
 
     const siteTickets = tickets.filter((t) => t.site_id === site.id && t.status !== "resolved" && t.status !== "closed");
     const siteAlerts = alerts.filter((a) => a.site_id === site.id && (a.status === "open" || a.status === "acknowledged"));
 
     const offlineInvsCount = siteInvs.filter((i) => {
-      const st = getSiteStatus([i], latestTimestampMap);
+      const st = getSiteStatus([i], latestTelemetryMap);
       return st === "OFFLINE";
     }).length;
 
@@ -349,8 +349,8 @@ export default async function DashboardPage() {
     }
   }
 
-  const onlineInverters = inverters.filter((i) => getSiteStatus([i], latestTimestampMap) !== "OFFLINE").length;
-  const offlineInverters = inverters.filter((i) => getSiteStatus([i], latestTimestampMap) === "OFFLINE").length;
+  const onlineInverters = inverters.filter((i) => getSiteStatus([i], latestTelemetryMap) !== "OFFLINE").length;
+  const offlineInverters = inverters.filter((i) => getSiteStatus([i], latestTelemetryMap) === "OFFLINE").length;
 
   function isConnectivityTicket(t: any) {
     return (

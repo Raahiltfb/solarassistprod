@@ -90,7 +90,7 @@ export default async function SitesPage() {
       }
     }
 
-    const siteStatus = getSiteStatus(siteInvs, latestTelemetryTimestampMap, undefined, s.service_tier);
+    const siteStatus = getSiteStatus(siteInvs, latestTelemetryMap, undefined, s.service_tier);
     siteStatusMap[s.id] = siteStatus;
     siteAlertsMap[s.id] = alertsCount;
 
