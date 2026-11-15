@@ -18,10 +18,11 @@ import {
   ExternalLink,
   Eye,
   Camera,
-
+  Layers,
 } from "lucide-react";
 
 export interface EvidenceItem {
+  id?: string;
   label: string;
   category: "before" | "after" | "safety" | "damage" | "general";
   url: string;
@@ -42,6 +43,20 @@ interface ClientEvidenceViewerProps {
   compactTrigger?: boolean;
 }
 
+// Helper to parse multiple URLs from string, comma-separated or JSON
+function parseUrls(val?: string | null): string[] {
+  if (!val || typeof val !== "string") return [];
+  const trimmed = val.trim();
+  if (!trimmed) return [];
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed.filter((u) => typeof u === "string" && u.trim().length > 0);
+    } catch (e) {}
+  }
+  return trimmed.split(",").map((s) => s.trim()).filter((s) => s.length > 0);
+}
+
 export function ClientEvidenceViewer({
   title = "Field Service Evidence & Verification",
   subtitle,
@@ -60,39 +75,54 @@ export function ClientEvidenceViewer({
 
   const items: EvidenceItem[] = [];
 
-  if (beforePhotoUrl) {
+  // Parse Safety Gear / PPE photos (Category 1)
+  const safetyUrls = parseUrls(safetyPhotoUrl);
+  safetyUrls.forEach((url, i) => {
     items.push({
-      label: "Before Service / Condition Found",
-      category: "before",
-      url: beforePhotoUrl,
-      caption: "Photo recorded by technician upon arriving on site.",
-    });
-  }
-
-  if (afterPhotoUrl) {
-    items.push({
-      label: "After Service / Restored State",
-      category: "after",
-      url: afterPhotoUrl,
-      caption: "Photo recorded upon successful completion of work.",
-    });
-  }
-
-  if (safetyPhotoUrl) {
-    items.push({
-      label: "Safety Gear & Protocol Verification",
+      id: `safety-${i}`,
+      label: safetyUrls.length > 1 ? `Safety Gear / PPE (${i + 1}/${safetyUrls.length})` : "Safety Gear / PPE Protocol",
       category: "safety",
-      url: safetyPhotoUrl,
-      caption: "Technician verified wearing mandatory PPE, harness, and safety footwear.",
+      url,
+      caption: "Technician verified wearing mandatory PPE, harness, and safety footwear before climbing.",
     });
-  }
+  });
 
-  if (damagePhotoUrl || damageObserved) {
+  // Parse Before Cleaning / Baseline photos (Category 2)
+  const beforeUrls = parseUrls(beforePhotoUrl);
+  beforeUrls.forEach((url, i) => {
     items.push({
-      label: "Roof & Panel Condition Observation",
-      category: "damage",
-      url: damagePhotoUrl || beforePhotoUrl || afterPhotoUrl || "",
-      caption: damageType ? `Observation type: ${damageType}` : "Observation recorded during site walk-around.",
+      id: `before-${i}`,
+      label: beforeUrls.length > 1 ? `Before Cleaning (${i + 1}/${beforeUrls.length})` : "Before Cleaning / Module Baseline",
+      category: "before",
+      url,
+      caption: "Photo recorded by technician upon arriving on site, documenting module soiling.",
+    });
+  });
+
+  // Parse After Cleaning / Restored photos (Category 3)
+  const afterUrls = parseUrls(afterPhotoUrl);
+  afterUrls.forEach((url, i) => {
+    items.push({
+      id: `after-${i}`,
+      label: afterUrls.length > 1 ? `After Cleaning (${i + 1}/${afterUrls.length})` : "After Cleaning / Restored State",
+      category: "after",
+      url,
+      caption: "Photo recorded upon successful completion of washing, verifying restored irradiance capture.",
+    });
+  });
+
+  // Parse Damage / Condition notes
+  const damageUrls = parseUrls(damagePhotoUrl);
+  if (damageUrls.length > 0 || damageObserved) {
+    const urls = damageUrls.length > 0 ? damageUrls : [beforeUrls[0] || afterUrls[0] || ""];
+    urls.forEach((url, i) => {
+      items.push({
+        id: `damage-${i}`,
+        label: urls.length > 1 ? `Roof Observation (${i + 1}/${urls.length})` : "Roof & Panel Observation",
+        category: "damage",
+        url,
+        caption: damageType ? `Observation type: ${damageType}` : "Observation recorded during site walk-around.",
+      });
     });
   }
 
@@ -119,7 +149,7 @@ export function ClientEvidenceViewer({
 
           return (
             <button
-              key={idx}
+              key={it.id || idx}
               type="button"
               onClick={() => handleOpenPhoto(it)}
               className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-md border transition-all ${isAfter
@@ -135,7 +165,15 @@ export function ClientEvidenceViewer({
               {isBefore && <ImageIcon className="h-3 w-3" />}
               {isSafety && <ShieldCheck className="h-3 w-3" />}
               {isDamage && <AlertTriangle className="h-3 w-3" />}
-              <span>{it.category === "after" ? "After Service" : it.category === "before" ? "Before Service" : it.category === "safety" ? "Safety Proof" : "Condition Note"}</span>
+              <span>
+                {it.category === "after" 
+                  ? "After Service" 
+                  : it.category === "before" 
+                    ? "Before Service" 
+                    : it.category === "safety" 
+                      ? "Safety / PPE" 
+                      : "Condition Note"}
+              </span>
               <Eye className="h-2.5 w-2.5 opacity-60 ml-0.5" />
             </button>
           );
@@ -165,9 +203,9 @@ export function ClientEvidenceViewer({
           <div className="flex flex-wrap items-center gap-2 pt-1">
             {items.map((it, idx) => (
               <Button
-                key={idx}
+                key={it.id || idx}
                 type="button"
-                variant={selectedPhoto.category === it.category ? "default" : "outline"}
+                variant={selectedPhoto.id === it.id ? "default" : "outline"}
                 size="sm"
                 onClick={() => setActivePhoto(it)}
                 className="text-xs h-7 gap-1.5"
@@ -190,7 +228,6 @@ export function ClientEvidenceViewer({
                   alt={selectedPhoto.label}
                   className="w-full h-full object-contain"
                   onError={(e) => {
-                    // Fallback in case of expired presigned URL or mock
                     (e.target as HTMLElement).style.display = "none";
                   }}
                 />

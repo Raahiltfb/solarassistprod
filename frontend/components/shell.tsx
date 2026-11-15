@@ -232,8 +232,13 @@ export function Shell({ profile, children }: { profile: Profile; children: React
         {/* Fixed Mobile Bottom Navigation Bar (Native Mobile PWA feel) */}
         {(() => {
           const isOverflow = items.length > 5;
-          const primaryItems = isOverflow ? items.filter((it) => ["/dashboard", "/cleaning", "/sites", "/diagnostics"].includes(it.href)) : items;
-          const moreItems = isOverflow ? items.filter((it) => !primaryItems.some((pi) => pi.href === it.href)) : [];
+          const primaryHrefs = ["/dashboard", "/service-requests", "/cleaning", "/sites"];
+          const primaryItems = isOverflow 
+            ? items.filter((it) => primaryHrefs.includes(it.href)) 
+            : items;
+          const moreItems = isOverflow 
+            ? items.filter((it) => !primaryHrefs.includes(it.href)) 
+            : [];
           const isMoreActive = moreItems.some((it) => 
             pathname === it.href || 
             (it.href !== "/dashboard" && pathname.startsWith(it.href + "/")) ||
@@ -242,7 +247,7 @@ export function Shell({ profile, children }: { profile: Profile; children: React
 
           return (
             <nav
-              className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur border-t h-16 safe-area-pb shadow-lg grid grid-flow-col auto-cols-fr items-center px-1"
+              className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur border-t h-16 safe-area-pb shadow-lg grid grid-cols-5 items-center px-1"
               data-testid="mobile-nav"
             >
               {primaryItems.map((it) => {
@@ -256,12 +261,12 @@ export function Shell({ profile, children }: { profile: Profile; children: React
                     href={it.href}
                     prefetch={true}
                     className={cn(
-                      "flex flex-col items-center justify-center h-full py-1 text-[11px] font-medium transition-colors gap-1 min-w-0 px-1",
+                      "flex flex-col items-center justify-center h-full py-1 text-[11px] font-medium transition-colors gap-0.5 min-w-0 px-0.5 overflow-hidden",
                       Active ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"
                     )}
                   >
                     <it.icon className={cn("h-5 w-5 shrink-0", Active ? "text-primary stroke-[2.5]" : "text-muted-foreground")} />
-                    <span className="w-full text-center text-[10px] leading-tight truncate">
+                    <span className="w-full text-center text-[10px] leading-tight truncate px-0.5 block max-w-full">
                       {(it as any).mobileLabel || it.label}
                     </span>
                   </Link>
@@ -273,12 +278,14 @@ export function Shell({ profile, children }: { profile: Profile; children: React
                   <DropdownMenuTrigger asChild>
                     <button
                       className={cn(
-                        "flex flex-col items-center justify-center h-full py-1 text-[11px] font-medium transition-colors gap-1 min-w-0 px-1 focus:outline-none",
+                        "flex flex-col items-center justify-center h-full py-1 text-[11px] font-medium transition-colors gap-0.5 min-w-0 px-0.5 overflow-hidden focus:outline-none",
                         isMoreActive ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"
                       )}
                     >
                       <MoreHorizontal className={cn("h-5 w-5 shrink-0", isMoreActive ? "text-primary stroke-[2.5]" : "text-muted-foreground")} />
-                      <span className="w-full text-center text-[10px] leading-tight truncate">More</span>
+                      <span className="w-full text-center text-[10px] leading-tight truncate px-0.5 block max-w-full">
+                        More
+                      </span>
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" side="top" sideOffset={12} className="w-56 mb-2">

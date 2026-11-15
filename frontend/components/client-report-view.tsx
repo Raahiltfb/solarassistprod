@@ -65,6 +65,8 @@ export interface ReportIncident {
   created_at: string;
   resolved_at?: string | null;
   post_repair_metric?: string | null;
+  resolution_mode?: "automated" | "technician" | "acknowledged" | "open";
+  resolution_summary?: string | null;
 }
 
 interface ClientReportViewProps {
@@ -415,26 +417,61 @@ export function ClientReportView({
                     <th className="p-3">Site</th>
                     <th className="p-3">Service Scope</th>
                     <th className="p-3">Date Logged</th>
-                    <th className="p-3">Resolution State</th>
+                    <th className="p-3">Resolution Mode</th>
                     <th className="p-3 text-right">Telemetry Verification</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {incidents.map((inc) => (
-                    <tr key={inc.id} className="hover:bg-muted/20">
-                      <td className="p-3 font-semibold text-foreground">{inc.site_name}</td>
-                      <td className="p-3 font-medium text-foreground">{inc.title}</td>
-                      <td className="p-3 text-muted-foreground">{formatDate(inc.created_at)}</td>
-                      <td className="p-3">
-                        <Badge variant="success" className="text-[10px]">
-                          {inc.status === "closed" ? "Resolved & Closed" : "Resolved"}
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-right text-muted-foreground">
-                        {inc.post_repair_metric || "Confirmed by telemetry baseline"}
-                      </td>
-                    </tr>
-                  ))}
+                  {incidents.map((inc) => {
+                    const isAuto = inc.resolution_mode === "automated";
+                    const isPhys = inc.resolution_mode === "technician";
+                    const isAck = inc.resolution_mode === "acknowledged";
+
+                    return (
+                      <tr key={inc.id} className="hover:bg-muted/20">
+                        <td className="p-3 font-semibold text-foreground">{inc.site_name}</td>
+                        <td className="p-3 font-medium text-foreground">{inc.title}</td>
+                        <td className="p-3 text-muted-foreground">{formatDate(inc.created_at)}</td>
+                        <td className="p-3 space-y-0.5">
+                          {isAuto ? (
+                            <div>
+                              <Badge variant="success" className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                                🤖 Automated Resolution
+                              </Badge>
+                              <div className="text-[9px] text-muted-foreground mt-0.5">
+                                Normalized via telemetry; no physical work recorded
+                              </div>
+                            </div>
+                          ) : isPhys ? (
+                            <div>
+                              <Badge variant="default" className="text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+                                🔧 Field Technician Service
+                              </Badge>
+                              <div className="text-[9px] text-muted-foreground mt-0.5">
+                                Physical repairs & inspection completed on site
+                              </div>
+                            </div>
+                          ) : isAck ? (
+                            <div>
+                              <Badge variant="secondary" className="text-[10px]">
+                                👁️ Acknowledged
+                              </Badge>
+                              <div className="text-[9px] text-muted-foreground mt-0.5">
+                                24/7 supervision active
+                              </div>
+                            </div>
+                          ) : (
+                            <Badge variant="warning" className="text-[10px]">
+                              Active Supervision
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="p-3 text-right text-muted-foreground">
+                          {inc.post_repair_metric || "Confirmed by telemetry baseline"}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

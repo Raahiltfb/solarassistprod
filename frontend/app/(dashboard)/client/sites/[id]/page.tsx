@@ -166,7 +166,9 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
   // Sanitized Service Timeline Events & Structured Requests
   const serviceEvents = sanitizeServiceEvents(alerts, workOrders, cleaningLogs, tickets, upcomingVisits, [site]);
   const clientServiceRequests = formatClientServiceRequests(tickets, workOrders, new Map([[site.id, site]]), alerts);
-  const activeRequestsCount = clientServiceRequests.filter((r) => r.status !== "resolved").length;
+  const activeRequestsCount = clientServiceRequests.filter(
+    (r) => r.status !== "auto_resolved" && r.status !== "physically_resolved"
+  ).length;
 
   return (
     <div className="space-y-10" data-testid="client-site-detail-page">
@@ -541,23 +543,9 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
               <span>{activeRequestsCount} Active Item(s) Under Solar Assist Supervision</span>
             </div>
             {(() => {
-              const activeReq = clientServiceRequests.find((r) => r.status !== "resolved") || clientServiceRequests[0];
-              const steps = [
-                { label: "1. Detected", desc: "Monitored 24/7" },
-                { label: "2. Dispatched", desc: "Engineer Assigned" },
-                { label: "3. On Site", desc: "Physical Work" },
-                { label: "4. Verifying", desc: "Telemetry Check" },
-                { label: "5. Resolved", desc: "Verified Safe" },
-              ];
-              const statusOrder: Record<string, number> = {
-                reported: 0,
-                dispatched: 1,
-                on_site: 2,
-                verifying: 3,
-                resolved: 4,
-                follow_up: 2,
-              };
-              const currentOrder = statusOrder[activeReq.status] ?? 0;
+              const activeReq = clientServiceRequests.find(
+                (r) => r.status !== "auto_resolved" && r.status !== "physically_resolved"
+              ) || clientServiceRequests[0];
 
               return (
                 <Card className="border shadow-sm p-4 space-y-3.5 bg-card border-amber-500/30">
@@ -570,6 +558,9 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
                       <span className="text-xs text-muted-foreground">•</span>
                       <Badge variant="outline" className="text-[10px] uppercase tracking-wider font-semibold">
                         {activeReq.macroCategory}
+                      </Badge>
+                      <Badge variant="secondary" className="text-[10px]">
+                        Action: {activeReq.actionTakenLabel}
                       </Badge>
                     </div>
 
@@ -612,14 +603,19 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
                     </div>
                   </div>
 
+                  {/* Factual Dynamic Operational Workflow Steps */}
                   <div className="pt-1">
-                    <div className="grid grid-cols-5 gap-1 text-center">
-                      {steps.map((st, sIdx) => {
-                        const isCompleted = activeReq.status === "resolved" || currentOrder > sIdx;
-                        const isCurrent = activeReq.status !== "resolved" && currentOrder === sIdx;
+                    <div className={`grid gap-1.5 text-center ${
+                      activeReq.workflowSteps.length === 3 ? "grid-cols-3" :
+                      activeReq.workflowSteps.length === 4 ? "grid-cols-4" :
+                      activeReq.workflowSteps.length === 5 ? "grid-cols-5" : "grid-cols-2"
+                    }`}>
+                      {activeReq.workflowSteps.map((st, sIdx) => {
+                        const isCompleted = st.status === "completed";
+                        const isCurrent = st.status === "current";
 
                         return (
-                          <div key={sIdx} className="space-y-1">
+                          <div key={sIdx} className="space-y-1 p-1 rounded bg-muted/20 border border-border/40">
                             <div
                               className={`h-1.5 rounded-full transition-all ${isCompleted
                                 ? "bg-emerald-500"
@@ -648,7 +644,7 @@ export default async function ClientSiteDetailPage({ params }: { params: Promise
                   </div>
 
                   <div className="pt-2 flex justify-between items-center border-t text-xs text-muted-foreground">
-                    <span>Certified technicians and automated verification active</span>
+                    <span>Supervised operational lifecycle</span>
                     <a href="#operational-history" className="text-primary font-medium hover:underline flex items-center gap-1">
                       View full history in Operational Log ↓
                     </a>

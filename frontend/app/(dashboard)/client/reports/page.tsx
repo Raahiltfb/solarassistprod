@@ -236,17 +236,48 @@ export default async function ClientReportsPage({
     remarks: c.remarks,
   }));
 
-  // Format incidents
-  const reportIncidents: ReportIncident[] = tickets.map((t) => ({
-    id: t.id,
-    site_name: t.sites?.name || "Solar Site",
-    title: t.title,
-    status: t.status,
-    verification_status: t.verification_status || "verified_recovered",
-    created_at: t.created_at,
-    resolved_at: t.resolved_at,
-    post_repair_metric: t.post_repair_metric,
-  }));
+  // Format incidents with factual resolution mode (Automated Telemetry vs Field Technician Service)
+  const reportIncidents: ReportIncident[] = tickets.map((t) => {
+    // Find linked work orders for this ticket
+    const linkedWo = workOrders.find((wo: any) => wo.ticket_id === t.id);
+    const hasCompletedWo = linkedWo && (linkedWo.status === "completed" || linkedWo.completed_at);
+    const hasPhotos = Boolean(
+      t.before_photo_url || 
+      t.after_photo_url || 
+      linkedWo?.before_photo_url || 
+      linkedWo?.after_photo_url
+    );
+
+    const isClosed = t.status === "closed" || t.status === "resolved";
+    let resolutionMode: ReportIncident["resolution_mode"] = "open";
+    let resolutionSummary = "Monitored under 24/7 telemetry supervision.";
+
+    if (isClosed) {
+      if (hasCompletedWo || hasPhotos) {
+        resolutionMode = "technician";
+        resolutionSummary = "Field technician completed physical work and verified site status.";
+      } else {
+        resolutionMode = "automated";
+        resolutionSummary = "Subsequent inverter telemetry returned to normal baseline. No physical intervention recorded.";
+      }
+    } else if (t.status === "acknowledged") {
+      resolutionMode = "acknowledged";
+      resolutionSummary = "Operator acknowledged; active telemetry supervision.";
+    }
+
+    return {
+      id: t.id,
+      site_name: t.sites?.name || "Solar Site",
+      title: t.title,
+      status: t.status,
+      verification_status: t.verification_status || "verified_recovered",
+      created_at: t.created_at,
+      resolved_at: t.resolved_at,
+      post_repair_metric: t.post_repair_metric,
+      resolution_mode: resolutionMode,
+      resolution_summary: resolutionSummary,
+    };
+  });
 
   const clientName = profile.full_name || "Valued Solar Client";
   const organizationName = customerOrg?.name || profile.organization || "Solar Energy Portfolio";

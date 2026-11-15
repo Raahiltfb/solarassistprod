@@ -67,18 +67,40 @@ export interface ClientServiceEvent {
   technicianFindings?: string | null;
 }
 
+export type ClientActionStatus = 
+  | "auto_resolved"
+  | "acknowledged"
+  | "scheduled"
+  | "dispatched"
+  | "in_progress"
+  | "physically_resolved"
+  | "escalated"
+  | "reported";
+
+export type ResolutionType = "automated" | "technician" | "none";
+
+export interface WorkflowStepItem {
+  label: string;
+  desc: string;
+  status: "completed" | "current" | "upcoming";
+  timestamp?: string;
+}
+
 export interface ClientServiceRequest {
   id: string;
   ticketNumber: string;
   siteName: string;
   title: string;
   macroCategory: "Inverter Service" | "String Optimization" | "Connectivity & Gateway" | "Panel Maintenance" | "Grid Outage";
-  status: "reported" | "dispatched" | "on_site" | "verifying" | "resolved" | "follow_up";
+  status: ClientActionStatus;
   statusLabel: string;
   statusBadgeVariant: "default" | "success" | "warning" | "secondary" | "destructive";
+  resolutionType: ResolutionType;
+  actionTakenLabel: string;
   explanation: string;
   whatIsGoingOn: string;
   whatSaIsDoing: string;
+  resolutionSummary?: string;
   technicianFindings?: string | null;
   preRepairMetric?: string | null;
   postRepairMetric?: string | null;
@@ -87,6 +109,7 @@ export interface ClientServiceRequest {
   resolvedAt?: string | null;
   beforePhotoUrl?: string | null;
   afterPhotoUrl?: string | null;
+  workflowSteps: WorkflowStepItem[];
 }
 
 export interface MacroTechnicalInfo {
@@ -122,10 +145,10 @@ export function getMacroTechnicalDescription(
     titleUpper.includes("POWER-FAULT")
   ) {
     return {
-      title: "Inverter Safety Inspection Underway",
-      description: `Inverter operating parameter variation reached safety boundary at ${siteName}. Solar Assist automated O&M system has safely paused the unit and scheduled technical inspection.`,
+      title: "Inverter Safety Monitoring Active",
+      description: `Inverter operating parameter variation reached safety boundary at ${siteName}. Solar Assist automated supervisory controls paused feeding while evaluating telemetry.`,
       whatIsGoingOn: `Inverter internal safety sensors detected an abnormal electrical boundary (such as insulation resistance, DC ground leakage, or phase balance) and safely paused the unit.`,
-      whatSaIsDoing: `Solar Assist automated O&M system safely paused power feeding, conducted remote diagnostics, and scheduled an on-site technician inspection to verify cables, terminals, and safe restart.`,
+      whatSaIsDoing: `Solar Assist automated supervisory system is monitoring telemetry parameters, evaluating grid stability, and verifying whether automatic recovery occurs.`,
       category: "Inverter Service",
     };
   }
@@ -139,10 +162,10 @@ export function getMacroTechnicalDescription(
     titleUpper.includes("VARIANCE")
   ) {
     return {
-      title: "String Performance Optimization Scheduled",
-      description: `String voltage or current variance detected across PV circuits at ${siteName}. Solar Assist has scheduled circuit inspection to maximize daily generation.`,
+      title: "String Performance Variance Supervised",
+      description: `String voltage or current variance detected across PV circuits at ${siteName}. Solar Assist telemetry engine is tracking performance.`,
       whatIsGoingOn: `Telemetry sensors detected a minor current or voltage variance between parallel solar panel rows (strings), likely caused by localized roof shading, module dust accumulation, or connection resistance.`,
-      whatSaIsDoing: `Solar Assist algorithmic performance engine is analyzing daily string IV curves to isolate the affected circuit and has scheduled routine module washing and electrical terminal inspection.`,
+      whatSaIsDoing: `Solar Assist automated performance engine is continuously analyzing daily string current-voltage curves to track balance across PV strings.`,
       category: "String Optimization",
     };
   }
@@ -208,10 +231,10 @@ export function getMacroTechnicalDescription(
     titleUpper.includes("UNDER-GENERATION")
   ) {
     return {
-      title: "Solar Yield Optimization Underway",
-      description: `Site generation at ${siteName} tracked slightly below ideal sunlight benchmark today. Solar Assist is supervising module washing and operational settings to maximize yield.`,
+      title: "Solar Yield Supervised",
+      description: `Site generation at ${siteName} tracked below sunlight benchmark. Solar Assist is analyzing performance parameters.`,
       whatIsGoingOn: `Daily solar production for this installation was lower than expected given regional sunlight levels, typically caused by seasonal soiling, cloudy spells, or temporary inverter clipping.`,
-      whatSaIsDoing: `Solar Assist is cross-referencing satellite irradiance readings, verifying panel washing intervals, and scheduling module cleaning to bring generation back up to peak benchmark.`,
+      whatSaIsDoing: `Solar Assist is cross-referencing satellite irradiance readings, evaluating soiling impact, and tracking generation baselines against regional peer installations.`,
       category: "String Optimization",
     };
   }
@@ -539,6 +562,66 @@ export function sanitizeServiceEvents(
   });
 }
 
+function generateWorkflowSteps(
+  status: ClientActionStatus,
+  dates: { created: string; updated: string; resolved?: string | null; scheduledDate?: string | null }
+): WorkflowStepItem[] {
+  if (status === "auto_resolved") {
+    return [
+      { label: "1. Detected", desc: "Telemetry Anomaly Flagged", status: "completed", timestamp: dates.created },
+      { label: "2. Telemetry Normalization", desc: "Inverter Telemetry Returned to Baseline", status: "completed", timestamp: dates.resolved || dates.updated },
+      { label: "3. Automatically Resolved", desc: "No Physical Intervention Recorded", status: "completed", timestamp: dates.resolved || dates.updated },
+    ];
+  }
+  if (status === "physically_resolved") {
+    return [
+      { label: "1. Detected", desc: "Operational Item Flagged", status: "completed", timestamp: dates.created },
+      { label: "2. Dispatched", desc: "Field Technician Assigned", status: "completed" },
+      { label: "3. On Site Work", desc: "Physical Maintenance Performed", status: "completed" },
+      { label: "4. Telemetry Verified", desc: "Generation Recovery Confirmed", status: "completed" },
+      { label: "5. Physically Resolved", desc: "Service Signed Off With Evidence", status: "completed", timestamp: dates.resolved || dates.updated },
+    ];
+  }
+  if (status === "in_progress") {
+    return [
+      { label: "1. Detected", desc: "Operational Item Flagged", status: "completed", timestamp: dates.created },
+      { label: "2. Dispatched", desc: "Technician Assigned", status: "completed" },
+      { label: "3. On Site Work", desc: "Physical Service in Progress", status: "current" },
+      { label: "4. Telemetry Verified", desc: "Awaiting Verification", status: "upcoming" },
+    ];
+  }
+  if (status === "dispatched") {
+    return [
+      { label: "1. Detected", desc: "Operational Item Flagged", status: "completed", timestamp: dates.created },
+      { label: "2. Dispatched", desc: "Technician Assigned & Dispatched", status: "current" },
+      { label: "3. On Site Work", desc: "Awaiting Arrival", status: "upcoming" },
+    ];
+  }
+  if (status === "scheduled") {
+    return [
+      { label: "1. Detected", desc: "Operational Item Flagged", status: "completed", timestamp: dates.created },
+      { label: "2. Scheduled", desc: dates.scheduledDate ? `Service Visit on ${dates.scheduledDate}` : "Service Visit Scheduled", status: "current" },
+      { label: "3. Dispatched", desc: "Awaiting Route Dispatch", status: "upcoming" },
+    ];
+  }
+  if (status === "acknowledged") {
+    return [
+      { label: "1. Detected", desc: "Operational Item Flagged", status: "completed", timestamp: dates.created },
+      { label: "2. Acknowledged", desc: "Operator Monitored · No Physical Work", status: "current" },
+    ];
+  }
+  if (status === "escalated") {
+    return [
+      { label: "1. Detected", desc: "Operational Item Flagged", status: "completed", timestamp: dates.created },
+      { label: "2. Escalated", desc: "Senior Engineering Review Required", status: "current" },
+    ];
+  }
+  return [
+    { label: "1. Detected", desc: "Monitored 24/7 by Solar Assist", status: "current", timestamp: dates.created },
+    { label: "2. Supervision", desc: "Evaluating Subsequent Telemetry", status: "upcoming" },
+  ];
+}
+
 /**
  * Transforms tickets, alerts, and work orders into structured, transparent client service requests and operational error logs.
  */
@@ -570,45 +653,101 @@ export function formatClientServiceRequests(
 
     const macro = getMacroTechnicalDescription(ticket.title, siteName);
 
-    // Lifecycle status mapping
-    let status: ClientServiceRequest["status"] = "reported";
+    // Lifecycle status mapping based strictly on persisted workflow records
+    let status: ClientActionStatus = "reported";
     let statusLabel = "Detected & Monitored";
     let statusBadgeVariant: ClientServiceRequest["statusBadgeVariant"] = "secondary";
+    let resolutionType: ResolutionType = "none";
+    let actionTakenLabel = "Automated 24/7 Monitoring";
     let explanation = macro.description;
+    let resolutionSummary: string | undefined = undefined;
 
-    const verStatus = ticket.verification_status || linkedWo?.verification_status;
-    const reopened = (ticket.reopened_count || 0) > 0;
+    const hasCompletedWorkOrder = linkedWo && (linkedWo.status === "completed" || Boolean(linkedWo.completed_at));
+    const hasPhysicalEvidence = Boolean(
+      ticket.before_photo_url || 
+      ticket.after_photo_url || 
+      linkedWo?.before_photo_url || 
+      linkedWo?.after_photo_url
+    );
+    const hasAssignedTechnician = Boolean(
+      ticket.assignee_id || 
+      linkedWo?.assigned_technician_id
+    );
 
-    if (ticket.status === "closed" || verStatus === "verified_recovered") {
-      status = "resolved";
-      statusLabel = "Verified Resolved";
-      statusBadgeVariant = "success";
-      explanation = ticket.post_repair_metric
-        ? `Confirmed resolved. Telemetry verification confirmed: ${ticket.post_repair_metric}`
-        : "Operational health confirmed normal. Issue marked resolved following verification.";
-    } else if (verStatus === "under_verification") {
-      status = "verifying";
-      statusLabel = "Telemetry Verifying";
-      statusBadgeVariant = "default";
-      explanation = "Technician finished physical field intervention. Automated telemetry engine is verifying power recovery baseline.";
-    } else if (verStatus === "verification_failed" || reopened) {
-      status = "follow_up";
-      statusLabel = "Follow-Up Scheduled";
+    const isClosedOrResolved = ticket.status === "closed" || ticket.status === "resolved";
+
+    if (isClosedOrResolved) {
+      if (hasCompletedWorkOrder || hasPhysicalEvidence) {
+        status = "physically_resolved";
+        statusLabel = "Physically Resolved";
+        statusBadgeVariant = "success";
+        resolutionType = "technician";
+        actionTakenLabel = "On-Site Physical Service";
+        explanation = ticket.post_repair_metric
+          ? `Physically resolved. Technician completed on-site work; post-service verification confirmed: ${ticket.post_repair_metric}`
+          : "Physically resolved. A field technician completed on-site service and verified operational recovery.";
+        resolutionSummary = "Technician on-site intervention completed and verified.";
+      } else {
+        // Automatically resolved without physical work
+        status = "auto_resolved";
+        statusLabel = "Automatically Resolved";
+        statusBadgeVariant = "success";
+        resolutionType = "automated";
+        actionTakenLabel = "Automated Telemetry Recovery";
+        explanation = "Automatically resolved. Subsequent inverter telemetry indicates that the condition has returned to normal. No physical intervention was recorded.";
+        resolutionSummary = "Subsequent inverter telemetry verified condition returned to normal baseline. No physical intervention was recorded.";
+      }
+    } else if (ticket.status === "escalated" || (ticket.priority === "p1" && ticket.status === "on_hold")) {
+      status = "escalated";
+      statusLabel = "Escalated";
+      statusBadgeVariant = "destructive";
+      resolutionType = "none";
+      actionTakenLabel = "Engineering Escalation";
+      explanation = "Escalated to tier-2 engineering for further root-cause investigation.";
+      resolutionSummary = "Escalated to engineering.";
+    } else if (linkedWo?.status === "in_progress" || ticket.status === "in_progress") {
+      status = "in_progress";
+      statusLabel = "Work in Progress";
       statusBadgeVariant = "warning";
-      explanation = "Post-service telemetry indicated variance persisted. Automatically escalated for follow-up technician visit.";
-    } else if (linkedWo?.status === "in_progress") {
-      status = "on_site";
-      statusLabel = "Technician On Site";
-      statusBadgeVariant = "warning";
-      explanation = "Solar Assist field technician has checked in on site and is actively conducting inspections.";
-    } else if (linkedWo?.status === "scheduled" || linkedWo?.status === "en_route" || ticket.assignee_id) {
+      resolutionType = "technician";
+      actionTakenLabel = "Technician Active On Site";
+      explanation = "Technician is currently on site performing physical inspection and maintenance.";
+    } else if (linkedWo?.status === "dispatched" || linkedWo?.status === "en_route" || (hasAssignedTechnician && !linkedWo?.scheduled_date)) {
       status = "dispatched";
       statusLabel = "Technician Dispatched";
       statusBadgeVariant = "warning";
-      explanation = linkedWo?.scheduled_date
-        ? `Field technician visit scheduled for ${linkedWo.scheduled_date}.`
-        : "Certified field technician assigned and scheduled for site visit.";
+      resolutionType = "technician";
+      actionTakenLabel = "Field Technician Dispatched";
+      explanation = "Field technician has been assigned and dispatched for site inspection.";
+    } else if (linkedWo?.status === "scheduled" || linkedWo?.scheduled_date) {
+      status = "scheduled";
+      statusLabel = "Inspection Scheduled";
+      statusBadgeVariant = "warning";
+      resolutionType = "technician";
+      actionTakenLabel = "Service Visit Scheduled";
+      explanation = `Field service visit scheduled for ${linkedWo.scheduled_date}.`;
+    } else if (ticket.status === "acknowledged") {
+      status = "acknowledged";
+      statusLabel = "Acknowledged";
+      statusBadgeVariant = "secondary";
+      resolutionType = "none";
+      actionTakenLabel = "Operator Acknowledged";
+      explanation = "Acknowledged by operations. Monitored closely under 24/7 supervision; no physical intervention scheduled.";
+    } else {
+      status = "reported";
+      statusLabel = "Detected & Monitored";
+      statusBadgeVariant = "secondary";
+      resolutionType = "none";
+      actionTakenLabel = "Automated 24/7 Monitoring";
+      explanation = macro.description;
     }
+
+    const workflowSteps = generateWorkflowSteps(status, {
+      created: ticket.created_at,
+      updated: linkedWo?.completed_at || ticket.resolved_at || ticket.created_at,
+      resolved: ticket.resolved_at,
+      scheduledDate: linkedWo?.scheduled_date,
+    });
 
     requests.push({
       id: ticket.id,
@@ -619,9 +758,12 @@ export function formatClientServiceRequests(
       status,
       statusLabel,
       statusBadgeVariant,
+      resolutionType,
+      actionTakenLabel,
       explanation,
       whatIsGoingOn: macro.whatIsGoingOn,
       whatSaIsDoing: macro.whatSaIsDoing,
+      resolutionSummary,
       technicianFindings: ticket.verification_notes || linkedWo?.remarks || null,
       preRepairMetric: ticket.pre_repair_metric || null,
       postRepairMetric: ticket.post_repair_metric || null,
@@ -630,6 +772,7 @@ export function formatClientServiceRequests(
       resolvedAt: ticket.resolved_at,
       beforePhotoUrl: ticket.before_photo_url || linkedWo?.before_photo_url || linkedWo?.tickets?.before_photo_url || null,
       afterPhotoUrl: ticket.after_photo_url || linkedWo?.after_photo_url || linkedWo?.tickets?.after_photo_url || null,
+      workflowSteps,
     });
   }
 
@@ -644,9 +787,43 @@ export function formatClientServiceRequests(
     const macro = getMacroTechnicalDescription(alert, siteName);
 
     const isResolved = alert.status === "resolved";
-    const status: ClientServiceRequest["status"] = isResolved ? "resolved" : "reported";
-    const statusLabel = isResolved ? "Auto-Resolved & Safe" : "Detected & Supervised";
-    const statusBadgeVariant: ClientServiceRequest["statusBadgeVariant"] = isResolved ? "success" : "warning";
+    let status: ClientActionStatus = "reported";
+    let statusLabel = "Detected & Monitored";
+    let statusBadgeVariant: ClientServiceRequest["statusBadgeVariant"] = "secondary";
+    let resolutionType: ResolutionType = "none";
+    let actionTakenLabel = "Automated Telemetry Monitoring";
+    let explanation = macro.description;
+    let resolutionSummary: string | undefined = undefined;
+
+    if (isResolved) {
+      status = "auto_resolved";
+      statusLabel = "Automatically Resolved";
+      statusBadgeVariant = "success";
+      resolutionType = "automated";
+      actionTakenLabel = "Automated Telemetry Recovery";
+      explanation = "Automatically resolved. Subsequent inverter telemetry indicates that the condition has returned to normal. No physical intervention was recorded.";
+      resolutionSummary = "Subsequent inverter telemetry verified condition returned to normal baseline. No physical intervention was recorded.";
+    } else if (alert.status === "acknowledged") {
+      status = "acknowledged";
+      statusLabel = "Acknowledged";
+      statusBadgeVariant = "secondary";
+      resolutionType = "none";
+      actionTakenLabel = "Operator Acknowledged";
+      explanation = "Acknowledged by operations. Monitored closely under 24/7 supervision; no physical intervention scheduled.";
+    } else {
+      status = "reported";
+      statusLabel = "Detected & Monitored";
+      statusBadgeVariant = "secondary";
+      resolutionType = "none";
+      actionTakenLabel = "Automated 24/7 Monitoring";
+      explanation = macro.description;
+    }
+
+    const workflowSteps = generateWorkflowSteps(status, {
+      created: alert.triggered_at,
+      updated: alert.resolved_at || alert.triggered_at,
+      resolved: alert.resolved_at,
+    });
 
     requests.push({
       id: alert.id,
@@ -657,24 +834,23 @@ export function formatClientServiceRequests(
       status,
       statusLabel,
       statusBadgeVariant,
-      explanation: macro.description,
+      resolutionType,
+      actionTakenLabel,
+      explanation,
       whatIsGoingOn: macro.whatIsGoingOn,
       whatSaIsDoing: macro.whatSaIsDoing,
-      technicianFindings: null,
-      preRepairMetric: null,
-      postRepairMetric: isResolved ? "Normal Generation Restored" : null,
-      createdAt: alert.triggered_at || alert.created_at || new Date().toISOString(),
-      updatedAt: alert.resolved_at || alert.triggered_at || alert.created_at || new Date().toISOString(),
-      resolvedAt: alert.resolved_at || null,
-      beforePhotoUrl: null,
-      afterPhotoUrl: null,
+      resolutionSummary,
+      createdAt: alert.triggered_at,
+      updatedAt: alert.resolved_at || alert.triggered_at,
+      resolvedAt: alert.resolved_at,
+      workflowSteps,
     });
   }
 
   // Sort: active/open requests first, newest first
   return requests.sort((a, b) => {
-    const isClosedA = a.status === "resolved";
-    const isClosedB = b.status === "resolved";
+    const isClosedA = a.status === "auto_resolved" || a.status === "physically_resolved";
+    const isClosedB = b.status === "auto_resolved" || b.status === "physically_resolved";
     if (isClosedA !== isClosedB) return isClosedA ? 1 : -1;
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });

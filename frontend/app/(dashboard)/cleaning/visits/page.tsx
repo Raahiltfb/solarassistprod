@@ -339,43 +339,139 @@ export default function CleaningVisitsPage() {
 
         {/* Tab 2: Photographic Evidence Gallery */}
         <TabsContent value="evidence" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {logs.map((log: any) => (
-              <Card key={log.id} className="border shadow-sm overflow-hidden flex flex-col justify-between">
-                <div>
-                  <CardHeader className="p-4 pb-2 border-b bg-muted/20">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm font-bold">{log.sites?.name || "Solar Site"}</CardTitle>
-                      <Badge variant="outline" className="text-[10px] font-mono">
-                        {log.performed_at ? formatDate(log.performed_at) : "Date N/A"}
-                      </Badge>
-                    </div>
-                    <CardDescription className="text-[11px] break-words leading-tight mt-0.5">
-                      {log.sites?.location || "Site location"}
-                    </CardDescription>
-                  </CardHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {logs.map((log: any) => {
+              const hasSafety = Boolean(log.safety_photo_url);
+              const hasBefore = Boolean(log.before_photo_url);
+              const hasAfter = Boolean(log.after_photo_url);
 
-                  <CardContent className="p-4 space-y-3">
-                    <CleaningEvidenceLinks
-                      beforePhotoUrl={log.before_photo_url}
-                      afterPhotoUrl={log.after_photo_url}
-                      className="border p-2 rounded-lg bg-muted/10"
-                    />
-
-                    {log.remarks && (
-                      <div className="text-xs text-muted-foreground bg-muted/30 p-2.5 rounded-lg border">
-                        <span className="font-semibold text-foreground">Technician Notes:</span> {log.remarks}
+              return (
+                <Card key={log.id} className="border shadow-sm overflow-hidden flex flex-col justify-between">
+                  <div>
+                    <CardHeader className="p-4 pb-2.5 border-b bg-muted/20">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-bold">{log.sites?.name || "Solar Site"}</CardTitle>
+                        <Badge variant="outline" className="text-[10px] font-mono">
+                          {log.performed_at ? formatDate(log.performed_at) : "Date N/A"}
+                        </Badge>
                       </div>
-                    )}
-                  </CardContent>
-                </div>
+                      <CardDescription className="text-[11px] break-words leading-tight mt-0.5">
+                        {log.sites?.location || "Site location"}
+                      </CardDescription>
+                    </CardHeader>
 
-                <div className="p-3 border-t bg-muted/10 text-[10px] text-muted-foreground flex justify-between">
-                  <span>Logged by: <strong>{log.profiles?.full_name || "Field Tech"}</strong></span>
-                  {log.next_due_on && <span>Next Due: <strong>{formatDate(log.next_due_on)}</strong></span>}
-                </div>
-              </Card>
-            ))}
+                    <CardContent className="p-4 space-y-3.5">
+                      {/* 3 Evidence Categories Display */}
+                      <div className="grid grid-cols-3 gap-2">
+                        {/* 1. Safety Gear / PPE */}
+                        <div className="space-y-1 text-center">
+                          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                            Safety / PPE
+                          </span>
+                          {hasSafety ? (
+                            <div className="relative aspect-square rounded-md overflow-hidden border bg-muted/30 group">
+                              <img
+                                src={log.safety_photo_url}
+                                alt="Safety Gear / PPE"
+                                className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = "none";
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-blue-500/10 pointer-events-none" />
+                            </div>
+                          ) : (
+                            <div className="aspect-square rounded-md border border-dashed flex flex-col items-center justify-center bg-muted/10 p-1 text-muted-foreground text-[9px]">
+                              <span>No Photo</span>
+                            </div>
+                          )}
+                          <span className={`text-[9px] font-medium block truncate ${hasSafety ? "text-blue-600 dark:text-blue-400" : "text-muted-foreground"}`}>
+                            {hasSafety ? "Verified PPE" : "Pending"}
+                          </span>
+                        </div>
+
+                        {/* 2. Before Cleaning */}
+                        <div className="space-y-1 text-center">
+                          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                            Before
+                          </span>
+                          {hasBefore ? (
+                            <div className="relative aspect-square rounded-md overflow-hidden border bg-muted/30 group">
+                              <img
+                                src={log.before_photo_url}
+                                alt="Before Cleaning"
+                                className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = "none";
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-amber-500/10 pointer-events-none" />
+                            </div>
+                          ) : (
+                            <div className="aspect-square rounded-md border border-dashed flex flex-col items-center justify-center bg-muted/10 p-1 text-muted-foreground text-[9px]">
+                              <span>No Photo</span>
+                            </div>
+                          )}
+                          <span className={`text-[9px] font-medium block truncate ${hasBefore ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>
+                            {hasBefore ? "Soiled Module" : "Pending"}
+                          </span>
+                        </div>
+
+                        {/* 3. After Cleaning */}
+                        <div className="space-y-1 text-center">
+                          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                            After
+                          </span>
+                          {hasAfter ? (
+                            <div className="relative aspect-square rounded-md overflow-hidden border bg-muted/30 group">
+                              <img
+                                src={log.after_photo_url}
+                                alt="After Cleaning"
+                                className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = "none";
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-emerald-500/10 pointer-events-none" />
+                            </div>
+                          ) : (
+                            <div className="aspect-square rounded-md border border-dashed flex flex-col items-center justify-center bg-muted/10 p-1 text-muted-foreground text-[9px]">
+                              <span>No Photo</span>
+                            </div>
+                          )}
+                          <span className={`text-[9px] font-medium block truncate ${hasAfter ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
+                            {hasAfter ? "Restored Clean" : "Pending"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Modal Lightbox Trigger Links */}
+                      <CleaningEvidenceLinks
+                        safetyPhotoUrl={log.safety_photo_url}
+                        beforePhotoUrl={log.before_photo_url}
+                        afterPhotoUrl={log.after_photo_url}
+                        damagePhotoUrl={log.damage_photo_url}
+                        damageObserved={log.damage_observed}
+                        damageType={log.damage_type}
+                        remarks={log.remarks}
+                        className="border p-2 rounded-lg bg-muted/10 justify-center"
+                      />
+
+                      {log.remarks && (
+                        <div className="text-xs text-muted-foreground bg-muted/30 p-2.5 rounded-lg border">
+                          <span className="font-semibold text-foreground">Technician Notes:</span> {log.remarks}
+                        </div>
+                      )}
+                    </CardContent>
+                  </div>
+
+                  <div className="p-3 border-t bg-muted/10 text-[10px] text-muted-foreground flex justify-between">
+                    <span>Logged by: <strong>{log.profiles?.full_name || "Field Tech"}</strong></span>
+                    {log.next_due_on && <span>Next Due: <strong>{formatDate(log.next_due_on)}</strong></span>}
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         </TabsContent>
       </Tabs>
