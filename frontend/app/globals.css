@@ -88,3 +88,92 @@
 .safe-area-pt {
   padding-top: env(safe-area-inset-top, 0px);
 }
+
+/* Professional Print / PDF Report Styling */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm 12mm 12mm;
+  }
+
+  /* Force clean white print canvas regardless of dark mode */
+  html, body {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+    font-size: 10pt !important;
+    line-height: 1.35 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide app chrome, headers, sidebars, mobile bottom navigation */
+  aside,
+  header,
+  nav,
+  [data-testid="mobile-nav"],
+  [data-testid="sidebar"],
+  [data-testid="user-menu"],
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Full-bleed print area without padding clipping */
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  /* Avoid page breaks inside important sections */
+  .page-break-avoid,
+  .recharts-responsive-container,
+  .report-metric-card,
+  .report-section,
+  .border.rounded-xl,
+  .border.rounded-2xl {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .page-break-before {
+    break-before: page !important;
+    page-break-before: always !important;
+  }
+
+  .page-break-after {
+    break-after: page !important;
+    page-break-after: always !important;
+  }
+
+  /* Table print optimization */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  th, td {
+    padding: 5px 6px !important;
+    font-size: 9pt !important;
+    word-break: break-word !important;
+  }
+
+  /* Ensure chart container dimensions stay crisp in print */
+  .recharts-wrapper {
+    max-width: 100% !important;
+  }
+
+  .recharts-surface {
+    overflow: visible !important;
+  }
+}
+
