@@ -147,7 +147,12 @@ class SungrowAdapter(OemAdapter):
                 "ps_id": ps_id,
                 "device_type": 1,
                 "ps_key_list": [device_id],
-                "point_id_list": ["83001", "83002", "83003", "83004", "83005", "83006", "83020", "83022", "83025", "83026", "83027", "83028", "83029", "p83020", "p83022", "p83025"]
+                "point_id_list": [
+                    "1", "2", "4", "14", "18", "19", "20", "21", "22", "23", "24", "26", "27", "28", "29",
+                    "5", "6", "7", "8", "9", "10", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54",
+                    "83001", "83002", "83003", "83004", "83005", "83006", "83020", "83022", "83025", "83026", "83027", "83028", "83029",
+                    "p1", "p2", "p4", "p14", "p24", "p83020", "p83022", "p83025"
+                ]
             }
         )
         if not res or not res.get("result_data"):
@@ -157,14 +162,25 @@ class SungrowAdapter(OemAdapter):
             return None, []
         d = dev_list[0].get("device_point") or {}
 
-        ac_power_kw = float(d.get("p83022") or d.get("p_active") or 0.0)
-        dc_power_kw = float(d.get("p83020") or d.get("p_dc") or 0.0)
-        daily_kwh = float(d.get("p83025") or d.get("e_today") or 0.0)
-        total_kwh = float(d.get("p83026") or d.get("e_total") or 0.0)
-        temp_c = float(d.get("p83027") or d.get("temp") or 35.0)
-        is_online = (ac_power_kw > 0) or (dc_power_kw > 0) or (d.get("device_status") == 1)
+        # Commercial inverters (e.g. SG125CX-P2, SG110CX) report p24, p14 in Watts, p1, p2 in Wh, p4 in °C
+        # Residential inverters report p83022, p83020 in kW, p83025, p83026 in kWh
+        ac_power_kw = round(float(d.get("p24")) / 1000.0, 3) if d.get("p24") is not None else float(d.get("p83022") or d.get("p_active") or 0.0)
+        dc_power_kw = round(float(d.get("p14")) / 1000.0, 3) if d.get("p14") is not None else float(d.get("p83020") or d.get("p_dc") or 0.0)
+        daily_kwh = round(float(d.get("p1")) / 1000.0, 2) if d.get("p1") is not None else float(d.get("p83025") or d.get("e_today") or 0.0)
+        total_kwh = round(float(d.get("p2")) / 1000.0, 2) if d.get("p2") is not None else float(d.get("p83026") or d.get("e_total") or 0.0)
+        temp_c = float(d.get("p4") if d.get("p4") is not None else (d.get("p83027") or d.get("temp") or 35.0))
+        is_online = (ac_power_kw > 0) or (dc_power_kw > 0) or (d.get("device_status") == 1) or (d.get("dev_status") == 1) or (d.get("p29") == "并网运行")
         efficiency = min(100.0, max(0.0, (ac_power_kw / dc_power_kw) * 100.0)) if dc_power_kw > 0 else (98.0 if is_online else 0.0)
         iso_time = datetime.now(timezone.utc).isoformat()
+
+        v_r = float(d.get("p18") if d.get("p18") is not None else (d.get("p83001") or 0)) or None
+        v_s = float(d.get("p19") if d.get("p19") is not None else (d.get("p83002") or 0)) or None
+        v_t = float(d.get("p20") if d.get("p20") is not None else (d.get("p83003") or 0)) or None
+        c_r = float(d.get("p21") if d.get("p21") is not None else (d.get("p83004") or 0)) or None
+        c_s = float(d.get("p22") if d.get("p22") is not None else (d.get("p83005") or 0)) or None
+        c_t = float(d.get("p23") if d.get("p23") is not None else (d.get("p83006") or 0)) or None
+        pf = float(d.get("p26") if d.get("p26") is not None else (d.get("p83029") or 1.0))
+        freq = float(d.get("p27") if d.get("p27") is not None else (d.get("p83028") or 50.0))
 
         telemetry = NormalizedTelemetry(
             timestamp=iso_time,
@@ -178,31 +194,41 @@ class SungrowAdapter(OemAdapter):
             specific_yield=0.0,
             online_status=is_online,
             last_update=iso_time,
-            frequency_hz=float(d.get("p83028") or 50.0),
-            power_factor=float(d.get("p83029") or 1.0),
-            voltage_r_v=float(d.get("p83001") or 0) or None,
-            voltage_s_v=float(d.get("p83002") or 0) or None,
-            voltage_t_v=float(d.get("p83003") or 0) or None,
-            current_r_a=float(d.get("p83004") or 0) or None,
-            current_s_a=float(d.get("p83005") or 0) or None,
-            current_t_a=float(d.get("p83006") or 0) or None,
+            frequency_hz=freq,
+            power_factor=pf,
+            voltage_r_v=v_r,
+            voltage_s_v=v_s,
+            voltage_t_v=v_t,
+            current_r_a=c_r,
+            current_s_a=c_s,
+            current_t_a=c_t,
             metrics=d,
         )
 
         string_telemetries = []
-        for i in range(1, 9):
-            v = float(d.get(f"p8303{i}_v") or d.get(f"pv{i}_voltage") or 0.0)
-            c = float(d.get(f"p8303{i}_i") or d.get(f"pv{i}_current") or 0.0)
+        mppt_map = [
+            (1, "p5", "p6"),
+            (2, "p7", "p8"),
+            (3, "p9", "p10"),
+            (4, "p45", "p46"),
+            (5, "p47", "p48"),
+            (6, "p49", "p50"),
+            (7, "p51", "p52"),
+            (8, "p53", "p54"),
+        ]
+        for idx, v_key, i_key in mppt_map:
+            v = float(d.get(v_key) if d.get(v_key) is not None else (d.get(f"p8303{idx}_v") or d.get(f"pv{idx}_voltage") or 0.0))
+            c = float(d.get(i_key) if d.get(i_key) is not None else (d.get(f"p8303{idx}_i") or d.get(f"pv{idx}_current") or 0.0))
             if v > 10.0 or c > 0.05:
-                p_kw = (v * c) / 1000.0
+                p_kw = round((v * c) / 1000.0, 3)
                 string_telemetries.append(
                     NormalizedStringTelemetry(
-                        string_index=i,
+                        string_index=idx,
                         voltage_v=v,
                         current_a=c,
                         power_kw=p_kw,
                         status="normal" if p_kw > 0.05 else "low_current",
-                        metrics={"string": i},
+                        metrics={"string": idx},
                     )
                 )
 

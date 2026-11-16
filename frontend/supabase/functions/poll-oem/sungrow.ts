@@ -201,25 +201,38 @@ export class SungrowAdapter implements OemAdapter {
       ps_id: psId,
       device_type: 1,
       ps_key_list: [deviceId],
-      point_id_list: ["83001", "83002", "83003", "83004", "83005", "83006", "83020", "83022", "83025", "83026", "83027", "83028", "83029", "p83020", "p83022", "p83025"]
+      point_id_list: [
+        "1", "2", "4", "14", "18", "19", "20", "21", "22", "23", "24", "26", "27", "28", "29",
+        "5", "6", "7", "8", "9", "10", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54",
+        "83001", "83002", "83003", "83004", "83005", "83006", "83020", "83022", "83025", "83026", "83027", "83028", "83029",
+        "p1", "p2", "p4", "p14", "p24", "p83020", "p83022", "p83025"
+      ]
     });
     const d = res?.result_data?.device_point_list?.[0]?.device_point;
     if (!d) return [null, []];
 
-    // Sungrow standard parameter mapping:
-    // p83022 = Active Power (kW)
-    // p83020 = DC Power (kW)
-    // p83025 = Daily Energy (kWh)
-    // p83026 = Total Energy (kWh)
-    // p83027 = Temperature (°C)
-    const acPowerKw = parseFloat(String(d.p83022 || d.p_active || 0));
-    const dcPowerKw = parseFloat(String(d.p83020 || d.p_dc || 0));
-    const dailyKwh = parseFloat(String(d.p83025 || d.e_today || 0));
-    const totalKwh = parseFloat(String(d.p83026 || d.e_total || 0));
-    const tempC = parseFloat(String(d.p83027 || d.temp || 35));
-    const isOnline = acPowerKw > 0 || dcPowerKw > 0 || d.device_status === 1;
+    // Sungrow parameter mapping:
+    // Commercial inverters (e.g. SG125CX-P2, SG110CX):
+    // p24 = Active AC Power (W), p14 = Total DC Power (W), p1 = Daily Energy (Wh), p2 = Total Energy (Wh), p4 = Temperature (°C)
+    // Residential / Storage inverters:
+    // p83022 = Active Power (kW), p83020 = DC Power (kW), p83025 = Daily Energy (kWh), p83026 = Total Energy (kWh), p83027 = Temperature (°C)
+    const acPowerKw = d.p24 != null ? Math.round((parseFloat(String(d.p24)) / 1000.0) * 1000) / 1000 : parseFloat(String(d.p83022 || d.p_active || 0));
+    const dcPowerKw = d.p14 != null ? Math.round((parseFloat(String(d.p14)) / 1000.0) * 1000) / 1000 : parseFloat(String(d.p83020 || d.p_dc || 0));
+    const dailyKwh = d.p1 != null ? Math.round((parseFloat(String(d.p1)) / 1000.0) * 100) / 100 : parseFloat(String(d.p83025 || d.e_today || 0));
+    const totalKwh = d.p2 != null ? Math.round((parseFloat(String(d.p2)) / 1000.0) * 100) / 100 : parseFloat(String(d.p83026 || d.e_total || 0));
+    const tempC = parseFloat(String(d.p4 ?? d.p83027 ?? d.temp ?? 35));
+    const isOnline = acPowerKw > 0 || dcPowerKw > 0 || d.device_status === 1 || d.dev_status === 1 || d.p29 === "并网运行";
     const efficiency = dcPowerKw > 0 ? Math.min(100, Math.max(0, (acPowerKw / dcPowerKw) * 100)) : (isOnline ? 98.0 : 0);
     const isoTime = new Date().toISOString();
+
+    const v_r = parseFloat(String(d.p18 ?? d.p83001 ?? 0)) || null;
+    const v_s = parseFloat(String(d.p19 ?? d.p83002 ?? 0)) || null;
+    const v_t = parseFloat(String(d.p20 ?? d.p83003 ?? 0)) || null;
+    const c_r = parseFloat(String(d.p21 ?? d.p83004 ?? 0)) || null;
+    const c_s = parseFloat(String(d.p22 ?? d.p83005 ?? 0)) || null;
+    const c_t = parseFloat(String(d.p23 ?? d.p83006 ?? 0)) || null;
+    const pf = parseFloat(String(d.p26 ?? d.p83029 ?? 1.0));
+    const freq = parseFloat(String(d.p27 ?? d.p83028 ?? 50.0));
 
     const telemetry: NormalizedTelemetry = {
       timestamp: isoTime,
@@ -233,31 +246,41 @@ export class SungrowAdapter implements OemAdapter {
       specific_yield: 0,
       online_status: isOnline,
       last_update: isoTime,
-      frequency_hz: parseFloat(String(d.p83028 || 50.0)),
-      power_factor: parseFloat(String(d.p83029 || 1.0)),
-      voltage_r_v: parseFloat(String(d.p83001 || 0)) || null,
-      voltage_s_v: parseFloat(String(d.p83002 || 0)) || null,
-      voltage_t_v: parseFloat(String(d.p83003 || 0)) || null,
-      current_r_a: parseFloat(String(d.p83004 || 0)) || null,
-      current_s_a: parseFloat(String(d.p83005 || 0)) || null,
-      current_t_a: parseFloat(String(d.p83006 || 0)) || null,
+      frequency_hz: freq,
+      power_factor: pf,
+      voltage_r_v: v_r,
+      voltage_s_v: v_s,
+      voltage_t_v: v_t,
+      current_r_a: c_r,
+      current_s_a: c_s,
+      current_t_a: c_t,
       metrics: d
     };
 
-    // Extract strings
+    // Extract strings / MPPT channels
     const stringTelemetries: NormalizedStringTelemetry[] = [];
-    for (let i = 1; i <= 8; i++) {
-      const v = parseFloat(String(d[`p8303${i}_v`] || d[`pv${i}_voltage`] || 0));
-      const c = parseFloat(String(d[`p8303${i}_i`] || d[`pv${i}_current`] || 0));
+    const mpptMap: [number, string, string][] = [
+      [1, "p5", "p6"],
+      [2, "p7", "p8"],
+      [3, "p9", "p10"],
+      [4, "p45", "p46"],
+      [5, "p47", "p48"],
+      [6, "p49", "p50"],
+      [7, "p51", "p52"],
+      [8, "p53", "p54"],
+    ];
+    for (const [idx, vKey, iKey] of mpptMap) {
+      const v = parseFloat(String(d[vKey] ?? d[`p8303${idx}_v`] ?? d[`pv${idx}_voltage`] ?? 0));
+      const c = parseFloat(String(d[iKey] ?? d[`p8303${idx}_i`] ?? d[`pv${idx}_current`] ?? 0));
       if (v > 10.0 || c > 0.05) {
-        const pKw = (v * c) / 1000.0;
+        const pKw = Math.round(((v * c) / 1000.0) * 1000) / 1000;
         stringTelemetries.push({
-          string_index: i,
+          string_index: idx,
           voltage_v: v,
           current_a: c,
           power_kw: pKw,
           status: pKw > 0.05 ? "normal" : "low_current",
-          metrics: { string: i }
+          metrics: { string: idx }
         });
       }
     }
