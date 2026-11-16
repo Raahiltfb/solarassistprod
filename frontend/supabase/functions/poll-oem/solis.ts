@@ -146,11 +146,13 @@ export class SolisAdapter implements OemAdapter {
 
         if (stateVal === 4 || stateVal === "4" || stateVal === 5 || stateVal === "5") {
           status = "offline";
-        } else if (diffMinutes > 45) {
+        } else if (pacVal > 0.05) {
+          status = "online";
+        } else if (diffMinutes > 120) {
           status = (isNighttime && diffMinutes < 14 * 60) ? "standby" : "offline";
         } else if (stateVal === 3 || stateVal === "3") {
           status = "fault";
-        } else if (stateVal === 1 || stateVal === "1" || pacVal > 0) {
+        } else if (stateVal === 1 || stateVal === "1") {
           status = "online";
         } else {
           status = "standby";
@@ -190,6 +192,25 @@ export class SolisAdapter implements OemAdapter {
     const efficiencyPct = parseFloat(invData.efficiency || "95.0");
     const temperatureC = parseFloat(invData.inverterTemperature || "35.0");
 
+    const capacityKw = parseFloat(invData.power || "0.0");
+    const dailyGenerationKwh = energyKwh;
+
+    // Normalizing eTotal (lifetime generation)
+    const rawEtotal = parseFloat(invData.eTotal || "0.0");
+    const eTotalStr = String(invData.eTotalStr || "kWh").toUpperCase();
+    let totalGenerationKwh = rawEtotal;
+    if (eTotalStr.includes("M")) {
+      totalGenerationKwh = rawEtotal * 1000.0;
+    } else if (eTotalStr.includes("G")) {
+      totalGenerationKwh = rawEtotal * 1000000.0;
+    }
+
+    // Specific Yield (kWh/kWp)
+    let specificYield = parseFloat(invData.fullHour || "0.0");
+    if (specificYield === 0.0 && capacityKw > 0) {
+      specificYield = Math.round((dailyGenerationKwh / capacityKw) * 100) / 100;
+    }
+
     const ts = invData.dataTimestamp || invData.updateTime;
     let lastSeenAt = "2024-01-01T00:00:00Z";
     let diffMinutes = 99999;
@@ -202,9 +223,9 @@ export class SolisAdapter implements OemAdapter {
     }
 
     const stateVal = invData.state;
-    const isFresh = diffMinutes <= 45;
-    let onlineStatus = isFresh && ((stateVal === 1 || stateVal === "1") || acPowerKw > 0.05);
-    if (stateVal === 2 || stateVal === "2" || stateVal === 4 || stateVal === "4" || stateVal === 5 || stateVal === "5" || !isFresh) {
+    const isFresh = diffMinutes <= 120;
+    let onlineStatus = (isFresh && ((stateVal === 1 || stateVal === "1") || acPowerKw > 0.05)) || acPowerKw > 0.05;
+    if ((stateVal === 2 || stateVal === "2" || stateVal === 4 || stateVal === "4" || stateVal === 5 || stateVal === "5" || !isFresh) && acPowerKw <= 0.05) {
       onlineStatus = false;
     }
 

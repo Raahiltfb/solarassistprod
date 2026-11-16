@@ -713,16 +713,16 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
 
                     if diff_mins >= 14 * 60:
                         inv_status = "offline"
-                    elif is_nighttime:
-                        inv_status = "fault" if dev.status == "fault" else "standby"
-                    elif not telemetry.online_status or dev.status == "offline":
-                        inv_status = "offline"
-                    elif diff_mins > 45:
-                        inv_status = "offline"
-                    elif dev.status == "fault":
-                        inv_status = "fault"
                     elif telemetry.ac_power_kw > 0.05:
                         inv_status = "online"
+                    elif is_nighttime:
+                        inv_status = "fault" if dev.status == "fault" else "standby"
+                    elif dev.status == "fault":
+                        inv_status = "fault"
+                    elif diff_mins > 120:
+                        inv_status = "offline"
+                    elif not telemetry.online_status or dev.status == "offline":
+                        inv_status = "offline"
                     else:
                         inv_status = "standby"
                 else:

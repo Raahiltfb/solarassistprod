@@ -783,16 +783,16 @@ export async function pollAndSyncAll(
 
                   if (diffMins >= 14 * 60) {
                     calculatedStatus = "offline";
-                  } else if (isNighttime) {
-                    calculatedStatus = dev.status === "fault" ? "fault" : "standby";
-                  } else if (telemetry.online_status === false || dev.status === "offline") {
-                    calculatedStatus = "offline";
-                  } else if (diffMins > 45) {
-                    calculatedStatus = "offline";
-                  } else if (dev.status === "fault") {
-                    calculatedStatus = "fault";
                   } else if (telemetry.ac_power_kw > 0.05) {
                     calculatedStatus = "online";
+                  } else if (isNighttime) {
+                    calculatedStatus = dev.status === "fault" ? "fault" : "standby";
+                  } else if (dev.status === "fault") {
+                    calculatedStatus = "fault";
+                  } else if (diffMins > 120) {
+                    calculatedStatus = "offline";
+                  } else if (telemetry.online_status === false || dev.status === "offline") {
+                    calculatedStatus = "offline";
                   } else {
                     calculatedStatus = "standby";
                   }

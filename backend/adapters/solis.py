@@ -135,11 +135,13 @@ class SolisAdapter(OemAdapter):
                 # State 1 = Generating, State 2 = Stopped/Standby, State 3 = Fault, State 4 = Offline / Disconnected
                 if state_val in (4, "4") or state_val in (5, "5"):
                     status = "offline"
-                elif diff_mins > 45:
+                elif pac_val > 0.05:
+                    status = "online"
+                elif diff_mins > 120:
                     status = "standby" if (is_nighttime and diff_mins < 14 * 60) else "offline"
                 elif state_val in (3, "3"):
                     status = "fault"
-                elif state_val in (1, "1") or pac_val > 0:
+                elif state_val in (1, "1"):
                     status = "online"
                 else:
                     status = "standby"
@@ -208,13 +210,12 @@ class SolisAdapter(OemAdapter):
         now_utc = datetime.now(timezone.utc)
         last_seen_at = last_seen_dt.strftime("%Y-%m-%dT%H:%M:%SZ") if last_seen_dt else now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
         diff_seconds = (now_utc - last_seen_dt).total_seconds() if last_seen_dt else 999999
-        is_fresh = diff_seconds <= 45 * 60
+        is_fresh = diff_seconds <= 120 * 60
         
         state_val = inv_data.get("state")
         online_status = (
-            is_fresh and 
-            (state_val in (1, "1") or ac_power_kw > 0) and 
-            state_val not in (4, "4", 5, "5")
+            (is_fresh and (state_val in (1, "1") or ac_power_kw > 0.05) and state_val not in (4, "4", 5, "5"))
+            or ac_power_kw > 0.05
         )
         
         frequency_hz = float(inv_data.get("fac") or 0.0)
