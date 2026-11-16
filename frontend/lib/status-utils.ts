@@ -88,17 +88,16 @@ export function getInverterStatus(
   }
 
   // 3. Daylight hours (06:00 to 17:30 IST):
-  // Explicit telemetry offline flag
-  if (isTelemetryOnline === false) {
-    return "OFFLINE";
+  // FIRST CHECK: ACTIVE GENERATION!
+  // If the inverter is actively generating AC power or DC power right now,
+  // it is physically ONLINE. Real power generation supersedes any stale database or telemetry flag.
+  if ((telemetryAcPower !== undefined && telemetryAcPower > 0.05) ||
+      (typeof latestTelemetry === "object" && latestTelemetry && ((Number(latestTelemetry.ac_power_kw) || 0) > 0.05 || (Number(latestTelemetry.dc_power_kw) || 0) > 0.05))) {
+    return "ONLINE";
   }
 
-  // Explicit database status offline flag
+  // Check explicit database fault or grid error states
   const dbStatus = inverter.status?.toLowerCase();
-  if (dbStatus === "offline" || dbStatus === "comm_error" || dbStatus === "disconnected") {
-    return "OFFLINE";
-  }
-
   if (dbStatus === "fault") {
     return "FAULT";
   }
@@ -106,22 +105,20 @@ export function getInverterStatus(
     return "NO GRID";
   }
 
-  // Freshness threshold accounting for 15-min polling interval + retry jitter:
-  // If no communication for > 45 minutes during daylight hours:
-  if (diffMinutes > 45) {
-    return "OFFLINE";
-  }
-
-  if (dbStatus === "standby") {
+  // Freshness threshold accounting for OEM datalogger batch upload intervals (typically 30-60 mins):
+  // If communication was received within 120 minutes during daylight hours:
+  if (diffMinutes <= 120) {
+    if (isTelemetryOnline === true || dbStatus === "online" || dbStatus === "normal") {
+      return "ONLINE";
+    }
+    if (telemetryAcPower !== undefined && telemetryAcPower > 0.001) {
+      return "ONLINE";
+    }
     return "STANDBY";
   }
 
-  // During active daylight hours, if an inverter reports 0 kW power:
-  if (telemetryAcPower !== undefined && telemetryAcPower <= 0.001) {
-    return "STANDBY";
-  }
-
-  return "ONLINE";
+  // If no communication for > 120 minutes during daylight:
+  return "OFFLINE";
 }
 
 export function getSiteStatus(

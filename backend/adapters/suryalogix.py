@@ -163,17 +163,21 @@ class SuryalogixAdapter(OemAdapter):
             ist_hours = ((datetime.now(timezone.utc).hour + 5) + (datetime.now(timezone.utc).minute + 30) / 60.0) % 24
             is_nighttime = ist_hours >= 17.5 or ist_hours < 6.0
 
+            is_generating = (ac_power > 0.05) or (dc_power > 0.05)
+            is_online_code = inv_status in (4, 8) or str(inv_status) in ("4", "8")
+            is_fault = inv_status == 5 or str(inv_status) == "5"
+
             if diff_mins >= 14 * 60:
                 effective_status = "offline"
-            elif inv_status == 5 or str(inv_status) == "5":
+            elif is_fault:
                 effective_status = "fault"
+            elif is_generating:
+                effective_status = "online"
             elif is_nighttime:
                 effective_status = "standby"
-            elif inv_status == 8 or str(inv_status) == "8":
+            elif diff_mins > 120:
                 effective_status = "offline"
-            elif diff_mins > 45:
-                effective_status = "offline"
-            elif is_online and (ac_power > 0.05 or dc_power > 0.05):
+            elif is_online_code:
                 effective_status = "online"
             else:
                 effective_status = "standby"
@@ -223,9 +227,11 @@ class SuryalogixAdapter(OemAdapter):
         diff_mins = (datetime.now(timezone.utc).timestamp() - int(latest_ts)) / 60.0
         ist_hours = ((datetime.now(timezone.utc).hour + 5) + (datetime.now(timezone.utc).minute + 30) / 60.0) % 24
         is_nighttime = ist_hours >= 17.5 or ist_hours < 6.0
-        is_hardware_offline = (inv_status == 8 or str(inv_status) == "8") and not is_nighttime
-        is_fresh = diff_mins <= 45.0
-        is_online = is_fresh and not is_hardware_offline and ((inv_status == 4) or (ac_power_kw > 0.05) or (dc_power_kw > 0.05))
+        is_generating = (ac_power_kw > 0.05) or (dc_power_kw > 0.05)
+        is_online_code = inv_status in (4, 8) or str(inv_status) in ("4", "8")
+        is_fault = (inv_status == 5 or str(inv_status) == "5")
+        is_fresh = diff_mins <= 120.0
+        is_online = not is_fault and (is_generating or (is_fresh and is_online_code))
         efficiency = min(100.0, max(0.0, (ac_power_kw / dc_power_kw) * 100.0)) if dc_power_kw > 0 else (97.0 if is_online else 0.0)
         iso_time = datetime.fromtimestamp(int(latest_ts), tz=timezone.utc).isoformat()
 
