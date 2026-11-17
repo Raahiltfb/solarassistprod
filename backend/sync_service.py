@@ -606,31 +606,17 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                     metrics["telemetry_inserted_count"] += 1
                     logger.info(f"Processed Telemetry for Inverter {inv_id}")
                         
-                # Determine authoritative string count for this inverter
-                target_string_count = dev.string_count or 0
-                if string_telemetries:
-                    max_st_idx = max([st.string_index for st in string_telemetries] + [0])
-                    target_string_count = max(target_string_count, max_st_idx)
-                
-                # Authoritative topology: Omya Warehouse inverters I2-I5 are 18-string hardware installations
-                is_omya_wh = (
-                    getattr(station, "plant_id", "") == "dHVSQWF5TVZoUHF3UmlZS2trUTk5b2YzN2Y2VGcyN2dvQktTMGU0SU5xQT0=" or
-                    "warehouse" in getattr(station, "name", "").lower()
-                )
-                if is_omya_wh and (getattr(dev, "model", "") in ["I2", "I3", "I4", "I5"] or any(inv_tag in getattr(dev, "serial_number", "") for inv_tag in ["I2", "I3", "I4", "I5"])):
-                    target_string_count = max(target_string_count, 18)
-
                 # Strings lookup and authoritative seeding
                 existing_strings = supabase_get("strings", params={"inverter_id": f"eq.{inv_id}", "order": "string_index.asc"})
                 string_map = {s["string_index"]: s["id"] for s in existing_strings}
-                
-                # Seed all known channels (1..target_string_count) so the topology is permanent and never collapses
-                string_cap = round(inv_capacity / (target_string_count or 1), 2) if (target_string_count or 1) > 0 else inv_capacity
-                for idx in range(1, target_string_count + 1):
-                    if idx not in string_map:
+
+                if provider == "solis":
+                    target_string_count = max(len(string_map), 1)
+                    string_cap = round(inv_capacity / (dev.string_count or 1), 2) if (dev.string_count or 1) > 0 else inv_capacity
+                    if not string_map:
                         str_payload = {
                             "inverter_id": inv_id,
-                            "string_index": idx,
+                            "string_index": 1,
                             "capacity_kw": string_cap,
                             "status": "ok"
                         }
@@ -638,13 +624,52 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                             str_payload["modules_count"] = dev.modules_count
                         res_str = supabase_post("strings", [str_payload], headers_override={"Prefer": "return=representation"})
                         if res_str:
-                            string_map[idx] = res_str[0]["id"]
-                            logger.info(f"Authoritatively seeded String Index {idx} for Inverter {inv_id}")
+                            string_map[1] = res_str[0]["id"]
+                else:
+                    # Determine authoritative string count for this inverter
+                    target_string_count = dev.string_count or 0
+                    if string_telemetries:
+                        max_st_idx = max([st.string_index for st in string_telemetries] + [0])
+                        target_string_count = max(target_string_count, max_st_idx)
+                    
+                    # Authoritative topology: Omya Warehouse inverters I2-I5 are 18-string hardware installations
+                    is_omya_wh = (
+                        getattr(station, "plant_id", "") == "dHVSQWF5TVZoUHF3UmlZS2trUTk5b2YzN2Y2VGcyN2dvQktTMGU0SU5xQT0=" or
+                        "warehouse" in getattr(station, "name", "").lower()
+                    )
+                    if is_omya_wh and (getattr(dev, "model", "") in ["I2", "I3", "I4", "I5"] or any(inv_tag in getattr(dev, "serial_number", "") for inv_tag in ["I2", "I3", "I4", "I5"])):
+                        target_string_count = max(target_string_count, 18)
 
-                # String Telemetry sync (Permanent topology, zero destructive pruning)
+                    # Seed all known channels (1..target_string_count) so the topology is permanent and never collapses
+                    string_cap = round(inv_capacity / (target_string_count or 1), 2) if (target_string_count or 1) > 0 else inv_capacity
+                    for idx in range(1, target_string_count + 1):
+                        if idx not in string_map:
+                            str_payload = {
+                                "inverter_id": inv_id,
+                                "string_index": idx,
+                                "capacity_kw": string_cap,
+                                "status": "ok"
+                            }
+                            if getattr(dev, "modules_count", None):
+                                str_payload["modules_count"] = dev.modules_count
+                            res_str = supabase_post("strings", [str_payload], headers_override={"Prefer": "return=representation"})
+                            if res_str:
+                                string_map[idx] = res_str[0]["id"]
+                                logger.info(f"Authoritatively seeded String Index {idx} for Inverter {inv_id}")
+
+                # String Telemetry sync
                 string_telemetry_batch = []
                 for st in string_telemetries:
                     string_id = string_map.get(st.string_index)
+                    is_active = (st.voltage_v > 0.0 or st.current_a > 0.0)
+                    if provider == "solis":
+                        if not is_active and string_id and telemetry and telemetry.ac_power_kw > 1.0:
+                            supabase_delete("strings", params={"id": f"eq.{string_id}"})
+                            string_map.pop(st.string_index, None)
+                            continue
+                        if not is_active and not string_id:
+                            continue
+
                     if not string_id:
                         str_payload = {
                             "inverter_id": inv_id,
@@ -713,7 +738,7 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
 
                     if diff_mins >= 14 * 60:
                         inv_status = "offline"
-                    elif telemetry.ac_power_kw > 0.05:
+                    elif diff_mins <= 120 and telemetry.ac_power_kw > 0.05:
                         inv_status = "online"
                     elif is_nighttime:
                         inv_status = "fault" if dev.status == "fault" else "standby"
@@ -728,8 +753,9 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                 else:
                     inv_status = dev.status or "offline"
 
+                final_str_count = max(len(string_map), 1) if provider == "solis" else max(len(string_map), target_string_count)
                 inv_patch = {
-                    "string_count": max(len(string_map), target_string_count),
+                    "string_count": final_str_count,
                     "status": inv_status,
                     "last_seen_at": inv_last_seen
                 }

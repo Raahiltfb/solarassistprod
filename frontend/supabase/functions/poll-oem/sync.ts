@@ -482,8 +482,9 @@ export async function pollAndSyncAll(
 
         const updatedPlantsMapping: Array<{ plant_id: string; site_id: string }> = [];
 
-        // Fan out stations with concurrency limit of 6 to prevent connection saturation
-        await runWithConcurrency(stations, 6, async (station) => {
+        // Fan out stations with provider-aware concurrency limit to prevent OEM rate limits
+        const concurrencyLimit = (provider === "suryalogix" || provider === "suryalog") ? 1 : (provider === "solis" ? 3 : 6);
+        await runWithConcurrency(stations, concurrencyLimit, async (station) => {
           const plantId = String(station.plant_id);
           try {
             distLock.assertActiveOwner();
@@ -718,10 +719,22 @@ export async function pollAndSyncAll(
                   }
                 }
 
-                // Creation of dynamic string telemetry without pruning authoritative strings
+                // Creation of dynamic string telemetry
                 const stringTelemetryBatch: any[] = [];
                 for (const st of stringTelemetries) {
                   let stringId = stringMap[st.string_index];
+                  const isActive = (st.voltage_v > 0.0 || st.current_a > 0.0);
+
+                  if (provider === "solis") {
+                    if (!isActive && stringId && telemetry && telemetry.ac_power_kw > 1.0) {
+                      await supabase.from("strings").delete().eq("id", stringId);
+                      delete stringMap[st.string_index];
+                      continue;
+                    }
+                    if (!isActive && !stringId) {
+                      continue;
+                    }
+                  }
 
                   if (!stringId) {
                     const stringCap = dev.string_count > 0 ? Math.round((invCapacity / dev.string_count) * 100) / 100 : 0.0;
@@ -783,7 +796,7 @@ export async function pollAndSyncAll(
 
                   if (diffMins >= 14 * 60) {
                     calculatedStatus = "offline";
-                  } else if (telemetry.ac_power_kw > 0.05) {
+                  } else if (diffMins <= 120 && telemetry.ac_power_kw > 0.05) {
                     calculatedStatus = "online";
                   } else if (isNighttime) {
                     calculatedStatus = dev.status === "fault" ? "fault" : "standby";
@@ -798,7 +811,9 @@ export async function pollAndSyncAll(
                   }
                 }
 
-                const finalStringCount = Math.max(dev.string_count || 0, Object.keys(stringMap).length, 1);
+                const finalStringCount = provider === "solis"
+                  ? Math.max(Object.keys(stringMap).length, 1)
+                  : Math.max(dev.string_count || 0, Object.keys(stringMap).length, 1);
                 const updatePayload: Record<string, any> = {
                   string_count: finalStringCount,
                   status: calculatedStatus

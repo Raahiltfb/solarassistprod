@@ -38,6 +38,7 @@ export class SuryalogixAdapter implements OemAdapter {
   private plantTokens: string[];
   private cache: Map<string, { timestamp: number; data: any }> = new Map();
   private lastCallTime: number = 0;
+  private requestQueue: Promise<any> = Promise.resolve();
 
   constructor(options: {
     secret?: string;
@@ -56,24 +57,39 @@ export class SuryalogixAdapter implements OemAdapter {
   }
 
   private async ratePacedFetch(url: string, payload: any): Promise<any> {
-    const minInterval = 2500; // 2.5s pacing to satisfy Result 8 limit
-    const elapsed = Date.now() - this.lastCallTime;
-    if (elapsed < minInterval) {
-      await new Promise(r => setTimeout(r, minInterval - elapsed));
-    }
-    this.lastCallTime = Date.now();
+    const executeFetch = async () => {
+      const minInterval = 3500; // 3.5s pacing to satisfy Suryalogix Result 8 limit
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const elapsed = Date.now() - this.lastCallTime;
+        if (elapsed < minInterval) {
+          await new Promise(r => setTimeout(r, minInterval - elapsed));
+        }
+        this.lastCallTime = Date.now();
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
 
-    if (!res.ok) {
-      throw new Error(`Suryalogix HTTP error ${res.status}: ${res.statusText}`);
-    }
+        if (!res.ok) {
+          throw new Error(`Suryalogix HTTP error ${res.status}: ${res.statusText}`);
+        }
 
-    return await res.json();
+        const json = await res.json();
+        if (json?.result === 8 && attempt < 2) {
+          console.warn(`Suryalogix rate limit (code 8) hit, retrying after backoff...`);
+          await new Promise(r => setTimeout(r, 3500));
+          continue;
+        }
+        return json;
+      }
+      return { result: 8, cmsg: "Max retries exceeded" };
+    };
+
+    const next = this.requestQueue.then(executeFetch, executeFetch);
+    this.requestQueue = next.catch(() => {});
+    return next;
   }
 
   private async fetchPlantData(plantToken: string): Promise<any> {

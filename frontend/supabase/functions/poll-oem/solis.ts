@@ -67,7 +67,9 @@ export class SolisAdapter implements OemAdapter {
           return resJson;
         } else {
           console.warn(`Solis API returned error code ${resJson.code}: ${resJson.msg}`);
-          return resJson;
+          if (attempt === maxRetries - 1) {
+            return resJson;
+          }
         }
       } catch (err: any) {
         console.error(`Solis API connection error on attempt ${attempt + 1}: ${err.message}`);
@@ -146,13 +148,11 @@ export class SolisAdapter implements OemAdapter {
 
         if (stateVal === 4 || stateVal === "4" || stateVal === 5 || stateVal === "5") {
           status = "offline";
-        } else if (pacVal > 0.05) {
-          status = "online";
         } else if (diffMinutes > 120) {
           status = (isNighttime && diffMinutes < 14 * 60) ? "standby" : "offline";
         } else if (stateVal === 3 || stateVal === "3") {
           status = "fault";
-        } else if (stateVal === 1 || stateVal === "1") {
+        } else if (stateVal === 1 || stateVal === "1" || pacVal > 0.05) {
           status = "online";
         } else {
           status = "standby";
@@ -224,8 +224,8 @@ export class SolisAdapter implements OemAdapter {
 
     const stateVal = invData.state;
     const isFresh = diffMinutes <= 120;
-    let onlineStatus = (isFresh && ((stateVal === 1 || stateVal === "1") || acPowerKw > 0.05)) || acPowerKw > 0.05;
-    if ((stateVal === 2 || stateVal === "2" || stateVal === 4 || stateVal === "4" || stateVal === 5 || stateVal === "5" || !isFresh) && acPowerKw <= 0.05) {
+    let onlineStatus = isFresh && ((stateVal === 1 || stateVal === "1") || acPowerKw > 0.05);
+    if (stateVal === 2 || stateVal === "2" || stateVal === 4 || stateVal === "4" || stateVal === 5 || stateVal === "5" || !isFresh) {
       onlineStatus = false;
     }
 
