@@ -12,6 +12,7 @@ try:
     from adapters.feston import FestonAdapter
     from adapters.suryalogix import SuryalogixAdapter
     from adapters.sungrow import SungrowAdapter
+    from adapters.growatt import GrowattAdapter
     from adapters.base import OemAdapter
     from alarm_mappings import translate_alert
     from distributed_lock import DistributedLock
@@ -20,6 +21,7 @@ except ImportError:
     from backend.adapters.feston import FestonAdapter
     from backend.adapters.suryalogix import SuryalogixAdapter
     from backend.adapters.sungrow import SungrowAdapter
+    from backend.adapters.growatt import GrowattAdapter
     from backend.adapters.base import OemAdapter
     from backend.alarm_mappings import translate_alert
     from backend.distributed_lock import DistributedLock
@@ -142,6 +144,10 @@ def get_adapter_for_integration(integ: dict) -> OemAdapter:
             user_account=user_account,
             user_password=user_password
         )
+    elif provider == "growatt":
+        token = os.environ.get("GROWATT_TOKEN") or config.get("token") or "0vlcyi6371401rzl2nfy322i2iz6fb05"
+        api_url = os.environ.get("GROWATT_API_URL") or config.get("api_url") or "https://openapi.growatt.com/v1"
+        return GrowattAdapter(token=token, api_url=api_url)
     else:
         raise ValueError(f"Unsupported provider: {provider}")
 

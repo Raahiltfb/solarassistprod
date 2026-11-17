@@ -5,6 +5,8 @@ export interface NormalizedStation {
   location: string;
   timezone: string;
   commissioned_on?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface NormalizedDevice {

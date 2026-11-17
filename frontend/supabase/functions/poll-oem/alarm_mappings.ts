@@ -636,8 +636,364 @@ export const SUNGROW_ALARM_MAPPING: Record<string, AlarmRule> = {
   }
 };
 
+export const GROWATT_ALARM_MAPPING: Record<string, AlarmRule> = {
+  "101": {
+    title: "Grid Frequency Deviation",
+    description: "Grid AC frequency deviated outside acceptable operational boundaries (47.5 Hz - 52.0 Hz).",
+    severity: "high",
+    category: "grid",
+    is_auto_resolvable: true,
+    requires_technician: false,
+    recommended_action: "Inverter will auto-reconnect once grid frequency returns to nominal range."
+  },
+  "ERROR_101": {
+    title: "Grid Frequency Deviation",
+    description: "Grid AC frequency deviated outside acceptable operational boundaries (47.5 Hz - 52.0 Hz).",
+    severity: "high",
+    category: "grid",
+    is_auto_resolvable: true,
+    requires_technician: false,
+    recommended_action: "Log frequency event and monitor grid stability."
+  },
+  "304": {
+    title: "Grid Frequency Deviation",
+    description: "Utility grid AC frequency is outside the allowed operating range.",
+    severity: "high",
+    category: "grid",
+    is_auto_resolvable: true,
+    requires_technician: false,
+    recommended_action: "Inverter will automatically reconnect once grid frequency returns to nominal range."
+  },
+  "102": {
+    title: "Isolation Fault (ISO-F)",
+    description: "Ground isolation resistance of the PV array is below the safe operational threshold.",
+    severity: "critical",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Perform string insulation resistance testing per Growatt service manual. Inspect DC cable runs and replace faulty connectors."
+  },
+  "ERROR_102": {
+    title: "Isolation Fault (ISO-F)",
+    description: "Ground isolation resistance of the PV array is below the safe operational threshold.",
+    severity: "critical",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Perform string insulation resistance testing per Growatt service manual. Inspect DC cable runs and replace faulty connectors."
+  },
+  "203": {
+    title: "Isolation Fault (ISO-F)",
+    description: "Ground isolation resistance of the PV array is below the safe operational threshold.",
+    severity: "critical",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Perform string-by-string 1000V insulation resistance testing to earth. Repair grounded DC cable or connector."
+  },
+  "303": {
+    title: "Isolation Fault (ISO-F)",
+    description: "Ground isolation resistance of the PV array is below the safe operational threshold.",
+    severity: "critical",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Perform string-by-string 1000V insulation resistance testing to earth. Repair grounded DC cable or connector."
+  },
+  "103": {
+    title: "Residual Current Trip (GFCI)",
+    description: "Inverter ground fault current interrupter detected residual leakage current > 300mA.",
+    severity: "high",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Check grounding conductor and test leakage current across strings."
+  },
+  "ERROR_103": {
+    title: "Residual Current Trip (GFCI)",
+    description: "Inverter ground fault current interrupter detected residual leakage current > 300mA.",
+    severity: "high",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Check grounding conductor and test leakage current across strings."
+  },
+  "202": {
+    title: "Residual Current Trip (GFCI)",
+    description: "Inverter ground fault circuit interrupter detected excessive residual leakage current (>300mA).",
+    severity: "critical",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Inspect DC array wiring and connectors for moisture or ground leakage. Measure string insulation resistance."
+  },
+  "307": {
+    title: "Residual Current Trip (GFCI)",
+    description: "Inverter ground fault circuit interrupter detected excessive residual leakage current (>300mA).",
+    severity: "critical",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Inspect DC array wiring and connectors for moisture or ground leakage. Measure string insulation resistance."
+  },
+  "104": {
+    title: "AC Grid Phase / Terminal Fault",
+    description: "Three-phase AC grid wiring phase sequence error or missing phase detected.",
+    severity: "high",
+    category: "grid",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Check all three AC phases for voltage continuity and verify phase rotation with a phase sequence meter."
+  },
+  "301": {
+    title: "AC Grid Phase / Terminal Fault (Error 301)",
+    description: "Three-phase AC grid wiring phase sequence error or missing phase detected.",
+    severity: "high",
+    category: "grid",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Check all three AC phases for voltage continuity and verify phase rotation with a phase sequence meter."
+  },
+  "106": {
+    title: "Grid Overvoltage",
+    description: "Grid AC voltage exceeded the upper operating threshold configured on the inverter.",
+    severity: "high",
+    category: "grid",
+    is_auto_resolvable: true,
+    requires_technician: false,
+    recommended_action: "Monitor utility grid voltage. If persistent, check AC cable gauge and transformer tap settings."
+  },
+  "ERROR_106": {
+    title: "Grid Overvoltage",
+    description: "Grid AC voltage exceeded the upper operating threshold configured on the inverter.",
+    severity: "high",
+    category: "grid",
+    is_auto_resolvable: true,
+    requires_technician: false,
+    recommended_action: "Monitor utility grid voltage. If persistent, check AC cable gauge and transformer tap settings."
+  },
+  "300": {
+    title: "AC Grid Voltage Out of Range (Error 300)",
+    description: "Utility AC grid voltage is outside the permissible operating window configured on the inverter.",
+    severity: "high",
+    category: "grid",
+    is_auto_resolvable: true,
+    requires_technician: false,
+    recommended_action: "Inverter will auto-reconnect once grid voltage returns to normal range. If recurring at peak sun hours, inspect AC cable sizing and grid tap."
+  },
+  "107": {
+    title: "AC Grid Loss / No Utility (Error 107)",
+    description: "Utility AC grid connection is lost or main AC circuit breaker is open.",
+    severity: "high",
+    category: "grid",
+    is_auto_resolvable: true,
+    requires_technician: false,
+    recommended_action: "Verify utility grid availability. If grid power is active, inspect AC circuit breaker and isolator switches."
+  },
+  "302": {
+    title: "AC Grid Loss / No Utility (Error 302)",
+    description: "Utility AC grid connection is lost or main AC circuit breaker is open.",
+    severity: "high",
+    category: "grid",
+    is_auto_resolvable: true,
+    requires_technician: false,
+    recommended_action: "Verify utility grid availability. If grid power is active, inspect AC circuit breaker and isolator switches. Inverter auto-reconnects when AC is restored."
+  },
+  "108": {
+    title: "Inverter Overtemperature",
+    description: "Inverter internal heatsink or ambient temperature exceeded thermal safety cutoff limits.",
+    severity: "high",
+    category: "inverter",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Inspect external cooling fans, clean heatsink fins with compressed air, and ensure ventilation clearance."
+  },
+  "ERROR_108": {
+    title: "Inverter Overtemperature",
+    description: "Inverter internal heatsink or ambient temperature exceeded thermal safety cutoff limits.",
+    severity: "high",
+    category: "inverter",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Inspect external cooling fans, clean heatsink fins with compressed air, and ensure ventilation clearance."
+  },
+  "305": {
+    title: "Inverter Overtemperature",
+    description: "Internal inverter or IGBT heatsink temperature exceeded maximum safety threshold.",
+    severity: "high",
+    category: "inverter",
+    is_auto_resolvable: true,
+    requires_technician: true,
+    recommended_action: "Clean heatsink fins, inspect cooling fans for proper operation, and ensure adequate ventilation clearance."
+  },
+  "109": {
+    title: "DC Bus Overvoltage",
+    description: "Internal DC bus voltage exceeded maximum hardware threshold.",
+    severity: "critical",
+    category: "inverter",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Measure PV string DC voltages and AC grid voltages. Power-cycle inverter if voltages are within spec."
+  },
+  "409": {
+    title: "DC Bus Overvoltage (Error 409)",
+    description: "Internal DC bus voltage exceeded maximum hardware threshold.",
+    severity: "critical",
+    category: "inverter",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Measure PV string DC voltages and AC grid voltages. Power-cycle inverter if voltages are within spec."
+  },
+  "112": {
+    title: "High DC Injection Current",
+    description: "DC current component injected into the AC grid exceeded safety limits.",
+    severity: "high",
+    category: "inverter",
+    is_auto_resolvable: true,
+    requires_technician: true,
+    recommended_action: "Monitor if inverter self-recovers. If fault persists after AC/DC power cycle, contact Growatt service."
+  },
+  "306": {
+    title: "High DC Injection Current (Error 306)",
+    description: "DC current component injected into the AC grid exceeded safety limits.",
+    severity: "high",
+    category: "inverter",
+    is_auto_resolvable: true,
+    requires_technician: true,
+    recommended_action: "Monitor if inverter self-recovers. If fault persists after AC/DC power cycle, contact Growatt service."
+  },
+  "113": {
+    title: "PV Input Overvoltage",
+    description: "DC input voltage from PV strings exceeded the maximum allowable input voltage (1100V).",
+    severity: "critical",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Immediately switch off DC isolator. Measure string Voc with a 1500V DC meter and reduce series module count if over limit."
+  },
+  "308": {
+    title: "PV Input Overvoltage (Error 308)",
+    description: "DC input voltage from PV strings exceeded the maximum allowable input voltage (1100V).",
+    severity: "critical",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Immediately switch off DC isolator. Measure string Voc with a 1500V DC meter and reduce series module count if over limit."
+  },
+  "408": {
+    title: "PV Input Overvoltage (Error 408)",
+    description: "DC input voltage from PV strings exceeded the maximum allowable input voltage (1100V).",
+    severity: "critical",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Immediately switch off DC isolator. Measure string Voc with a 1500V DC meter and reduce series module count if over limit."
+  },
+  "124": {
+    title: "DC Arc Fault Detected (AFCI)",
+    description: "Arc-Fault Circuit Interrupter detected dangerous electrical arcing on a PV string.",
+    severity: "critical",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Do not reset without inspection. Check all MC4 connectors, DC isolator terminals, and string wiring for signs of arcing."
+  },
+  "200": {
+    title: "DC Arc Fault Detected (AFCI)",
+    description: "Arc-Fault Circuit Interrupter detected dangerous electrical arcing on a PV string.",
+    severity: "critical",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Do not reset without inspection. Check all MC4 connectors, DC isolator terminals, and string wiring for signs of arcing."
+  },
+  "126": {
+    title: "Inverter AC Overcurrent",
+    description: "Inverter AC output current exceeded hardware protection threshold.",
+    severity: "critical",
+    category: "inverter",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Isolate AC breaker and test AC cable insulation. Restart inverter and contact OEM if fault recurs."
+  },
+  "405": {
+    title: "Inverter AC Overcurrent (Error 405)",
+    description: "Inverter AC output current exceeded hardware protection threshold.",
+    severity: "critical",
+    category: "inverter",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Isolate AC breaker and test AC cable insulation. Restart inverter and contact OEM if fault recurs."
+  },
+  "401": {
+    title: "Cooling Fan Warning (Code 401)",
+    description: "One or more internal or external cooling fans are blocked or failing to rotate at target RPM.",
+    severity: "medium",
+    category: "inverter",
+    is_auto_resolvable: true,
+    requires_technician: true,
+    recommended_action: "Inspect and clean cooling fan assembly. Replace fan module if bearing is seized."
+  },
+  "411": {
+    title: "Internal Control Board Fault (Error 411)",
+    description: "Internal DSP/MCU communication failure or EEPROM read/write error.",
+    severity: "critical",
+    category: "inverter",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Perform full AC and DC power cycle (wait 10 minutes for bus discharge). Escalate to Growatt support if persistent."
+  },
+  "500": {
+    title: "PV String Disconnected / Abnormal",
+    description: "Inverter detected zero current or abnormal voltage on an active PV string.",
+    severity: "high",
+    category: "pv",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Measure individual string open-circuit voltages and operating currents with a DC clamp meter."
+  },
+  "503": {
+    title: "Surge Protection Device (SPD) Fault",
+    description: "Internal or external DC/AC Surge Protection Device (SPD) has tripped due to a lightning or surge event.",
+    severity: "high",
+    category: "inverter",
+    is_auto_resolvable: false,
+    requires_technician: true,
+    recommended_action: "Inspect SPD status windows in AC/DC distribution boxes and replace any red/tripped SPD cartridges."
+  },
+  "ERR_COMM_LOST": {
+    title: "Inverter / Data Logger Communication Offline",
+    description: "ShineWiFi / Shine4G / ShineLan data logger has lost connection to Growatt server or inverter RS485 bus.",
+    severity: "high",
+    category: "communication",
+    is_auto_resolvable: true,
+    requires_technician: true,
+    recommended_action: "Verify site internet/Wi-Fi router status and check LED indicators on the Growatt Shine data logger."
+  }
+};
+
 export function translateAlert(oem: string, rawCode: string, defaultTitle: string) {
   const oemLower = (oem || "").toLowerCase();
+
+  if (oemLower === "growatt") {
+    const clean = String(rawCode || "").trim().toUpperCase();
+    const stripped = clean.replace(/^(ERROR_|FAULT_|WARN_|ALARM_|ERR_)/, "");
+    const rule =
+      GROWATT_ALARM_MAPPING[clean] ||
+      GROWATT_ALARM_MAPPING[stripped] ||
+      GROWATT_ALARM_MAPPING[`ERROR_${stripped}`];
+    if (rule) {
+      return {
+        title: rule.title || defaultTitle,
+        description: rule.description || `OEM code: ${rawCode}`,
+        severity: rule.severity || "medium",
+        category: rule.category || "inverter",
+        recommended_action: rule.recommended_action || "Check inverter status and consult manual.",
+        is_auto_resolvable: rule.is_auto_resolvable ?? false,
+        requires_technician: rule.requires_technician ?? true
+      };
+    }
+  }
 
   if (oemLower === "feston" || oemLower === "solaros") {
     const match = matchFestonAlarm(rawCode, defaultTitle);

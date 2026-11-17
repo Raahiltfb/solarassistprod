@@ -3,6 +3,7 @@ import { SolisAdapter } from "./solis.ts";
 import { FestonAdapter } from "./feston.ts";
 import { SuryalogixAdapter } from "./suryalogix.ts";
 import { SungrowAdapter } from "./sungrow.ts";
+import { GrowattAdapter } from "./growatt.ts";
 import {
   NormalizedStation,
   NormalizedDevice,
@@ -235,6 +236,10 @@ function getAdapterForIntegration(integ: Record<string, any>): OemAdapter {
       userPassword,
       token
     });
+  } else if (provider === "growatt") {
+    const apiUrl = getEnv("GROWATT_API_URL") || config.api_url || "https://openapi.growatt.com/v1";
+    const token = getEnv("GROWATT_TOKEN") || config.token || "0vlcyi6371401rzl2nfy322i2iz6fb05";
+    return new GrowattAdapter({ apiUrl, token });
   } else {
     throw new Error(`Unsupported OEM provider: ${provider}`);
   }
@@ -542,8 +547,8 @@ export async function pollAndSyncAll(
             const siteFields: Record<string, any> = {
               name: station.name,
               location: station.location,
-              latitude: station.location !== "Unknown" ? 19.0 : 0.0,
-              longitude: station.location !== "Unknown" ? 73.0 : 0.0,
+              latitude: station.latitude ?? (station.location !== "Unknown" ? 19.0 : 0.0),
+              longitude: station.longitude ?? (station.location !== "Unknown" ? 73.0 : 0.0),
               capacity_kwp: station.capacity_kwp,
               status: "active",
               timezone: station.timezone

@@ -1,15 +1,15 @@
 {
   "$schema": "SolarAssist Alarm Intelligence Schema V1",
   "oem": "growatt",
-  "source_document": "Growatt MAX 100-125KTL3-X LV Installation & Operation Manual, Section 7 (Troubleshooting & Error Codes)",
+  "source_document": "Growatt MOD/MID/MAX TL3-X & OpenAPI V1 Installation & Operation Manual, Section 7 (Troubleshooting, Fault & Warning Codes)",
   "documentation_verified": true,
   "mappings": {
     "ERROR_102": {
       "code": "ERROR_102",
-      "oem_code": "Error 102 (PV Isolation Low)",
+      "oem_code": "Error 102 / 203 / 303 (PV Isolation Low)",
       "title": "Isolation Fault (ISO-F)",
       "description": "Ground isolation resistance of the PV array is below the safe operational threshold.",
-      "oem_definition": "PV Isolation Low (Error 102). Inverter detected PV array impedance to earth ground is below the permissible safety threshold.",
+      "oem_definition": "PV Isolation Low (Error 102 / 203 / 303). Inverter detected PV array impedance to earth ground is below the permissible safety threshold.",
       "operational_interpretation": {
         "severity": "critical",
         "category": "pv",
@@ -48,10 +48,10 @@
     },
     "ERROR_106": {
       "code": "ERROR_106",
-      "oem_code": "Error 106 (AC Voltage Out of Range)",
+      "oem_code": "Error 106 / 300 (AC Voltage Out of Range)",
       "title": "Grid Overvoltage",
       "description": "Grid AC voltage exceeded the upper operating threshold configured on the inverter.",
-      "oem_definition": "AC Voltage Out of Range (Error 106). Inverter disconnected from the grid because utility line voltage exceeds grid compliance window.",
+      "oem_definition": "AC Voltage Out of Range (Error 106 / 300). Inverter disconnected from the grid because utility line voltage exceeds grid compliance window.",
       "operational_interpretation": {
         "severity": "high",
         "category": "grid",
@@ -79,10 +79,10 @@
     },
     "ERROR_108": {
       "code": "ERROR_108",
-      "oem_code": "Error 108 (Inverter Over Temperature)",
+      "oem_code": "Error 108 / 305 (Inverter Over Temperature)",
       "title": "Inverter Overtemperature",
       "description": "Inverter internal heatsink or ambient temperature exceeded thermal safety cutoff limits.",
-      "oem_definition": "Inverter Over Temperature (Error 108). Internal thermal sensors tripped thermal protection derating or shutdown.",
+      "oem_definition": "Inverter Over Temperature (Error 108 / 305). Internal thermal sensors tripped thermal protection derating or shutdown.",
       "operational_interpretation": {
         "severity": "high",
         "category": "inverter",
@@ -120,10 +120,10 @@
     },
     "ERROR_101": {
       "code": "ERROR_101",
-      "oem_code": "Error 101 (Grid Frequency Out of Range)",
+      "oem_code": "Error 101 / 304 (Grid Frequency Out of Range)",
       "title": "Grid Frequency Deviation",
       "description": "Grid AC frequency deviated outside acceptable operational boundaries (47.5 Hz - 52.0 Hz).",
-      "oem_definition": "Grid Frequency Out of Range (Error 101). Inverter tripped due to utility frequency instability.",
+      "oem_definition": "Grid Frequency Out of Range (Error 101 / 304). Inverter tripped due to utility frequency instability.",
       "operational_interpretation": {
         "severity": "high",
         "category": "grid",
@@ -145,10 +145,10 @@
     },
     "ERROR_103": {
       "code": "ERROR_103",
-      "oem_code": "Error 103 (Residual Current Fault)",
+      "oem_code": "Error 103 / 202 / 307 (Residual Current Fault)",
       "title": "Residual Current Trip (GFCI)",
       "description": "Inverter ground fault current interrupter detected residual leakage current > 300mA.",
-      "oem_definition": "Residual Current Fault (Error 103). Excessive DC/AC leakage current to ground.",
+      "oem_definition": "Residual Current Fault (Error 103 / 202 / 307). Excessive DC/AC leakage current to ground.",
       "operational_interpretation": {
         "severity": "high",
         "category": "pv",
@@ -166,6 +166,489 @@
           "step": 1,
           "phase": "Measurements",
           "instruction": "Measure DC leakage current with AC/DC clamp meter."
+        }
+      ]
+    },
+    "302": {
+      "code": "302",
+      "oem_code": "Error 302 / 107 (No AC Connection)",
+      "title": "AC Grid Loss / No Utility (Error 302)",
+      "description": "Utility AC grid connection is lost or main AC circuit breaker is open.",
+      "oem_definition": "No AC Connection (Error 302 / 107). Inverter detects no AC utility voltage at output terminals.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Local utility grid outage or feeder trip",
+        "Tripped AC circuit breaker or open AC isolator switch",
+        "Loose AC terminal connection at inverter or distribution panel"
+      ],
+      "recommended_action": "Verify utility grid availability. If grid power is active, inspect AC circuit breaker and isolator switches. Inverter auto-reconnects when AC is restored.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Safety & Isolation",
+          "instruction": "Follow AC electrical safety procedures before opening distribution enclosures."
+        },
+        {
+          "step": 2,
+          "phase": "Visual Inspection",
+          "instruction": "Check position of main AC breaker, RCCB/MCCB, and AC isolator switch."
+        },
+        {
+          "step": 3,
+          "phase": "Measurements",
+          "instruction": "Measure 3-phase line-to-line and line-to-neutral AC voltages on both sides of the AC breaker."
+        },
+        {
+          "step": 4,
+          "phase": "Verification",
+          "instruction": "Restore AC breaker if tripped after verifying no short circuit, and confirm inverter grid synchronization."
+        }
+      ]
+    },
+    "300": {
+      "code": "300",
+      "oem_code": "Error 300 / 106 (AC V Outrange)",
+      "title": "AC Grid Voltage Out of Range (Error 300)",
+      "description": "Utility AC grid voltage is outside the permissible operating window configured on the inverter.",
+      "oem_definition": "AC V Outrange (Error 300 / 106). Grid phase voltage exceeded upper or lower statutory limits.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Utility grid voltage surge or brownout",
+        "High AC line impedance causing voltage rise during peak export",
+        "Incorrect country grid code setting"
+      ],
+      "recommended_action": "Inverter will auto-reconnect once grid voltage returns to normal range. If recurring at peak sun hours, inspect AC cable sizing and grid tap.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Measurements",
+          "instruction": "Measure L1, L2, L3 AC voltages at inverter terminals and main distribution board."
+        },
+        {
+          "step": 2,
+          "phase": "Verification",
+          "instruction": "Confirm inverter resumes normal grid feed-in when AC voltage stabilizes."
+        }
+      ]
+    },
+    "301": {
+      "code": "301",
+      "oem_code": "Error 301 / 104 (AC Terminals Reversed / Phase Fault)",
+      "title": "AC Grid Phase / Terminal Fault (Error 301)",
+      "description": "Three-phase AC grid wiring phase sequence error or missing phase detected.",
+      "oem_definition": "AC Terminal Fault (Error 301). Incorrect phase rotation, missing phase, or neutral-live reversal.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "grid",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Blown fuse on one of the three AC phases",
+        "Phase rotation reversed after utility or panel maintenance",
+        "Loose phase conductor in AC connector"
+      ],
+      "recommended_action": "Check all three AC phases for voltage continuity and verify phase rotation with a phase sequence meter.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Safety & Isolation",
+          "instruction": "Isolate AC breaker before inspecting terminal connections."
+        },
+        {
+          "step": 2,
+          "phase": "Measurements",
+          "instruction": "Check L1-N, L2-N, L3-N voltages and verify clockwise phase sequence."
+        }
+      ]
+    },
+    "303": {
+      "code": "303",
+      "oem_code": "Error 303 / 203 / 102 (PV Isolation Low)",
+      "title": "Isolation Fault (ISO-F)",
+      "description": "Ground isolation resistance of the PV array is below the safe operational threshold.",
+      "oem_definition": "PV Isolation Low (Error 303 / 203). Insulation resistance between DC array and earth is below safety threshold (<100kOhm).",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "pv",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Damaged DC cable insulation or water ingress in MC4 connectors",
+        "Pinched PV wire against mounting structure",
+        "Grounded or damaged solar module"
+      ],
+      "recommended_action": "Perform string-by-string 1000V insulation resistance testing to earth. Repair grounded DC cable or connector.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Safety & Isolation",
+          "instruction": "Switch off AC breaker and DC isolator before disconnecting strings."
+        },
+        {
+          "step": 2,
+          "phase": "Measurements",
+          "instruction": "Measure insulation resistance of each PV string (+ to earth, - to earth) using a 1000V megohmmeter."
+        }
+      ]
+    },
+    "304": {
+      "code": "304",
+      "oem_code": "Error 304 / 101 (AC F Outrange)",
+      "title": "Grid Frequency Deviation",
+      "description": "Utility grid AC frequency is outside the allowed operating range.",
+      "oem_definition": "AC Frequency Out of Range (Error 304 / 101). Utility frequency exceeded statutory window.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "grid",
+        "requires_technician": false,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Utility grid frequency fluctuation",
+        "Generator operation on site without proper frequency regulation"
+      ],
+      "recommended_action": "Inverter will automatically reconnect once grid frequency returns to nominal range.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Measurements",
+          "instruction": "Verify AC grid frequency is near 50.0 Hz."
+        }
+      ]
+    },
+    "305": {
+      "code": "305",
+      "oem_code": "Error 305 / 108 (Over Temperature)",
+      "title": "Inverter Overtemperature",
+      "description": "Internal inverter or IGBT heatsink temperature exceeded maximum safety threshold.",
+      "oem_definition": "Over Temperature Protection (Error 305 / 108). Inverter internal temperature exceeded thermal protection limit.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "inverter",
+        "requires_technician": true,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Dust or debris blocking heatsink fins",
+        "Cooling fan failure",
+        "Poor cabinet ventilation or direct sunlight exposure"
+      ],
+      "recommended_action": "Clean heatsink fins, inspect cooling fans for proper operation, and ensure adequate ventilation clearance.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Visual Inspection",
+          "instruction": "Inspect cooling fans and heatsink airways for dust blockage."
+        }
+      ]
+    },
+    "306": {
+      "code": "306",
+      "oem_code": "Error 306 / 112 (Output High DCI)",
+      "title": "High DC Injection Current (Error 306)",
+      "description": "DC current component injected into the AC grid exceeded safety limits.",
+      "oem_definition": "Output High DCI (Error 306 / 112). Inverter AC output DC offset current exceeded statutory limit.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "inverter",
+        "requires_technician": true,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Sudden grid waveform distortion",
+        "Internal current sensor drift or IGBT asymmetry"
+      ],
+      "recommended_action": "Monitor if inverter self-recovers. If fault persists after AC/DC power cycle, contact Growatt service for current sensor check.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Verification",
+          "instruction": "Perform AC and DC power cycle and monitor DCI telemetry values (rDci, sDci, tDci)."
+        }
+      ]
+    },
+    "307": {
+      "code": "307",
+      "oem_code": "Error 307 / 202 / 103 (Residual I High)",
+      "title": "Residual Current Trip (GFCI)",
+      "description": "Inverter ground fault circuit interrupter detected excessive residual leakage current (>300mA).",
+      "oem_definition": "Residual I High (Error 307 / 202 / 103). Ground leakage current exceeded GFCI safety limit.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "pv",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Moisture ingress in PV connectors or junction boxes",
+        "Damaged DC cable insulation leaking to ground",
+        "Defective module backsheet"
+      ],
+      "recommended_action": "Inspect DC array wiring and connectors for moisture or ground leakage. Measure string insulation resistance.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Measurements",
+          "instruction": "Test DC string leakage current and insulation resistance to ground."
+        }
+      ]
+    },
+    "308": {
+      "code": "308",
+      "oem_code": "Error 308 / 113 / 408 (PV Voltage High)",
+      "title": "PV Input Overvoltage (Error 308)",
+      "description": "DC input voltage from PV strings exceeded the maximum allowable input voltage (1100V).",
+      "oem_definition": "PV Voltage High (Error 308 / 113 / 408). DC string open-circuit voltage exceeds inverter hardware limit.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "pv",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Too many PV modules connected in series in a single string",
+        "Low ambient temperature increasing string open-circuit voltage (Voc)"
+      ],
+      "recommended_action": "Immediately switch off DC isolator. Measure string Voc with a 1500V DC meter and reduce series module count if over limit.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Safety & Isolation",
+          "instruction": "Do not operate under load if Voc exceeds 1100V. Isolate DC switch immediately."
+        },
+        {
+          "step": 2,
+          "phase": "Measurements",
+          "instruction": "Measure open-circuit voltage of each string with a calibrated high-voltage DC multimeter."
+        }
+      ]
+    },
+    "200": {
+      "code": "200",
+      "oem_code": "Error 200 / 124 (DC Arc Fault / AFCI)",
+      "title": "DC Arc Fault Detected (AFCI)",
+      "description": "Arc-Fault Circuit Interrupter detected dangerous electrical arcing on a PV string.",
+      "oem_definition": "AFCI Fault (Error 200 / 124). High-frequency DC arc signature detected on PV input.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "pv",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Loose or improperly crimped MC4 connector",
+        "Damaged DC conductor or burnt terminal in DC isolator",
+        "Faulty solar module junction box diode"
+      ],
+      "recommended_action": "Do not reset without inspection. Check all MC4 connectors, DC isolator terminals, and string wiring for signs of arcing or heat.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Safety & Isolation",
+          "instruction": "De-energize inverter and isolate all DC strings immediately."
+        },
+        {
+          "step": 2,
+          "phase": "Visual Inspection",
+          "instruction": "Perform thermal and visual inspection of every MC4 connector and DC combiner terminal."
+        }
+      ]
+    },
+    "401": {
+      "code": "401",
+      "oem_code": "Warning 401 / 104 (Fan Abnormal)",
+      "title": "Cooling Fan Warning (Code 401)",
+      "description": "One or more internal or external cooling fans are blocked or failing to rotate at target RPM.",
+      "oem_definition": "Fan Abnormal (Warning 401 / 104). Cooling fan tachometer feedback out of range.",
+      "operational_interpretation": {
+        "severity": "medium",
+        "category": "inverter",
+        "requires_technician": true,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Dust, leaves, or debris obstructing fan blades",
+        "Loose fan power connector",
+        "Worn fan bearing requiring replacement"
+      ],
+      "recommended_action": "Inspect and clean cooling fan assembly. Replace fan module if bearing is seized.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Visual Inspection",
+          "instruction": "Check fan tray for debris and verify smooth blade rotation."
+        }
+      ]
+    },
+    "405": {
+      "code": "405",
+      "oem_code": "Error 405 / 126 (Output Overcurrent)",
+      "title": "Inverter AC Overcurrent (Error 405)",
+      "description": "Inverter AC output current exceeded hardware protection threshold.",
+      "oem_definition": "Output Overcurrent (Error 405 / 126). Hardware or software overcurrent trip on AC output stage.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "inverter",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Short circuit or ground fault on AC output cable",
+        "Severe utility grid phase voltage dip",
+        "Internal IGBT power stage fault"
+      ],
+      "recommended_action": "Isolate AC breaker and test AC cable insulation. Restart inverter and contact OEM if fault recurs.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Measurements",
+          "instruction": "Verify AC phase-to-phase and phase-to-earth insulation before re-energizing."
+        }
+      ]
+    },
+    "409": {
+      "code": "409",
+      "oem_code": "Error 409 / 109 (Bus Voltage High)",
+      "title": "DC Bus Overvoltage (Error 409)",
+      "description": "Internal DC bus voltage exceeded maximum hardware threshold.",
+      "oem_definition": "Bus Voltage High (Error 409 / 109). Internal DC link capacitor voltage exceeded safe threshold.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "inverter",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Excessive PV string open-circuit voltage",
+        "Sudden load rejection or grid disconnection under high export",
+        "Internal bus voltage sensing circuit fault"
+      ],
+      "recommended_action": "Measure PV string DC voltages and AC grid voltages. Power-cycle inverter if voltages are within spec.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Measurements",
+          "instruction": "Check pBusVoltage, nBusVoltage, and PV string Voc."
+        }
+      ]
+    },
+    "411": {
+      "code": "411",
+      "oem_code": "Error 411 / 114 / 116 (Internal Communication / EEPROM Fault)",
+      "title": "Internal Control Board Fault (Error 411)",
+      "description": "Internal DSP/MCU communication failure or EEPROM read/write error.",
+      "oem_definition": "Internal Hardware Fault (Error 411 / 114 / 116). Internal processor communication or memory verification error.",
+      "operational_interpretation": {
+        "severity": "critical",
+        "category": "inverter",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Control board power supply disturbance",
+        "EEPROM memory corruption",
+        "Internal ribbon cable looseness"
+      ],
+      "recommended_action": "Perform full AC and DC power cycle (wait 10 minutes for bus discharge). Escalate to Growatt support if persistent.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Verification",
+          "instruction": "Isolate AC and DC for 10 minutes, then restart inverter."
+        }
+      ]
+    },
+    "500": {
+      "code": "500",
+      "oem_code": "Warning 500 (String Abnormal / Open)",
+      "title": "PV String Disconnected / Abnormal",
+      "description": "Inverter detected zero current or abnormal voltage on an active PV string.",
+      "oem_definition": "String Fault / Open Warning (Code 500). String current deviation or open string detected.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "pv",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Blown DC string fuse or tripped DC MCB",
+        "Disconnected MC4 plug on array",
+        "Severe localized shading or damaged module"
+      ],
+      "recommended_action": "Measure individual string open-circuit voltages and operating currents with a DC clamp meter.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Measurements",
+          "instruction": "Compare MPPT and string currents (ipv1..N, currentString1..N) and inspect DC fuses."
+        }
+      ]
+    },
+    "503": {
+      "code": "503",
+      "oem_code": "Warning 503 / 204 (SPD Abnormal)",
+      "title": "Surge Protection Device (SPD) Fault",
+      "description": "Internal or external DC/AC Surge Protection Device (SPD) has tripped due to a lightning or surge event.",
+      "oem_definition": "SPD Fault (Warning 503 / 204). Surge arrestor cartridge fault indicator triggered.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "inverter",
+        "requires_technician": true,
+        "is_auto_resolvable": false
+      },
+      "potential_causes": [
+        "Lightning-induced surge on DC array or AC grid",
+        "Degraded SPD varistor cartridge"
+      ],
+      "recommended_action": "Inspect SPD status windows in AC/DC distribution boxes and replace any red/tripped SPD cartridges.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Visual Inspection",
+          "instruction": "Check SPD visual indicator windows (Green = OK, Red = Replace)."
+        }
+      ]
+    },
+    "ERR_COMM_LOST": {
+      "code": "ERR_COMM_LOST",
+      "oem_code": "Status -1 / Lost (Data Logger Communication Lost)",
+      "title": "Inverter / Data Logger Communication Offline",
+      "description": "ShineWiFi / Shine4G / ShineLan data logger has lost connection to Growatt server or inverter RS485 bus.",
+      "oem_definition": "Device Lost (lost=true / status=-1). No telemetry heartbeat received from site datalogger.",
+      "operational_interpretation": {
+        "severity": "high",
+        "category": "site",
+        "requires_technician": true,
+        "is_auto_resolvable": true
+      },
+      "potential_causes": [
+        "Site Wi-Fi router or 4G SIM internet connectivity outage",
+        "AC/DC power switched off at site",
+        "Loose Shine dongle / datalogger connection on inverter COM port"
+      ],
+      "recommended_action": "Verify site internet/Wi-Fi router status and check LED indicators on the Growatt Shine data logger.",
+      "general_field_guidance": [
+        {
+          "step": 1,
+          "phase": "Visual Inspection",
+          "instruction": "Check Shine datalogger status LEDs (Blue flashing = normal server link; Red/Off = network or power loss)."
+        },
+        {
+          "step": 2,
+          "phase": "Verification",
+          "instruction": "Reboot site router or re-seat datalogger stick and verify live telemetry resumes."
         }
       ]
     }

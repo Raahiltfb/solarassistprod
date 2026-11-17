@@ -4,6 +4,7 @@ from .solis import SOLIS_ALARM_MAPPING
 from .feston import match_feston_alarm, FESTON_ALARM_MAPPING
 from .suryalogix import SURYALOGIX_ALARM_MAPPING
 from .sungrow import SUNGROW_ALARM_MAPPING
+from .growatt import GROWATT_ALARM_MAPPING, match_growatt_alarm
 
 def translate_alert(oem: str, raw_code: str, default_title: str) -> dict:
     """Translates raw OEM alarm codes into normalized, human-readable alerts."""
@@ -19,6 +20,8 @@ def translate_alert(oem: str, raw_code: str, default_title: str) -> dict:
     elif oem_lower in ("sungrow", "isolarcloud"):
         clean_code = raw_code if raw_code.startswith("FAULT_") else f"FAULT_{raw_code}"
         rule = SUNGROW_ALARM_MAPPING.get(clean_code) or SUNGROW_ALARM_MAPPING.get(raw_code)
+    elif oem_lower == "growatt":
+        rule = match_growatt_alarm(raw_code, default_title)
         
     if rule:
         return {

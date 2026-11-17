@@ -10,6 +10,7 @@ from .solis import SolisAdapter
 from .feston import FestonAdapter
 from .suryalogix import SuryalogixAdapter
 from .sungrow import SungrowAdapter
+from .growatt import GrowattAdapter
 
 __all__ = [
     "OemAdapter",
@@ -22,4 +23,5 @@ __all__ = [
     "FestonAdapter",
     "SuryalogixAdapter",
     "SungrowAdapter",
+    "GrowattAdapter",
 ]

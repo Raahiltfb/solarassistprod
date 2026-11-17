@@ -64,6 +64,26 @@ export function getAlarmIntelligence(code: string, oem = "solis"): AlarmIntellig
   const reg = registries[normalizedOem] || registries.solis;
   let raw = reg.mappings[normalizedCode] || reg.mappings[code];
 
+  if (!raw && normalizedOem === "growatt") {
+    const stripped = normalizedCode.replace(/^(ERROR_|FAULT_|WARN_|ALARM_|ERR_)/, "");
+    raw =
+      reg.mappings[stripped] ||
+      reg.mappings[`ERROR_${stripped}`] ||
+      reg.mappings[`WARN_${stripped}`] ||
+      (stripped === "107" ? reg.mappings["302"] : undefined) ||
+      (stripped === "203" ? reg.mappings["303"] : undefined) ||
+      (stripped === "202" ? reg.mappings["307"] : undefined) ||
+      (stripped === "112" ? reg.mappings["306"] : undefined) ||
+      (stripped === "113" || stripped === "408" ? reg.mappings["308"] : undefined) ||
+      (stripped === "124" ? reg.mappings["200"] : undefined) ||
+      (stripped === "104" ? reg.mappings["301"] : undefined) ||
+      (stripped === "126" ? reg.mappings["405"] : undefined) ||
+      (stripped === "109" ? reg.mappings["409"] : undefined) ||
+      (stripped === "114" || stripped === "116" || stripped === "404" || stripped === "414" ? reg.mappings["411"] : undefined) ||
+      (stripped === "204" ? reg.mappings["503"] : undefined) ||
+      (stripped === "99" || stripped === "OFFLINE" || stripped === "LOST" ? reg.mappings["ERR_COMM_LOST"] : undefined);
+  }
+
   if (!raw && (normalizedOem === "feston" || normalizedOem === "solaros")) {
     if (normalizedCode === "ERR5" || normalizedCode === "2") {
       raw = reg.mappings["F35"];
