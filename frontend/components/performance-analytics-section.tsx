@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { format, parseISO, startOfDay, subDays, startOfMonth, startOfYear, endOfDay, endOfMonth, endOfYear, isSameDay } from "date-fns";
+import { format, parseISO, startOfDay, subDays, startOfMonth, startOfYear, endOfDay, endOfMonth, endOfYear, isSameDay, eachDayOfInterval, eachMonthOfInterval } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Info } from "lucide-react";
@@ -155,13 +155,76 @@ export function PerformanceAnalyticsSection({
           console.error("Error executing get_telemetry_analytics RPC:", rpcError);
           setChartData([]);
         } else {
-          const formatted = (rpcData ?? []).map((r: any) => ({
-            timestamp: r.timestamp,
-            power: Number(r.power || 0),
-            generation: Number(r.generation || 0),
-            specific_yield: Number(r.specific_yield || 0),
-          }));
-          setChartData(formatted);
+          // Zero-fill dates when dates are missing so graphs display full continuous calendar with 0s
+          if (
+            effectiveRange === "week" ||
+            effectiveRange === "month" ||
+            (!isSingleDayView && effectiveRange !== "year" && effectiveRange !== "lifetime")
+          ) {
+            const dayMap = new Map<string, { power: number; generation: number; specific_yield: number }>();
+            (rpcData ?? []).forEach((r: any) => {
+              try {
+                const d = parseISO(r.timestamp);
+                const key = format(d, "yyyy-MM-dd");
+                dayMap.set(key, {
+                  power: Number(r.power || 0),
+                  generation: Number(r.generation || 0),
+                  specific_yield: Number(r.specific_yield || 0),
+                });
+              } catch {
+                // Ignore parse errors
+              }
+            });
+
+            const allDays = eachDayOfInterval({ start: startDate, end: endDate });
+            const formatted = allDays.map((d) => {
+              const key = format(d, "yyyy-MM-dd");
+              const existing = dayMap.get(key);
+              return {
+                timestamp: `${key}T12:00:00Z`,
+                power: existing ? existing.power : 0,
+                generation: existing ? existing.generation : 0,
+                specific_yield: existing ? existing.specific_yield : 0,
+              };
+            });
+            setChartData(formatted);
+          } else if (effectiveRange === "year") {
+            const monthMap = new Map<string, { power: number; generation: number; specific_yield: number }>();
+            (rpcData ?? []).forEach((r: any) => {
+              try {
+                const d = parseISO(r.timestamp);
+                const key = format(d, "yyyy-MM");
+                monthMap.set(key, {
+                  power: Number(r.power || 0),
+                  generation: Number(r.generation || 0),
+                  specific_yield: Number(r.specific_yield || 0),
+                });
+              } catch {
+                // Ignore parse errors
+              }
+            });
+
+            const allMonths = eachMonthOfInterval({ start: startDate, end: endDate });
+            const formatted = allMonths.map((m) => {
+              const key = format(m, "yyyy-MM");
+              const existing = monthMap.get(key);
+              return {
+                timestamp: `${key}-01T12:00:00Z`,
+                power: existing ? existing.power : 0,
+                generation: existing ? existing.generation : 0,
+                specific_yield: existing ? existing.specific_yield : 0,
+              };
+            });
+            setChartData(formatted);
+          } else {
+            const formatted = (rpcData ?? []).map((r: any) => ({
+              timestamp: r.timestamp,
+              power: Number(r.power || 0),
+              generation: Number(r.generation || 0),
+              specific_yield: Number(r.specific_yield || 0),
+            }));
+            setChartData(formatted);
+          }
         }
       } catch (err) {
         console.error("Error loading performance charts data:", err);

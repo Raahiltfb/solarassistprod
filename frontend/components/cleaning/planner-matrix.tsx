@@ -377,9 +377,6 @@ export function PlannerMatrix({
                         />
                         <span className="text-foreground font-bold text-sm break-words leading-tight">{team.name}</span>
                       </div>
-                      <div className="text-[11px] text-muted-foreground font-normal break-words leading-tight">
-                        {team.base_address || "Base MMR"}
-                      </div>
                     </td>
 
                     {/* Generous Width Day Cells */}
@@ -555,7 +552,7 @@ export function PlannerMatrix({
                   <SelectContent>
                     {teams.map((t) => (
                       <SelectItem key={t.id} value={t.id} className="text-xs">
-                        {t.name} ({t.base_address || "MMR"})
+                        {t.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

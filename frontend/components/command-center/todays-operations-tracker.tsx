@@ -153,10 +153,6 @@ export function TodaysOperationsTracker({
                       </div>
                       <div>
                         <h4 className="font-semibold text-sm text-foreground leading-tight">{techName}</h4>
-                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-0.5">
-                          <MapPin className="h-3 w-3 shrink-0" />
-                          <span className="break-words leading-tight">{baseLoc}</span>
-                        </div>
                       </div>
                     </div>
 

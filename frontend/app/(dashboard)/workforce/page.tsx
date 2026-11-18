@@ -236,10 +236,7 @@ export default function WorkforcePage() {
                     </Button>
                   </CardHeader>
                   <CardContent className="pt-4 space-y-4 text-xs">
-                    <div className="flex items-center justify-between text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3.5 w-3.5" /> {team.base_address || "Operating Base"}
-                      </span>
+                    <div className="flex items-center justify-end text-muted-foreground">
                       <Badge variant="outline" className="text-[10px] uppercase">
                         {team.is_active ? "Active" : "Inactive"}
                       </Badge>
@@ -266,9 +263,6 @@ export default function WorkforcePage() {
                               <div className="min-w-0 flex-1">
                                 <div className="font-semibold text-foreground break-words leading-tight">
                                   {m.profiles?.full_name || "Technician"}
-                                </div>
-                                <div className="text-[10px] text-muted-foreground break-words">
-                                  {m.profiles?.base_address || "Field Tech"}
                                 </div>
                               </div>
                             </div>
@@ -303,7 +297,6 @@ export default function WorkforcePage() {
                   <TableRow>
                     <TableHead className="py-3 px-6">Technician</TableHead>
                     <TableHead className="py-3 px-4">Assigned Team</TableHead>
-                    <TableHead className="py-3 px-4">Base Location</TableHead>
                     <TableHead className="py-3 px-4 text-center">Cleaning Jobs</TableHead>
                     <TableHead className="py-3 px-4 text-center">Maintenance Jobs</TableHead>
                     <TableHead className="py-3 px-4 text-center">Total Completed</TableHead>
@@ -329,10 +322,6 @@ export default function WorkforcePage() {
                           <Badge variant={teamName !== "Unassigned" ? "secondary" : "outline"} className="text-[10px]">
                             {teamName}
                           </Badge>
-                        </TableCell>
-
-                        <TableCell className="py-3.5 px-4 text-muted-foreground">
-                          {tech.base_address || "Field Location"}
                         </TableCell>
 
                         <TableCell className="py-3.5 px-4 text-center font-mono font-semibold">
@@ -379,14 +368,6 @@ export default function WorkforcePage() {
                 value={teamForm.name}
                 onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })}
                 placeholder="e.g. Team F"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Base Location / Address</Label>
-              <Input
-                value={teamForm.base_address}
-                onChange={(e) => setTeamForm({ ...teamForm, base_address: e.target.value })}
-                placeholder="e.g. Operating Base Station"
               />
             </div>
             <div className="space-y-1.5">
@@ -442,7 +423,6 @@ export default function WorkforcePage() {
                       />
                       <span>{t.full_name}</span>
                     </div>
-                    <span className="text-[10px] text-muted-foreground">{t.base_address || "Field Tech"}</span>
                   </label>
                 );
               })}

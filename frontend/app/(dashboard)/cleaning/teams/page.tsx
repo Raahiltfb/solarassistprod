@@ -181,10 +181,7 @@ export default function CleaningTeamsPage() {
                   </Button>
                 </CardHeader>
                 <CardContent className="pt-4 space-y-4 text-xs">
-                  <div className="flex items-center justify-between text-muted-foreground">
-                    <span className="flex items-center gap-1 font-mono">
-                      <MapPin className="h-3.5 w-3.5 text-primary" /> {team.base_address || "Operating Base"}
-                    </span>
+                  <div className="flex items-center justify-end text-muted-foreground">
                     <Badge variant="outline" className="text-[10px] uppercase font-mono">
                       {members.length} Crew · 480m / day
                     </Badge>
@@ -218,9 +215,6 @@ export default function CleaningTeamsPage() {
                                 </div>
                               </div>
                             </div>
-                            <span className="text-[10px] text-muted-foreground font-mono shrink-0 ml-2">
-                              {m.profiles?.base_address?.split(",")[0] || "Hub"}
-                            </span>
                           </div>
                         ))}
                       </div>
@@ -263,7 +257,7 @@ export default function CleaningTeamsPage() {
                   >
                     <div>
                       <div>{tech.full_name}</div>
-                      <div className="text-[10px] text-muted-foreground font-mono">{tech.email} · {tech.base_address}</div>
+                      <div className="text-[10px] text-muted-foreground font-mono">{tech.email}</div>
                     </div>
                     <Badge variant={isSelected ? "default" : "outline"} className="text-[10px]">
                       {isSelected ? "Selected" : "Add"}

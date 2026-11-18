@@ -83,6 +83,7 @@ export function StringAnomalyDiagnosticSection({
   }
 
   const [chartMetricMode, setChartMetricMode] = useState<"current" | "voltage">("current");
+  const [daylightFilter, setDaylightFilter] = useState<boolean>(true);
   const [chartMounted, setChartMounted] = useState<boolean>(false);
 
   useEffect(() => {
@@ -98,6 +99,20 @@ export function StringAnomalyDiagnosticSection({
   function handleOpenGraph(anom: StringAnomaly) {
     setSelectedAnomalyForChart(anom);
     setChartMetricMode(anom.type === "voltage_droop" ? "voltage" : "current");
+    setDaylightFilter(true);
+  }
+
+  // Format persistence duration nicely (e.g. "72h (3 days)")
+  function formatPersistence(mins?: number) {
+    if (!mins || mins <= 0) return "0 mins";
+    if (mins < 60) return `${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    const remMins = mins % 60;
+    if (hrs < 24) {
+      return remMins > 0 ? `${hrs}h ${remMins}m` : `${hrs} hrs`;
+    }
+    const days = (mins / 1440).toFixed(1);
+    return `${hrs}h (${days}d)`;
   }
 
   // Generate timeseries data from actual recorded string telemetry points
@@ -107,7 +122,7 @@ export function StringAnomalyDiagnosticSection({
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
     : [];
 
-  const chartData = stringHistoryPoints.map((pt) => {
+  const rawChartData = stringHistoryPoints.map((pt) => {
     const ts = pt.timestamp;
     const dateObj = new Date(ts);
     const timeStr = dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -121,20 +136,24 @@ export function StringAnomalyDiagnosticSection({
     const validCurrents = siblingPoints.map((t) => Number(t.current_a || 0)).filter((c) => c > 0.2);
     const validVoltages = siblingPoints.map((t) => Number(t.voltage_v || 0)).filter((v) => v > 50);
 
-    const peerCurr = validCurrents.length > 0
-      ? calculateMedian(validCurrents)
-      : selectedAnomalyForChart?.benchmark_current_a ?? 5.0;
-    const peerVolt = validVoltages.length > 0
-      ? calculateMedian(validVoltages)
-      : selectedAnomalyForChart?.benchmark_voltage_v ?? 650;
-
     const actualCurr = Number(pt.current_a || 0);
     const actualVolt = Number(pt.voltage_v || 0);
+
+    // Daylight operation detection: true when peers or string is active
+    const isOperating = validVoltages.length > 0 || actualVolt > 50 || actualCurr > 0.2;
+
+    const peerCurr = validCurrents.length > 0
+      ? calculateMedian(validCurrents)
+      : (isOperating ? (selectedAnomalyForChart?.benchmark_current_a ?? 0) : 0);
+    const peerVolt = validVoltages.length > 0
+      ? calculateMedian(validVoltages)
+      : (isOperating ? (selectedAnomalyForChart?.benchmark_voltage_v ?? 0) : 0);
 
     return {
       timestamp: ts,
       time: fullLabel,
       timeOnly: timeStr,
+      isOperating,
       actualCurrent: Number(actualCurr.toFixed(2)),
       peerMedianCurrent: Number(peerCurr.toFixed(2)),
       historicalCurrent: Number((selectedAnomalyForChart?.historical_current_a ?? peerCurr).toFixed(2)),
@@ -144,16 +163,21 @@ export function StringAnomalyDiagnosticSection({
     };
   });
 
-  const currentValues = chartData.flatMap((d) => [d.actualCurrent, d.peerMedianCurrent]).filter((v) => typeof v === "number" && !isNaN(v));
+  // Filter night time noise when daylightFilter is active
+  const chartData = daylightFilter
+    ? rawChartData.filter((d) => d.isOperating && (d.actualVoltage > 30 || d.peerMedianVoltage > 30))
+    : rawChartData;
+
+  const currentValues = chartData.flatMap((d) => [d.actualCurrent, d.peerMedianCurrent]).filter((v) => typeof v === "number" && !isNaN(v) && v > 0);
   const maxCurrent = currentValues.length > 0 ? Math.max(...currentValues) : 10;
   const yDomainCurrent: [number, number] = [0, Math.ceil(maxCurrent * 1.25) || 10];
 
-  const voltageValues = chartData.flatMap((d) => [d.actualVoltage, d.peerMedianVoltage]).filter((v) => typeof v === "number" && !isNaN(v));
-  const minVoltage = voltageValues.length > 0 ? Math.min(...voltageValues) : 500;
+  const voltageValues = chartData.flatMap((d) => [d.actualVoltage, d.peerMedianVoltage]).filter((v) => typeof v === "number" && !isNaN(v) && v > 50);
+  const minVoltage = voltageValues.length > 0 ? Math.min(...voltageValues) : 300;
   const maxVoltage = voltageValues.length > 0 ? Math.max(...voltageValues) : 700;
   const yDomainVoltage: [number, number] = [
-    Math.max(0, Math.floor(minVoltage * 0.85)),
-    Math.ceil(maxVoltage * 1.15) || 800,
+    Math.max(0, Math.floor(minVoltage * 0.9)),
+    Math.ceil(maxVoltage * 1.1) || 800,
   ];
 
   // Accurately compute the anomaly window on the X-axis from genuine anomaly timestamps and telemetry deviations
@@ -427,72 +451,112 @@ export function StringAnomalyDiagnosticSection({
 
       {/* Visual Chart Evidence Modal */}
       <Dialog open={!!selectedAnomalyForChart} onOpenChange={(open) => !open && setSelectedAnomalyForChart(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl sm:max-w-4xl">
           {selectedAnomalyForChart && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-base flex items-center justify-between">
-                  <span>
-                    Visual Evidence: {selectedAnomalyForChart.inverter_name} - String #{selectedAnomalyForChart.string_index}
+                <DialogTitle className="text-base flex flex-wrap items-center justify-between gap-3">
+                  <span className="font-semibold text-foreground">
+                    Visual Evidence: {selectedAnomalyForChart.inverter_name} — String #{selectedAnomalyForChart.string_index}
                   </span>
                   <div className="flex items-center gap-2">
-                    <div className="flex items-center bg-muted p-0.5 rounded border">
+                    {/* Daylight filter toggle */}
+                    <div className="flex items-center bg-muted p-0.5 rounded border text-[11px]">
+                      <button
+                        onClick={() => setDaylightFilter(true)}
+                        className={`px-2 py-0.5 font-medium rounded transition-colors ${daylightFilter ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+                        title="Show daylight operating hours only (excludes night 0V/0A drops)"
+                      >
+                        Daylight Hours
+                      </button>
+                      <button
+                        onClick={() => setDaylightFilter(false)}
+                        className={`px-2 py-0.5 font-medium rounded transition-colors ${!daylightFilter ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+                        title="Show full 24h day/night cycle"
+                      >
+                        24h All
+                      </button>
+                    </div>
+
+                    {/* Metric Mode Toggle */}
+                    <div className="flex items-center bg-muted p-0.5 rounded border text-[11px]">
                       <button
                         onClick={() => setChartMetricMode("current")}
-                        className={`px-2 py-0.5 text-[10px] font-bold rounded ${chartMetricMode === "current" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+                        className={`px-2 py-0.5 font-medium rounded transition-colors ${chartMetricMode === "current" ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"}`}
                       >
                         Current (A)
                       </button>
                       <button
                         onClick={() => setChartMetricMode("voltage")}
-                        className={`px-2 py-0.5 text-[10px] font-bold rounded ${chartMetricMode === "voltage" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+                        className={`px-2 py-0.5 font-medium rounded transition-colors ${chartMetricMode === "voltage" ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"}`}
                       >
                         Voltage (V)
                       </button>
                     </div>
+
                     <Badge 
                       variant={selectedAnomalyForChart.severity === "critical" ? "destructive" : "warning"}
-                      className="text-xs uppercase"
+                      className="text-xs uppercase font-mono tracking-wider"
                     >
                       {selectedAnomalyForChart.type.replace("_", " ")}
                     </Badge>
                   </div>
                 </DialogTitle>
-                <DialogDescription className="text-xs">
-                  String telemetry compared directly against peer-string median baselines over time.
+                <DialogDescription className="text-xs text-muted-foreground">
+                  High-resolution string telemetry compared directly against peer-string median baselines across active operating windows.
                 </DialogDescription>
               </DialogHeader>
 
-              {/* 3-Way Anomaly Metrics Bar */}
-              <div className="grid grid-cols-5 gap-2 bg-muted/40 p-3 rounded-lg text-xs font-mono">
-                <div>
-                  <span className="text-muted-foreground block text-[10px]">CURRENT (ACT/PEER/HIST)</span>
-                  <span className="font-bold text-foreground">
-                    {selectedAnomalyForChart.actual_current_a}A / {selectedAnomalyForChart.benchmark_current_a}A / {selectedAnomalyForChart.historical_current_a}A
+              {/* Crystal Clear Anomaly Metrics Bar */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 bg-muted/40 p-3 rounded-xl border border-border/60 text-xs">
+                <div className="bg-card/70 p-2.5 rounded-lg border border-border/40 space-y-1">
+                  <span className="text-muted-foreground block text-[10px] font-semibold uppercase tracking-wider">
+                    {chartMetricMode === "current" ? "Actual String Current" : "Actual String Voltage"}
+                  </span>
+                  <span className={`text-base font-bold font-mono ${chartMetricMode === "current" ? "text-rose-600 dark:text-rose-400" : "text-sky-600 dark:text-sky-400"}`}>
+                    {chartMetricMode === "current" ? `${selectedAnomalyForChart.actual_current_a} A` : `${selectedAnomalyForChart.actual_voltage_v} V`}
                   </span>
                 </div>
-                <div>
-                  <span className="text-muted-foreground block text-[10px]">VOLTAGE (ACT/PEER/HIST)</span>
-                  <span className="font-bold text-foreground">
-                    {selectedAnomalyForChart.actual_voltage_v}V / {selectedAnomalyForChart.benchmark_voltage_v}V / {selectedAnomalyForChart.historical_voltage_v}V
+
+                <div className="bg-card/70 p-2.5 rounded-lg border border-border/40 space-y-1">
+                  <span className="text-muted-foreground block text-[10px] font-semibold uppercase tracking-wider">
+                    Peer Median Baseline
+                  </span>
+                  <span className="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                    {chartMetricMode === "current" ? `${selectedAnomalyForChart.benchmark_current_a} A` : `${selectedAnomalyForChart.benchmark_voltage_v} V`}
                   </span>
                 </div>
-                <div>
-                  <span className="text-muted-foreground block text-[10px]">PEER DEVIATION</span>
-                  <span className="font-bold text-destructive">{selectedAnomalyForChart.deviation_pct}%</span>
+
+                <div className="bg-card/70 p-2.5 rounded-lg border border-border/40 space-y-1">
+                  <span className="text-muted-foreground block text-[10px] font-semibold uppercase tracking-wider">
+                    Historical Self Baseline
+                  </span>
+                  <span className="text-base font-bold font-mono text-violet-600 dark:text-violet-400">
+                    {chartMetricMode === "current" ? `${selectedAnomalyForChart.historical_current_a} A` : `${selectedAnomalyForChart.historical_voltage_v} V`}
+                  </span>
                 </div>
-                <div>
-                  <span className="text-muted-foreground block text-[10px]">HIST DEVIATION</span>
-                  <span className="font-bold text-amber-600">{selectedAnomalyForChart.historical_deviation_pct}%</span>
+
+                <div className="bg-card/70 p-2.5 rounded-lg border border-border/40 space-y-1">
+                  <span className="text-muted-foreground block text-[10px] font-semibold uppercase tracking-wider">
+                    Peer Deviation
+                  </span>
+                  <span className="text-base font-bold font-mono text-rose-600 dark:text-rose-400">
+                    {selectedAnomalyForChart.deviation_pct}%
+                  </span>
                 </div>
-                <div>
-                  <span className="text-muted-foreground block text-[10px]">PERSISTENCE</span>
-                  <span className="font-bold text-foreground">{selectedAnomalyForChart.duration_mins} mins</span>
+
+                <div className="bg-card/70 p-2.5 rounded-lg border border-border/40 space-y-1 col-span-2 sm:col-span-1">
+                  <span className="text-muted-foreground block text-[10px] font-semibold uppercase tracking-wider">
+                    Persistence Duration
+                  </span>
+                  <span className="text-base font-bold font-mono text-foreground">
+                    {formatPersistence(selectedAnomalyForChart.duration_mins)}
+                  </span>
                 </div>
               </div>
 
               {/* Chart Overlay */}
-              <div className="w-full pt-2 h-[280px] min-h-[280px]">
+              <div className="w-full pt-2 h-[320px] min-h-[320px]">
                 {chartData.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center p-6 bg-muted/20 border border-dashed rounded-lg">
                     <Info className="h-8 w-8 text-muted-foreground mb-2" />
@@ -502,13 +566,13 @@ export function StringAnomalyDiagnosticSection({
                     </p>
                   </div>
                 ) : chartMounted ? (
-                  <ResponsiveContainer width="100%" height={280}>
+                  <ResponsiveContainer width="100%" height={320}>
                     <ReLineChart 
-                      key={`${selectedAnomalyForChart.id}-${chartMetricMode}`}
+                      key={`${selectedAnomalyForChart.id}-${chartMetricMode}-${daylightFilter}`}
                       data={chartData} 
-                      margin={{ top: 15, right: 30, left: 20, bottom: 5 }}
+                      margin={{ top: 15, right: 25, left: 15, bottom: 5 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
                       <XAxis dataKey="time" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
                       <YAxis 
                         width={55}
@@ -517,16 +581,17 @@ export function StringAnomalyDiagnosticSection({
                         tick={{ fontSize: 11 }} 
                       />
                       <Tooltip
-                        contentStyle={{ backgroundColor: "#1e293b", borderColor: "#334155", color: "#f8fafc", fontSize: "12px" }}
+                        contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", color: "#f8fafc", fontSize: "12px", borderRadius: "8px" }}
+                        formatter={(val: any, name: any) => [`${Number(val).toFixed(2)} ${chartMetricMode === "current" ? "A" : "V"}`, name]}
                       />
                       <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }} />
                       {anomalyWindow && (
                         <ReferenceArea 
                           x1={anomalyWindow.x1} 
                           x2={anomalyWindow.x2} 
-                          fill="rgba(239, 68, 68, 0.15)" 
-                          stroke="rgba(239, 68, 68, 0.5)" 
-                          label={{ value: "Anomaly Window", fill: "#ef4444", fontSize: 11 }} 
+                          fill="rgba(239, 68, 68, 0.12)" 
+                          stroke="rgba(239, 68, 68, 0.4)" 
+                          label={{ value: "Anomaly Window", fill: "#ef4444", fontSize: 11, position: "insideTopLeft" }} 
                         />
                       )}
                       {chartMetricMode === "current" && (
@@ -536,8 +601,9 @@ export function StringAnomalyDiagnosticSection({
                           dataKey="actualCurrent"
                           name={`Actual Current (String #${selectedAnomalyForChart.string_index})`}
                           stroke="#ef4444"
-                          strokeWidth={3}
-                          dot={{ r: 4, fill: "#ef4444" }}
+                          strokeWidth={2.5}
+                          dot={false}
+                          activeDot={{ r: 5, fill: "#ef4444" }}
                           isAnimationActive={false}
                         />
                       )}
@@ -548,9 +614,10 @@ export function StringAnomalyDiagnosticSection({
                           dataKey="peerMedianCurrent"
                           name="Peer Median Current Baseline"
                           stroke="#10b981"
-                          strokeWidth={2.5}
-                          strokeDasharray="5 5"
+                          strokeWidth={2}
+                          strokeDasharray="4 4"
                           dot={false}
+                          activeDot={{ r: 4, fill: "#10b981" }}
                           isAnimationActive={false}
                         />
                       )}
@@ -560,10 +627,11 @@ export function StringAnomalyDiagnosticSection({
                           type="monotone"
                           dataKey="historicalCurrent"
                           name="Historical Self Baseline"
-                          stroke="#6366f1"
-                          strokeWidth={2}
-                          strokeDasharray="3 3"
+                          stroke="#8b5cf6"
+                          strokeWidth={1.5}
+                          strokeDasharray="2 2"
                           dot={false}
+                          activeDot={{ r: 4, fill: "#8b5cf6" }}
                           isAnimationActive={false}
                         />
                       )}
@@ -574,8 +642,9 @@ export function StringAnomalyDiagnosticSection({
                           dataKey="actualVoltage"
                           name={`Actual Voltage (String #${selectedAnomalyForChart.string_index})`}
                           stroke="#3b82f6"
-                          strokeWidth={3}
-                          dot={{ r: 4, fill: "#3b82f6" }}
+                          strokeWidth={2.5}
+                          dot={false}
+                          activeDot={{ r: 5, fill: "#3b82f6" }}
                           isAnimationActive={false}
                         />
                       )}
@@ -586,16 +655,31 @@ export function StringAnomalyDiagnosticSection({
                           dataKey="peerMedianVoltage"
                           name="Peer Median Voltage Baseline"
                           stroke="#10b981"
-                          strokeWidth={2.5}
-                          strokeDasharray="5 5"
+                          strokeWidth={2}
+                          strokeDasharray="4 4"
                           dot={false}
+                          activeDot={{ r: 4, fill: "#10b981" }}
+                          isAnimationActive={false}
+                        />
+                      )}
+                      {chartMetricMode === "voltage" && (
+                        <Line
+                          key="historicalVoltage"
+                          type="monotone"
+                          dataKey="historicalVoltage"
+                          name="Historical Self Baseline"
+                          stroke="#8b5cf6"
+                          strokeWidth={1.5}
+                          strokeDasharray="2 2"
+                          dot={false}
+                          activeDot={{ r: 4, fill: "#8b5cf6" }}
                           isAnimationActive={false}
                         />
                       )}
                     </ReLineChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="h-[280px] flex items-center justify-center text-xs text-muted-foreground">
+                  <div className="h-[320px] flex items-center justify-center text-xs text-muted-foreground">
                     Loading recorded telemetry graph...
                   </div>
                 )}
