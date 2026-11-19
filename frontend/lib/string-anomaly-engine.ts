@@ -176,17 +176,28 @@ export function analyzeStringAnomalies(
   }
 
   stringTelemetryPointsMap.forEach((pts, strId) => {
+    // Only consider operational readings with active generation (I >= 1.5A)
     const activeCurrents = pts
       .map((p) => Number(p.current_a || 0))
-      .filter((c) => c > 0.2);
+      .filter((c) => c >= 1.5);
     const allCurrents = pts.map((p) => Number(p.current_a || 0));
-    const activeVoltages = pts
+
+    // CRITICAL: operational Vmp must be calculated during active current generation (I >= 1.5A),
+    // to avoid open-circuit voltage (Voc) at dawn/dusk inflating the historical baseline!
+    const activeGenVoltages = pts
+      .filter((p) => Number(p.current_a || 0) >= 1.5 && Number(p.voltage_v || 0) > 50)
+      .map((p) => Number(p.voltage_v || 0));
+    const allVoltages = pts
       .map((p) => Number(p.voltage_v || 0))
       .filter((v) => v > 50);
 
     const maxCurrent = allCurrents.length > 0 ? Math.max(...allCurrents) : 0;
-    const histCurrent = activeCurrents.length > 0 ? calculateMedian(activeCurrents) : 0;
-    const histVoltage = activeVoltages.length > 0 ? calculateMedian(activeVoltages) : 0;
+    const histCurrent = activeCurrents.length > 0
+      ? calculateMedian(activeCurrents)
+      : (allCurrents.filter((c) => c > 0.2).length > 0 ? calculateMedian(allCurrents.filter((c) => c > 0.2)) : 0);
+    const histVoltage = activeGenVoltages.length > 0
+      ? calculateMedian(activeGenVoltages)
+      : (allVoltages.length > 0 ? calculateMedian(allVoltages) : 0);
 
     // A string has active generation history ONLY if it historically generated >= 1.5A median or >= 2.5A peak.
     // Unpopulated channels or small bleed-current strings (e.g. 0.0A - 0.8A) do NOT have active generation history.
@@ -240,7 +251,7 @@ export function analyzeStringAnomalies(
             const dt = parseUtcDate(p.timestamp);
             if (!dt) return false;
             const hoursAgo = (Date.now() - dt.getTime()) / (1000 * 3600);
-            return hoursAgo < 16 && (Number(p.current_a || 0) > 0.05 || Number(p.power_kw || 0) > 0.05);
+            return (hoursAgo < 16 || !inv.last_seen_at) && (Number(p.current_a || 0) > 0.05 || Number(p.power_kw || 0) > 0.05);
           })
         ) {
           invHasActiveGeneration = true;
@@ -269,6 +280,10 @@ export function analyzeStringAnomalies(
       const existingTicket = activeTicketMap.get(`${inv.id}:0`);
       const existingSr = activeSrMap.get(`${inv.id}:0`);
 
+      const rawDuration = inv.last_seen_at ? Math.max(30, Math.round((Date.now() - new Date(inv.last_seen_at).getTime()) / 60000)) : 60;
+      // Cap duration at 43200 mins (30 days) to prevent confusing numbers for long-decommissioned units
+      const durMins = Math.min(rawDuration, 43200);
+
       anomalies.push({
         id: `anom-offline-${inv.id}`,
         string_id: `str-offline-${inv.id}`,
@@ -292,7 +307,7 @@ export function analyzeStringAnomalies(
         deviation_pct: -100,
         historical_deviation_pct: -100,
         voltage_deviation_pct: -100,
-        duration_mins: inv.last_seen_at ? Math.max(30, Math.round((Date.now() - new Date(inv.last_seen_at).getTime()) / 60000)) : 60,
+        duration_mins: durMins,
         first_detected_at: firstTs,
         last_detected_at: new Date().toISOString(),
         benchmark_methodology: "Communication Loss / Heartbeat Timeout (>30m stale telemetry)",
@@ -368,8 +383,10 @@ export function analyzeStringAnomalies(
       const peerMedianCurrent = calculateMedian(validCurrents);
       const peerMedianVoltage = calculateMedian(validVoltages);
 
-      // Require active generation (peer median current >= 0.5A)
-      if (peerMedianCurrent < 0.5) continue;
+      // Require active generation (peer median current >= 2.0A).
+      // Early morning (< 8:30 AM), late evening (> 4:30 PM), or heavy overcast produces low currents (< 2.0A)
+      // where roof parapet shadows, different string orientations, and MPPT scanning produce non-fault variance.
+      if (peerMedianCurrent < 2.0) continue;
 
       // Check Global Low Production vs Individual String Anomaly:
       // Global Low Production occurs when ALL strings track each other within 12% variance (e.g. overcast or plant-wide derating).
@@ -428,6 +445,7 @@ export function analyzeStringAnomalies(
         }
 
         const siblingStrings = Array.from(stringMap.values()).filter((s) => s.inverter_id === strObj.inverter_id);
+        const hasFewStrings = siblingStrings.length <= 2;
         const siblingCapacities = siblingStrings.map((s) => Number(s.capacity_kw || 0)).filter((c) => c > 0);
         const avgSiblingCap = siblingCapacities.length > 0 ? calculateMedian(siblingCapacities) : 0;
         const expectedRatio = (avgSiblingCap > 0 && Number(strObj.capacity_kw || 0) > 0)
@@ -440,7 +458,7 @@ export function analyzeStringAnomalies(
         const histDropAbs = histCurrent - curr;
         const expDropAbs = expectedCurrent - curr;
 
-        // Metric 1: Peer Variance
+        // Metric 1: Peer Current Variance
         // Requires meaningful active solar generation (peer >= 2.0A),
         // at least a 25% relative drop, at least 1.8A absolute drop,
         // and string current < 6.5A (a string producing 7A+ is generating strong power, not underperforming).
@@ -450,10 +468,13 @@ export function analyzeStringAnomalies(
           curr < 0.75 * peerMedianCurrent &&
           curr < 6.5;
 
+        // Metric 1: Peer Voltage Variance
+        // On <=2 string inverters, peer median is the simple arithmetic average of 2 strings with different module counts.
+        // Therefore, on <=2 string inverters, voltage comparison against peer median must allow for design asymmetry.
         const isPeerVoltDev =
           peerMedianVoltage >= 180 &&
-          (peerMedianVoltage - volt) >= 40 &&
-          volt < 0.85 * peerMedianVoltage;
+          (peerMedianVoltage - volt) >= (hasFewStrings ? 50 : 40) &&
+          volt < (hasFewStrings ? 0.80 : 0.85) * peerMedianVoltage;
 
         // Metric 2: Historical Self Variance
         const isHistCurrDev =
@@ -462,10 +483,11 @@ export function analyzeStringAnomalies(
           curr < 0.80 * histCurrent &&
           curr < 6.5;
 
+        // Voltage droop must drop significantly below its OWN historical operational Vmp (by at least 35V and 12%)
         const isHistVoltDev =
-          histVoltage > 150 &&
-          (histVoltage - volt) >= 40 &&
-          volt < 0.85 * histVoltage;
+          histVoltage >= 180 &&
+          (histVoltage - volt) >= 35 &&
+          volt < 0.88 * histVoltage;
 
         // Metric 3: Expected Rating Variance
         const isExpCurrDev =
@@ -484,23 +506,47 @@ export function analyzeStringAnomalies(
           detectedType = "string_disconnected";
         } else if (isPeerCurrDev && isHistCurrDev && isExpCurrDev) {
           detectedType = "sustained_underperformance";
-        } else if (isPeerVoltDev && isHistVoltDev) {
+        } else if (curr >= 1.5 && isHistVoltDev && (hasFewStrings ? true : isPeerVoltDev)) {
           detectedType = "voltage_droop";
         }
 
+        const existingStreak = stringStreakMap.get(r.string_id);
+
         if (detectedType) {
-          const streak = stringStreakMap.get(r.string_id);
-          if (streak && streak.type === detectedType) {
-            streak.lastTs = ts;
-            streak.count += 1;
-            streak.sumCurrent += curr;
-            streak.sumPeerMedianCurrent += peerMedianCurrent;
-            streak.sumHistCurrent += histCurrent;
-            streak.sumExpCurrent += expectedCurrent;
-            streak.sumVoltage += volt;
-            streak.sumPeerMedianVoltage += peerMedianVoltage;
-            streak.sumHistVoltage += histVoltage;
-            streak.sumExpVoltage += expectedVoltage;
+          if (existingStreak && existingStreak.type === detectedType) {
+            const gapMins = (new Date(ts).getTime() - new Date(existingStreak.lastTs).getTime()) / 60000;
+            // Consecutive contiguous readings must be within 45 minutes of each other
+            if (gapMins <= 45) {
+              existingStreak.lastTs = ts;
+              existingStreak.count += 1;
+              existingStreak.sumCurrent += curr;
+              existingStreak.sumPeerMedianCurrent += peerMedianCurrent;
+              existingStreak.sumHistCurrent += histCurrent;
+              existingStreak.sumExpCurrent += expectedCurrent;
+              existingStreak.sumVoltage += volt;
+              existingStreak.sumPeerMedianVoltage += peerMedianVoltage;
+              existingStreak.sumHistVoltage += histVoltage;
+              existingStreak.sumExpVoltage += expectedVoltage;
+            } else {
+              // Gap exceeded 45 mins (e.g. overnight gap or multi-hour recovery); start fresh streak
+              stringStreakMap.set(r.string_id, {
+                firstTs: ts,
+                lastTs: ts,
+                count: 1,
+                type: detectedType,
+                sumCurrent: curr,
+                sumPeerMedianCurrent: peerMedianCurrent,
+                sumHistCurrent: histCurrent,
+                sumExpCurrent: expectedCurrent,
+                sumVoltage: volt,
+                sumPeerMedianVoltage: peerMedianVoltage,
+                sumHistVoltage: histVoltage,
+                sumExpVoltage: expectedVoltage,
+                includedPeers: includedPeers.filter((idx) => idx !== strObj.string_index),
+                excludedPeers: excludedPeers.filter((idx) => idx !== strObj.string_index),
+                exclusionReason,
+              });
+            }
           } else {
             stringStreakMap.set(r.string_id, {
               firstTs: ts,
@@ -520,12 +566,29 @@ export function analyzeStringAnomalies(
               exclusionReason,
             });
           }
+        } else {
+          // Healthy normal operation during active generation!
+          // Clear active streak since string has recovered
+          if (existingStreak) {
+            stringStreakMap.delete(r.string_id);
+          }
         }
       }
     }
 
     // Process streaks into explainable StringAnomaly objects
+    const latestTs = timestamps[timestamps.length - 1];
+    const latestTsMs = new Date(latestTs).getTime();
+
     stringStreakMap.forEach((streak, strId) => {
+      // Check if streak is still actively ongoing:
+      // The last detected timestamp must be within 60 minutes of the latest telemetry received
+      const gapToLatestMins = (latestTsMs - new Date(streak.lastTs).getTime()) / 60000;
+      if (gapToLatestMins > 60) {
+        // Anomaly ended earlier and recovered; do not surface as an active anomaly
+        return;
+      }
+
       // Require at least 2 consecutive polling cycles for underperformance or voltage droop,
       // so single-sample momentary dips (passing cloud/shadow jitter) are never flagged as active underperformers!
       const firstMs = new Date(streak.firstTs).getTime();

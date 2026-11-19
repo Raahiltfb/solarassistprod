@@ -55,7 +55,15 @@ export function getInverterStatus(
 
   const lastSeen = parseUtcDate(lastSeenStr);
   if (!lastSeen) {
+    if (hasActiveGenerationToday && inverter.status?.toLowerCase() === "online") {
+      return "ONLINE";
+    }
     return "OFFLINE";
+  }
+
+  // Active generation today supersedes historical offline states if device is online
+  if (hasActiveGenerationToday && inverter.status?.toLowerCase() === "online") {
+    return "ONLINE";
   }
 
   const now = new Date();

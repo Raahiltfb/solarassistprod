@@ -111,9 +111,26 @@ export function StringAnomalyDiagnosticSection({
     if (hrs < 24) {
       return remMins > 0 ? `${hrs}h ${remMins}m` : `${hrs} hrs`;
     }
-    const days = (mins / 1440).toFixed(1);
+    const days = Math.round((mins / 1440) * 10) / 10;
+    if (days >= 30) {
+      return `> 30d (${days}d)`;
+    }
     return `${hrs}h (${days}d)`;
   }
+
+  // Isolate sibling string IDs belonging strictly to the SAME inverter
+  const siblingStringIds = useMemo(() => {
+    if (!selectedAnomalyForChart) return new Set<string>();
+    return new Set(
+      strings
+        .filter(
+          (s) =>
+            s.inverter_id === selectedAnomalyForChart.inverter_id &&
+            s.id !== selectedAnomalyForChart.string_id
+        )
+        .map((s) => s.id)
+    );
+  }, [selectedAnomalyForChart, strings]);
 
   // Generate timeseries data from actual recorded string telemetry points
   const stringHistoryPoints = selectedAnomalyForChart
@@ -129,9 +146,9 @@ export function StringAnomalyDiagnosticSection({
     const dateStr = dateObj.toLocaleDateString([], { month: "short", day: "numeric" });
     const fullLabel = `${dateStr} ${timeStr}`;
 
-    // Compute sibling strings median at this exact timestamp
+    // Compute sibling strings median at this exact timestamp (strictly within same inverter)
     const siblingPoints = telemetry.filter(
-      (t) => t.timestamp === ts && t.string_id !== pt.string_id && (t.voltage_v || 0) > 50
+      (t) => siblingStringIds.has(t.string_id) && t.timestamp === ts && (t.voltage_v || 0) > 50
     );
     const validCurrents = siblingPoints.map((t) => Number(t.current_a || 0)).filter((c) => c > 0.2);
     const validVoltages = siblingPoints.map((t) => Number(t.voltage_v || 0)).filter((v) => v > 50);
