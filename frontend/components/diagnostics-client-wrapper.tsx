@@ -179,10 +179,13 @@ export function DiagnosticsClientWrapper({
         (alt.code && alt.code.toUpperCase().includes("STRING")) ||
         (alt.title && alt.title.toUpperCase().includes("STRING"));
 
-      // ONLY process genuine string deviation alerts that match a real string in the database.
-      // Generic OEM plant alarms (like 1D4C3 Inefficient Power Plants or connectivity alarms)
-      // are tracked via alertsCount / siteIssuesMap and must NOT be fabricated into phantom string rows with blank graphs.
+      // ONLY process genuine string deviation alerts that match a real string in the database and have verified per-string telemetry metrics.
+      // Generic OEM inverter alarms or device warning codes (like GROWATT_500 or 1D4C3) without per-string metrics
+      // are tracked via alertsCount / siteIssuesMap and must NOT be fabricated into phantom string rows with zeroed baselines.
       if (!isStringDeviation) continue;
+      if (!alt.metrics || Number(alt.metrics.actual_current || 0) <= 0 || Number(alt.metrics.expected_current || 0) <= 0 || !alt.metrics.string_index) {
+        continue;
+      }
 
       const invObj = allInverters.find((i) => i.id === alt.inverter_id) || allInverters.find((i) => i.site_id === alt.site_id);
       const strIdx = Number(alt.metrics?.string_index || 1);

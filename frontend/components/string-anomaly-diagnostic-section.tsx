@@ -84,6 +84,7 @@ export function StringAnomalyDiagnosticSection({
 
   const [chartMetricMode, setChartMetricMode] = useState<"current" | "voltage">("current");
   const [daylightFilter, setDaylightFilter] = useState<boolean>(true);
+  const [chartTimeWindow, setChartTimeWindow] = useState<"focused" | "3d" | "all">("focused");
   const [chartMounted, setChartMounted] = useState<boolean>(false);
 
   useEffect(() => {
@@ -100,6 +101,7 @@ export function StringAnomalyDiagnosticSection({
     setSelectedAnomalyForChart(anom);
     setChartMetricMode(anom.type === "voltage_droop" ? "voltage" : "current");
     setDaylightFilter(true);
+    setChartTimeWindow("focused");
   }
 
   // Format persistence duration nicely (e.g. "72h (3 days)")
@@ -133,11 +135,34 @@ export function StringAnomalyDiagnosticSection({
   }, [selectedAnomalyForChart, strings]);
 
   // Generate timeseries data from actual recorded string telemetry points
-  const stringHistoryPoints = selectedAnomalyForChart
-    ? telemetry
-        .filter((t) => t.string_id === selectedAnomalyForChart.string_id)
-        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-    : [];
+  const stringHistoryPoints = useMemo(() => {
+    if (!selectedAnomalyForChart) return [];
+    const allPts = telemetry
+      .filter((t) => t.string_id === selectedAnomalyForChart.string_id)
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+    if (chartTimeWindow === "all" || allPts.length === 0) {
+      return allPts;
+    }
+
+    const firstMs = new Date(selectedAnomalyForChart.first_detected_at).getTime();
+    const lastMs = new Date(selectedAnomalyForChart.last_detected_at).getTime();
+
+    // In "focused" mode: Show 18h before first detection to 18h after last detection (centered diurnal curve)
+    // In "3d" mode: Show 48h before to 48h after (3-day cycle)
+    const padHours = chartTimeWindow === "focused" ? 18 : 48;
+    const padMs = padHours * 3600 * 1000;
+    const windowStart = firstMs - padMs;
+    const windowEnd = lastMs + padMs;
+
+    const filtered = allPts.filter((pt) => {
+      const ptMs = new Date(pt.timestamp).getTime();
+      return ptMs >= windowStart && ptMs <= windowEnd;
+    });
+
+    // Fallback to all points if filtered window has fewer than 2 points
+    return filtered.length >= 2 ? filtered : allPts;
+  }, [selectedAnomalyForChart, telemetry, chartTimeWindow]);
 
   const rawChartData = stringHistoryPoints.map((pt) => {
     const ts = pt.timestamp;
@@ -166,6 +191,25 @@ export function StringAnomalyDiagnosticSection({
       ? calculateMedian(validVoltages)
       : (isOperating ? (selectedAnomalyForChart?.benchmark_voltage_v ?? 0) : 0);
 
+    // Historical baseline calculation:
+    // Scale dynamically with peer median so it reflects diurnal generation irradiance curve rather than a flat line
+    const hasHistCurrent = (selectedAnomalyForChart?.historical_current_a ?? 0) > 0;
+    const hasHistVoltage = (selectedAnomalyForChart?.historical_voltage_v ?? 0) > 0;
+    const currRatio = (hasHistCurrent && (selectedAnomalyForChart?.benchmark_current_a ?? 0) > 0)
+      ? (selectedAnomalyForChart!.historical_current_a / selectedAnomalyForChart!.benchmark_current_a)
+      : 1.0;
+    const voltRatio = (hasHistVoltage && (selectedAnomalyForChart?.benchmark_voltage_v ?? 0) > 0)
+      ? (selectedAnomalyForChart!.historical_voltage_v / selectedAnomalyForChart!.benchmark_voltage_v)
+      : 1.0;
+
+    const historicalCurrVal = hasHistCurrent
+      ? (peerCurr > 0 ? Number((peerCurr * currRatio).toFixed(2)) : 0)
+      : undefined;
+
+    const historicalVoltVal = hasHistVoltage
+      ? (peerVolt > 0 ? Number((peerVolt * voltRatio).toFixed(1)) : 0)
+      : undefined;
+
     return {
       timestamp: ts,
       time: fullLabel,
@@ -173,10 +217,10 @@ export function StringAnomalyDiagnosticSection({
       isOperating,
       actualCurrent: Number(actualCurr.toFixed(2)),
       peerMedianCurrent: Number(peerCurr.toFixed(2)),
-      historicalCurrent: Number((selectedAnomalyForChart?.historical_current_a ?? peerCurr).toFixed(2)),
+      historicalCurrent: historicalCurrVal,
       actualVoltage: Number(actualVolt.toFixed(1)),
       peerMedianVoltage: Number(peerVolt.toFixed(1)),
-      historicalVoltage: Number((selectedAnomalyForChart?.historical_voltage_v ?? peerVolt).toFixed(1)),
+      historicalVoltage: historicalVoltVal,
     };
   });
 
@@ -210,52 +254,82 @@ export function StringAnomalyDiagnosticSection({
       return ptMs >= firstMs && ptMs <= lastMs;
     });
 
+    let x1 = "";
+    let x2 = "";
+    let startIndex = 0;
+    let endIndex = chartData.length - 1;
+
     if (pointsInWindow.length > 0) {
-      return {
-        x1: pointsInWindow[0].time,
-        x2: pointsInWindow[pointsInWindow.length - 1].time,
-      };
+      startIndex = chartData.findIndex((d) => d.timestamp === pointsInWindow[0].timestamp);
+      endIndex = chartData.findIndex((d) => d.timestamp === pointsInWindow[pointsInWindow.length - 1].timestamp);
+      x1 = pointsInWindow[0].time;
+      x2 = pointsInWindow[pointsInWindow.length - 1].time;
+    } else {
+      // 2. Identify actual physical drop in chartData
+      const isVoltage = selectedAnomalyForChart.type === "voltage_droop";
+      const deviatingPoints = chartData.filter((d) => {
+        if (isVoltage) {
+          return d.peerMedianVoltage > 150 && (d.peerMedianVoltage - d.actualVoltage) >= 30;
+        }
+        return d.peerMedianCurrent >= 1.5 && (d.peerMedianCurrent - d.actualCurrent) >= 1.5;
+      });
+
+      if (deviatingPoints.length > 0) {
+        startIndex = chartData.findIndex((d) => d.timestamp === deviatingPoints[0].timestamp);
+        endIndex = chartData.findIndex((d) => d.timestamp === deviatingPoints[deviatingPoints.length - 1].timestamp);
+        x1 = deviatingPoints[0].time;
+        x2 = deviatingPoints[deviatingPoints.length - 1].time;
+      } else {
+        // 3. Fallback: closest chart points to first_detected_at and last_detected_at
+        let minDiffStart = Infinity;
+        let minDiffEnd = Infinity;
+        let closestStartIdx = 0;
+        let closestEndIdx = chartData.length - 1;
+
+        for (let i = 0; i < chartData.length; i++) {
+          const ptMs = new Date(chartData[i].timestamp).getTime();
+          const diffStart = Math.abs(ptMs - firstMs);
+          const diffEnd = Math.abs(ptMs - lastMs);
+          if (diffStart < minDiffStart) {
+            minDiffStart = diffStart;
+            closestStartIdx = i;
+          }
+          if (diffEnd < minDiffEnd) {
+            minDiffEnd = diffEnd;
+            closestEndIdx = i;
+          }
+        }
+        startIndex = closestStartIdx;
+        endIndex = closestEndIdx;
+        x1 = chartData[closestStartIdx].time;
+        x2 = chartData[closestEndIdx].time;
+      }
     }
 
-    // 2. Identify the actual physical drop in chartData
-    const isVoltage = selectedAnomalyForChart.type === "voltage_droop";
-    const deviatingPoints = chartData.filter((d) => {
-      if (isVoltage) {
-        return d.peerMedianVoltage > 150 && (d.peerMedianVoltage - d.actualVoltage) >= 30;
-      }
-      return d.peerMedianCurrent >= 1.5 && (d.peerMedianCurrent - d.actualCurrent) >= 1.5;
-    });
-
-    if (deviatingPoints.length > 0) {
-      return {
-        x1: deviatingPoints[0].time,
-        x2: deviatingPoints[deviatingPoints.length - 1].time,
-      };
-    }
-
-    // 3. Fallback: Closest chart points to first_detected_at and last_detected_at
-    let closestStart = chartData[0];
-    let closestEnd = chartData[chartData.length - 1];
-    let minDiffStart = Infinity;
-    let minDiffEnd = Infinity;
-
-    for (const pt of chartData) {
-      const ptMs = new Date(pt.timestamp).getTime();
-      const diffStart = Math.abs(ptMs - firstMs);
-      const diffEnd = Math.abs(ptMs - lastMs);
-      if (diffStart < minDiffStart) {
-        minDiffStart = diffStart;
-        closestStart = pt;
-      }
-      if (diffEnd < minDiffEnd) {
-        minDiffEnd = diffEnd;
-        closestEnd = pt;
+    // Ensure ReferenceArea has visible width across at least 2 points
+    if (x1 === x2 && chartData.length > 1) {
+      if (endIndex < chartData.length - 1) {
+        endIndex++;
+        x2 = chartData[endIndex].time;
+      } else if (startIndex > 0) {
+        startIndex--;
+        x1 = chartData[startIndex].time;
       }
     }
+
+    // Determine safe label position to strictly prevent SVG boundary clipping
+    const isNearRightEdge = endIndex >= chartData.length - 6;
+    const isNearLeftEdge = startIndex <= 5;
+    const labelPosition: "insideTopRight" | "insideTopLeft" | "insideTop" = isNearRightEdge
+      ? "insideTopRight"
+      : isNearLeftEdge
+      ? "insideTopLeft"
+      : "insideTop";
 
     return {
-      x1: closestStart.time,
-      x2: closestEnd.time,
+      x1,
+      x2,
+      labelPosition,
     };
   }, [selectedAnomalyForChart, chartData]);
 
@@ -476,7 +550,32 @@ export function StringAnomalyDiagnosticSection({
                   <span className="font-semibold text-foreground">
                     Visual Evidence: {selectedAnomalyForChart.inverter_name} — String #{selectedAnomalyForChart.string_index}
                   </span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Time Window Focus Toggle */}
+                    <div className="flex items-center bg-muted p-0.5 rounded border text-[11px]">
+                      <button
+                        onClick={() => setChartTimeWindow("focused")}
+                        className={`px-2 py-0.5 font-medium rounded transition-colors ${chartTimeWindow === "focused" ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+                        title="Focused 24-hour diurnal window centered on the anomaly incident"
+                      >
+                        Focused (24h)
+                      </button>
+                      <button
+                        onClick={() => setChartTimeWindow("3d")}
+                        className={`px-2 py-0.5 font-medium rounded transition-colors ${chartTimeWindow === "3d" ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+                        title="3-day window surrounding the anomaly incident"
+                      >
+                        3 Days
+                      </button>
+                      <button
+                        onClick={() => setChartTimeWindow("all")}
+                        className={`px-2 py-0.5 font-medium rounded transition-colors ${chartTimeWindow === "all" ? "bg-background text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+                        title="Show all recorded telemetry history"
+                      >
+                        All History
+                      </button>
+                    </div>
+
                     {/* Daylight filter toggle */}
                     <div className="flex items-center bg-muted p-0.5 rounded border text-[11px]">
                       <button
@@ -549,7 +648,9 @@ export function StringAnomalyDiagnosticSection({
                     Historical Self Baseline
                   </span>
                   <span className="text-base font-bold font-mono text-violet-600 dark:text-violet-400">
-                    {chartMetricMode === "current" ? `${selectedAnomalyForChart.historical_current_a} A` : `${selectedAnomalyForChart.historical_voltage_v} V`}
+                    {chartMetricMode === "current"
+                      ? (selectedAnomalyForChart.historical_current_a > 0 ? `${selectedAnomalyForChart.historical_current_a} A` : "N/A (New)")
+                      : (selectedAnomalyForChart.historical_voltage_v > 0 ? `${selectedAnomalyForChart.historical_voltage_v} V` : "N/A (New)")}
                   </span>
                 </div>
 
@@ -572,8 +673,21 @@ export function StringAnomalyDiagnosticSection({
                 </div>
               </div>
 
+              {/* Active Incident Window Context Banner */}
+              <div className="flex items-center justify-between px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 rounded-md text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0" />
+                  <span className="font-semibold text-rose-600 dark:text-rose-400">
+                    Anomaly Window: {formatDateTime(selectedAnomalyForChart.first_detected_at)} → {formatDateTime(selectedAnomalyForChart.last_detected_at)}
+                  </span>
+                </div>
+                <div className="text-muted-foreground font-mono">
+                  Persistence: <strong className="text-foreground">{formatPersistence(selectedAnomalyForChart.duration_mins)}</strong>
+                </div>
+              </div>
+
               {/* Chart Overlay */}
-              <div className="w-full pt-2 h-[320px] min-h-[320px]">
+              <div className="w-full pt-1 h-[320px] min-h-[320px]">
                 {chartData.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center p-6 bg-muted/20 border border-dashed rounded-lg">
                     <Info className="h-8 w-8 text-muted-foreground mb-2" />
@@ -585,9 +699,9 @@ export function StringAnomalyDiagnosticSection({
                 ) : chartMounted ? (
                   <ResponsiveContainer width="100%" height={320}>
                     <ReLineChart 
-                      key={`${selectedAnomalyForChart.id}-${chartMetricMode}-${daylightFilter}`}
+                      key={`${selectedAnomalyForChart.id}-${chartMetricMode}-${daylightFilter}-${chartTimeWindow}`}
                       data={chartData} 
-                      margin={{ top: 15, right: 25, left: 15, bottom: 5 }}
+                      margin={{ top: 15, right: 55, left: 15, bottom: 5 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
                       <XAxis dataKey="time" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
@@ -599,7 +713,10 @@ export function StringAnomalyDiagnosticSection({
                       />
                       <Tooltip
                         contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", color: "#f8fafc", fontSize: "12px", borderRadius: "8px" }}
-                        formatter={(val: any, name: any) => [`${Number(val).toFixed(2)} ${chartMetricMode === "current" ? "A" : "V"}`, name]}
+                        formatter={(val: any, name: any) => {
+                          if (val === undefined || val === null) return ["--", name];
+                          return [`${Number(val).toFixed(2)} ${chartMetricMode === "current" ? "A" : "V"}`, name];
+                        }}
                       />
                       <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }} />
                       {anomalyWindow && (
@@ -608,7 +725,13 @@ export function StringAnomalyDiagnosticSection({
                           x2={anomalyWindow.x2} 
                           fill="rgba(239, 68, 68, 0.12)" 
                           stroke="rgba(239, 68, 68, 0.4)" 
-                          label={{ value: "Anomaly Window", fill: "#ef4444", fontSize: 11, position: "insideTopLeft" }} 
+                          label={{ 
+                            value: "Anomaly Window", 
+                            fill: "#ef4444", 
+                            fontSize: 11, 
+                            position: anomalyWindow.labelPosition,
+                            offset: 8 
+                          }} 
                         />
                       )}
                       {chartMetricMode === "current" && (
@@ -638,7 +761,7 @@ export function StringAnomalyDiagnosticSection({
                           isAnimationActive={false}
                         />
                       )}
-                      {chartMetricMode === "current" && (
+                      {chartMetricMode === "current" && (selectedAnomalyForChart.historical_current_a ?? 0) > 0 && (
                         <Line
                           key="historicalCurrent"
                           type="monotone"
@@ -679,7 +802,7 @@ export function StringAnomalyDiagnosticSection({
                           isAnimationActive={false}
                         />
                       )}
-                      {chartMetricMode === "voltage" && (
+                      {chartMetricMode === "voltage" && (selectedAnomalyForChart.historical_voltage_v ?? 0) > 0 && (
                         <Line
                           key="historicalVoltage"
                           type="monotone"
