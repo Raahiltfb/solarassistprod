@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -299,6 +299,45 @@ export default async function DashboardPage() {
     }
   }
 
+  // Filter and auto-resolve alerts whose telemetry confirms healthy normal operation
+  const autoResolvedAlertIds: string[] = [];
+  const activeAlerts = alerts.filter((a) => {
+    // If the alert is marked resolved in database, exclude it
+    if (a.status === "resolved" || a.status === "closed") {
+      return false;
+    }
+
+    // Check Growatt / OEM string warnings where live telemetry confirms healthy operation
+    const invId = a.inverter_id || inverters.find((i) => i.site_id === a.site_id)?.id;
+    if (invId && (a.oem === "growatt" || a.code?.startsWith("GROWATT_") || a.alarm_code === "500")) {
+      const tel = latestTelemetryMap.get(invId);
+      if (tel) {
+        const warnCode = Number(tel.metrics?.warn_code ?? 0);
+        const faultType = Number(tel.metrics?.fault_type ?? 0);
+        const strFault = Number(tel.metrics?.str_fault ?? 0);
+        const isGenerating = Number(tel.ac_power_kw ?? 0) > 0.2;
+        // If warnCode is 0, strFault is 0, faultType is 0, and inverter is generating normally, the warning has auto-resolved
+        if (warnCode === 0 && faultType === 0 && strFault === 0 && isGenerating) {
+          autoResolvedAlertIds.push(a.id);
+          return false;
+        }
+      }
+    }
+    return true;
+  });
+
+  if (autoResolvedAlertIds.length > 0) {
+    try {
+      const serviceClient = createServiceClient();
+      await serviceClient
+        .from("alerts")
+        .update({ status: "resolved", resolved_at: new Date().toISOString() })
+        .in("id", autoResolvedAlertIds);
+    } catch (err) {
+      console.error("Failed to auto-resolve healthy alerts in database:", err);
+    }
+  }
+
   // Site health & status breakdown
   const siteInvertersMap = new Map<string, typeof inverters>();
   for (const inv of inverters) {
@@ -322,7 +361,7 @@ export default async function DashboardPage() {
     const status = getSiteStatus(siteInvs, latestTelemetryMap, undefined, site.service_tier);
 
     const siteTickets = tickets.filter((t) => t.site_id === site.id && t.status !== "resolved" && t.status !== "closed");
-    const siteAlerts = alerts.filter((a) => a.site_id === site.id && (a.status === "open" || a.status === "acknowledged"));
+    const siteAlerts = activeAlerts.filter((a) => a.site_id === site.id && (a.status === "open" || a.status === "acknowledged"));
 
     const offlineInvsCount = siteInvs.filter((i) => {
       const st = getSiteStatus([i], latestTelemetryMap);
@@ -358,40 +397,6 @@ export default async function DashboardPage() {
       Boolean(t.title?.includes("[Internet/WiFi Down]")) ||
       Boolean(t.description?.includes("[Root Cause Classification]: INTERNET OUTAGE"))
     );
-  }
-
-  // Filter and auto-resolve alerts whose telemetry confirms healthy normal operation
-  const autoResolvedAlertIds: string[] = [];
-  const activeAlerts = alerts.filter((a) => {
-    // If the alert is marked resolved in database, exclude it
-    if (a.status === "resolved" || a.status === "closed") {
-      return false;
-    }
-
-    // Check Growatt / OEM string warnings where live telemetry confirms healthy operation
-    if (a.inverter_id && (a.oem === "growatt" || a.code?.startsWith("GROWATT_") || a.alarm_code === "500")) {
-      const tel = latestTelemetryMap.get(a.inverter_id);
-      if (tel && tel.metrics) {
-        const warnCode = Number(tel.metrics.warn_code || 0);
-        const faultType = Number(tel.metrics.fault_type || 0);
-        const strFault = Number(tel.metrics.str_fault || 0);
-        const isGenerating = Number(tel.ac_power_kw || 0) > 0.2;
-        // If warnCode is 0, strFault is 0, faultType is 0, and inverter is generating normally, the warning has auto-resolved
-        if (warnCode === 0 && faultType === 0 && strFault === 0 && isGenerating) {
-          autoResolvedAlertIds.push(a.id);
-          return false;
-        }
-      }
-    }
-    return true;
-  });
-
-  if (autoResolvedAlertIds.length > 0) {
-    // Persist resolution to database in background
-    sb.from("alerts")
-      .update({ status: "resolved", resolved_at: new Date().toISOString() })
-      .in("id", autoResolvedAlertIds)
-      .then();
   }
 
   const openTickets = tickets.filter(

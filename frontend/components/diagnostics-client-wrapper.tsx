@@ -176,8 +176,7 @@ export function DiagnosticsClientWrapper({
       const isStringDeviation =
         alt.code === "STRING_PERFORMANCE_DEVIATION" ||
         alt.code === "STRING_ANOMALY" ||
-        (alt.code && alt.code.toUpperCase().includes("STRING")) ||
-        (alt.title && alt.title.toUpperCase().includes("STRING"));
+        Boolean(alt.metrics?.actual_current && alt.metrics?.string_index);
 
       // ONLY process genuine string deviation alerts that match a real string in the database and have verified per-string telemetry metrics.
       // Generic OEM inverter alarms or device warning codes (like GROWATT_500 or 1D4C3) without per-string metrics

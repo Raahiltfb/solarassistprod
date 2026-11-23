@@ -277,8 +277,7 @@ export default async function InverterDetailsPage({ params }: { params: Promise<
                     const isStringDeviation =
                       a.code === "STRING_PERFORMANCE_DEVIATION" ||
                       a.code === "STRING_ANOMALY" ||
-                      (a.code && a.code.toUpperCase().includes("STRING")) ||
-                      (a.title && a.title.toUpperCase().includes("STRING"));
+                      Boolean((a as any).metrics?.actual_current && (a as any).metrics?.string_index);
 
                     return (
                       <TableRow key={a.id}>

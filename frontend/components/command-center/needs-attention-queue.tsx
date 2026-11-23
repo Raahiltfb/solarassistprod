@@ -480,8 +480,7 @@ export function NeedsAttentionQueue({
       const isStringDeviation =
         alert.code === "STRING_PERFORMANCE_DEVIATION" ||
         alert.code === "STRING_ANOMALY" ||
-        (alert.code && alert.code.toUpperCase().includes("STRING")) ||
-        (alert.title && alert.title.toUpperCase().includes("STRING"));
+        Boolean((alert as any).metrics?.actual_current && (alert as any).metrics?.string_index);
 
       const techIntelUrl = alert.site_id
         ? `/diagnostics?site_id=${alert.site_id}&tab=site`
