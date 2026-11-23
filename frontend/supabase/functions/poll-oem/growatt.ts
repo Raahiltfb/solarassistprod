@@ -626,7 +626,9 @@ export class GrowattAdapter implements OemAdapter {
             defaultTitle: `Growatt Warning ${d.warnCode}`
           });
         }
-        if (Number(d.strFault || 0) > 0 || Number(d.strBreak || 0) > 0) {
+        // In Growatt firmware, strBreak is a bitmask of unpopulated physical terminals (e.g. 4 for 2-string setups)
+        // and must NOT be treated as a fault. Only actual strFault or warnCode 500 represents an abnormal string.
+        if (Number(d.strFault || 0) > 0) {
           rawCodes.push({
             code: "500",
             defaultTitle: "PV String Disconnected / Abnormal"

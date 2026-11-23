@@ -360,10 +360,44 @@ export default async function DashboardPage() {
     );
   }
 
+  // Filter and auto-resolve alerts whose telemetry confirms healthy normal operation
+  const autoResolvedAlertIds: string[] = [];
+  const activeAlerts = alerts.filter((a) => {
+    // If the alert is marked resolved in database, exclude it
+    if (a.status === "resolved" || a.status === "closed") {
+      return false;
+    }
+
+    // Check Growatt / OEM string warnings where live telemetry confirms healthy operation
+    if (a.inverter_id && (a.oem === "growatt" || a.code?.startsWith("GROWATT_") || a.alarm_code === "500")) {
+      const tel = latestTelemetryMap.get(a.inverter_id);
+      if (tel && tel.metrics) {
+        const warnCode = Number(tel.metrics.warn_code || 0);
+        const faultType = Number(tel.metrics.fault_type || 0);
+        const strFault = Number(tel.metrics.str_fault || 0);
+        const isGenerating = Number(tel.ac_power_kw || 0) > 0.2;
+        // If warnCode is 0, strFault is 0, faultType is 0, and inverter is generating normally, the warning has auto-resolved
+        if (warnCode === 0 && faultType === 0 && strFault === 0 && isGenerating) {
+          autoResolvedAlertIds.push(a.id);
+          return false;
+        }
+      }
+    }
+    return true;
+  });
+
+  if (autoResolvedAlertIds.length > 0) {
+    // Persist resolution to database in background
+    sb.from("alerts")
+      .update({ status: "resolved", resolved_at: new Date().toISOString() })
+      .in("id", autoResolvedAlertIds)
+      .then();
+  }
+
   const openTickets = tickets.filter(
     (t) => t.status !== "resolved" && t.status !== "closed" && !isConnectivityTicket(t)
   );
-  const openAlerts = alerts.filter((a) => a.status === "open" || a.status === "acknowledged");
+  const openAlerts = activeAlerts.filter((a) => a.status === "open" || a.status === "acknowledged");
 
   // Today's work orders (scheduled, en_route, in_progress, completed)
   const todayWorkOrders = workOrders.filter((wo) => wo.scheduled_date === todayStr);
@@ -460,7 +494,7 @@ export default async function DashboardPage() {
         tickets={tickets}
         workOrders={workOrders}
         offlineSites={offlineSitesList}
-        alerts={alerts}
+        alerts={activeAlerts}
         latestSyncRun={latestSyncRun}
       />
 

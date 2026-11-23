@@ -580,7 +580,7 @@
         "severity": "high",
         "category": "pv",
         "requires_technician": true,
-        "is_auto_resolvable": false
+        "is_auto_resolvable": true
       },
       "potential_causes": [
         "Blown DC string fuse or tripped DC MCB",

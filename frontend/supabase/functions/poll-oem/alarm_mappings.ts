@@ -948,7 +948,7 @@ export const GROWATT_ALARM_MAPPING: Record<string, AlarmRule> = {
     description: "Inverter detected zero current or abnormal voltage on an active PV string.",
     severity: "high",
     category: "pv",
-    is_auto_resolvable: false,
+    is_auto_resolvable: true,
     requires_technician: true,
     recommended_action: "Measure individual string open-circuit voltages and operating currents with a DC clamp meter."
   },
