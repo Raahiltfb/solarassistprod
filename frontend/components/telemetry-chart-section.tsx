@@ -106,6 +106,7 @@ export function TelemetryChartSection({ telemetry, expectedKw }: { telemetry: an
               <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
               <XAxis 
                 dataKey="timestamp" 
+                minTickGap={16}
                 tickFormatter={(t) => {
                   try {
                     return format(parseISO(t), "HH:mm");

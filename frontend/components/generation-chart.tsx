@@ -17,7 +17,7 @@ export function GenerationChart({ data }: { data: Array<{ timestamp: string; ac_
           </linearGradient>
         </defs>
         <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
-        <XAxis dataKey="timestamp" tickFormatter={(t) => format(parseISO(t), "HH:mm")} tickLine={false} axisLine={false} />
+        <XAxis dataKey="timestamp" minTickGap={16} tickFormatter={(t) => format(parseISO(t), "HH:mm")} tickLine={false} axisLine={false} />
         <YAxis tickLine={false} axisLine={false} />
         <Tooltip
           contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}

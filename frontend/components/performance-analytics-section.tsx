@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { format, parseISO, startOfDay, subDays, startOfMonth, startOfYear, endOfDay, endOfMonth, endOfYear, isSameDay, eachDayOfInterval, eachMonthOfInterval } from "date-fns";
+import { format, parseISO, startOfDay, subDays, startOfMonth, startOfYear, endOfDay, endOfMonth, endOfYear, isSameDay, eachDayOfInterval, eachMonthOfInterval, addMinutes } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Info } from "lucide-react";
@@ -217,13 +217,70 @@ export function PerformanceAnalyticsSection({
             });
             setChartData(formatted);
           } else {
-            const formatted = (rpcData ?? []).map((r: any) => ({
-              timestamp: r.timestamp,
-              power: Number(r.power || 0),
-              generation: Number(r.generation || 0),
-              specific_yield: Number(r.specific_yield || 0),
-            }));
-            setChartData(formatted);
+            if (!rpcData || rpcData.length === 0) {
+              setChartData([]);
+            } else {
+              // Build map of existing 15-minute telemetry points
+              const pointMap = new Map<string, { power: number; generation: number; specific_yield: number }>();
+              let minTime: Date | null = null;
+              let maxTime: Date | null = null;
+
+              for (const r of rpcData) {
+                try {
+                  const d = parseISO(r.timestamp);
+                  if (!minTime || d < minTime) minTime = d;
+                  if (!maxTime || d > maxTime) maxTime = d;
+                  const key = format(d, "yyyy-MM-dd HH:mm");
+                  pointMap.set(key, {
+                    power: Number(r.power || 0),
+                    generation: Number(r.generation || 0),
+                    specific_yield: Number(r.specific_yield || 0),
+                  });
+                } catch {
+                  // Ignore parse errors
+                }
+              }
+
+              if (!minTime || !maxTime) {
+                setChartData([]);
+              } else {
+                const sTime: Date = minTime;
+                const eTime: Date = maxTime;
+                const startDay = startOfDay(sTime);
+                const standardDawn = addMinutes(startDay, 6 * 60); // 06:00
+                const timelineStart: Date = sTime < standardDawn ? sTime : standardDawn;
+                const endTimestamp = eTime.getTime();
+
+                const formatted: any[] = [];
+                let lastKnownGen = 0;
+                let lastKnownYield = 0;
+
+                // Step every 15 minutes continuously to prevent gaps or unequal tick distances
+                for (let cur = new Date(timelineStart); cur.getTime() <= endTimestamp; cur = addMinutes(cur, 15)) {
+                  const key = format(cur, "yyyy-MM-dd HH:mm");
+                  const existing = pointMap.get(key);
+                  if (existing) {
+                    lastKnownGen = existing.generation;
+                    lastKnownYield = existing.specific_yield;
+                    formatted.push({
+                      timestamp: cur.toISOString(),
+                      power: existing.power,
+                      generation: existing.generation,
+                      specific_yield: existing.specific_yield,
+                    });
+                  } else {
+                    // Pad missing 15-minute point with 0 power and continuous cumulative generation
+                    formatted.push({
+                      timestamp: cur.toISOString(),
+                      power: 0,
+                      generation: lastKnownGen,
+                      specific_yield: lastKnownYield,
+                    });
+                  }
+                }
+                setChartData(formatted);
+              }
+            }
           }
         }
       } catch (err) {
@@ -282,6 +339,38 @@ export function PerformanceAnalyticsSection({
         { id: "year", label: "Year" },
         { id: "lifetime", label: "Lifetime" },
       ];
+
+  // Evenly spaced X-axis interval for daily/monthly bar charts
+  const barInterval = useMemo(() => {
+    if (range === "week") return 0; // 7 days: show every single day
+    if (range === "year") return 0; // 12 months: show all 12 months
+    if (chartData.length <= 8) return 0;
+    if (chartData.length <= 15) return 1; // 2 weeks: show every 2nd day
+    if (chartData.length <= 22) return 2; // 3 weeks: show every 3rd day
+    return 3; // ~30 days (Month): show every 4th day cleanly (e.g. 1st, 5th, 9th, 13th, 17th, 21st, 25th, 29th)
+  }, [range, chartData.length]);
+
+  // Clean, consistent hourly ticks for intraday / today area charts
+  const intradayTicks = useMemo(() => {
+    if (range !== "today" && !isSingleDayView) return undefined;
+    if (chartData.length === 0) return undefined;
+
+    const onTheHour = chartData.filter((d) => {
+      try {
+        return parseISO(d.timestamp).getMinutes() === 0;
+      } catch {
+        return false;
+      }
+    });
+
+    // If more than 8 hour marks, display every 2 hours to keep the axis clean, legible, and uncrowded
+    if (onTheHour.length > 8) {
+      return onTheHour
+        .filter((d) => parseISO(d.timestamp).getHours() % 2 === 0)
+        .map((d) => d.timestamp);
+    }
+    return onTheHour.map((d) => d.timestamp);
+  }, [range, isSingleDayView, chartData]);
 
   return (
     <div className="space-y-4" data-testid="performance-analytics-section">
@@ -373,9 +462,10 @@ export function PerformanceAnalyticsSection({
                   <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
                   <XAxis
                     dataKey="timestamp"
+                    ticks={intradayTicks}
                     tickFormatter={(t) => {
                       try {
-                        if (range === "today") return format(parseISO(t), "HH:mm");
+                        if (range === "today" || isSingleDayView) return format(parseISO(t), "HH:mm");
                         if (range === "week" || range === "month") return format(parseISO(t), "d MMM");
                         if (range === "year" || range === "lifetime") return format(parseISO(t), "MMM yy");
                         return format(parseISO(t), "yyyy");
@@ -422,6 +512,8 @@ export function PerformanceAnalyticsSection({
                   <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
                   <XAxis
                     dataKey="timestamp"
+                    interval={barInterval}
+                    minTickGap={8}
                     tickFormatter={(t) => {
                       try {
                         if (range === "week" || range === "month") return format(parseISO(t), "d MMM");
