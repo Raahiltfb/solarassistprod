@@ -15,8 +15,16 @@ import { expectedDailyGeneration } from "@/lib/integrations/solcast";
 import { SiteCleaningConfigButton } from "@/components/sites/site-cleaning-config-button";
 import { CleaningEvidenceLinks } from "@/components/cleaning-evidence-links";
 
-export default async function SiteDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function SiteDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ tab?: string }>;
+}) {
   const { id } = await params;
+  const sp = await searchParams;
+  const defaultTab = sp?.tab === "alerts" ? "alerts" : "inverters";
   const sb = await createClient();
 
   const { data: site } = await sb.from("sites").select("*").eq("id", id).single();
@@ -163,7 +171,7 @@ export default async function SiteDetailPage({ params }: { params: Promise<{ id:
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="inverters">
+      <Tabs defaultValue={defaultTab}>
         <TabsList>
           <TabsTrigger value="inverters" data-testid="tab-inverters">Inverters ({inverters.length})</TabsTrigger>
           <TabsTrigger value="alerts" data-testid="tab-alerts">Alerts ({alerts.length})</TabsTrigger>

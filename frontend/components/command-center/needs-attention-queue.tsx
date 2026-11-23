@@ -293,7 +293,14 @@ export function NeedsAttentionQueue({
       : []),
 
     // Offline & Partially Disconnected Sites/Inverters — auto-classified root cause
-    ...offlineSites.map((site) => {
+    // (Only include sites that do not already have an open ticket or unresolved alerts card)
+    ...offlineSites
+      .filter((site) => {
+        const hasOpenTicket = tickets.some((t) => t.site_id === site.id && t.status !== "resolved" && t.status !== "closed");
+        const hasOpenAlert = unresolvedAlertsWithoutTicket.some((a) => a.site_id === site.id);
+        return !hasOpenTicket && !hasOpenAlert;
+      })
+      .map((site) => {
       const isPartial = (site as any).isPartialOutage;
       const offlineCount = (site as any).offlineInvertersCount || 1;
       const totalCount = (site as any).totalInvertersCount || 1;
@@ -466,46 +473,102 @@ export function NeedsAttentionQueue({
         };
       }),
 
-    // Unresolved OEM Alerts not yet linked to an open ticket
-    ...unresolvedAlertsWithoutTicket.map((alert) => {
-      let subtitle = `Code: ${alert.code} · ${formatUnresolvedDuration(alert.triggered_at)}`;
-      if (alert.requires_technician) {
-        subtitle += " · Tech Action Required";
+    // Unresolved OEM Alerts not yet linked to an open ticket (Grouped by site so each site has at most ONE alert card)
+    ...(() => {
+      const SEVERITY_WEIGHT: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+
+      const alertsBySite = new Map<string, typeof unresolvedAlertsWithoutTicket>();
+      for (const alert of unresolvedAlertsWithoutTicket) {
+        const key = alert.site_id || `alert-${alert.id}`;
+        const list = alertsBySite.get(key) ?? [];
+        list.push(alert);
+        alertsBySite.set(key, list);
       }
 
-      const actionExplanation = alert.severity === "critical"
-        ? "DISPATCH IMMEDIATELY — Critical fault code detected. Automated P1 ticket & job creation queued."
-        : "HUMAN REVIEW REQUIRED — Telemetry anomaly detected. System awaiting admin review.";
+      return Array.from(alertsBySite.entries()).map(([siteKey, siteAlerts]) => {
+        // Sort alerts by severity (highest first), then most recent
+        const sorted = [...siteAlerts].sort((a, b) => {
+          const wA = SEVERITY_WEIGHT[a.severity] ?? 9;
+          const wB = SEVERITY_WEIGHT[b.severity] ?? 9;
+          if (wA !== wB) return wA - wB;
+          return new Date(b.triggered_at).getTime() - new Date(a.triggered_at).getTime();
+        });
 
-      const isStringDeviation =
-        alert.code === "STRING_PERFORMANCE_DEVIATION" ||
-        alert.code === "STRING_ANOMALY" ||
-        Boolean((alert as any).metrics?.actual_current && (alert as any).metrics?.string_index);
+        const primaryAlert = sorted[0];
+        const impactedInverterIds = new Set(
+          sorted.map((a) => a.inverter_id).filter(Boolean)
+        );
+        const invCount = impactedInverterIds.size;
 
-      const techIntelUrl = alert.site_id
-        ? `/diagnostics?site_id=${alert.site_id}&tab=site`
-        : "/diagnostics";
+        const oldestTriggeredAt = sorted.reduce((oldest, a) => {
+          return new Date(a.triggered_at).getTime() < new Date(oldest).getTime()
+            ? a.triggered_at
+            : oldest;
+        }, primaryAlert.triggered_at);
 
-      return {
-        id: `alert-${alert.id}`,
-        type: "alert" as const,
-        siteName: alert.sites?.name || "Unknown Site",
-        siteId: alert.site_id,
-        title: alert.title,
-        subtitle,
-        actionExplanation,
-        severity: alert.severity === "critical" ? ("critical" as const) : alert.severity === "high" ? ("high" as const) : ("medium" as const),
-        timestamp: alert.triggered_at,
-        actionUrl: isStringDeviation
+        let subtitle = `Code: ${primaryAlert.code}`;
+        if (invCount > 1) {
+          subtitle += ` · ${invCount} inverters impacted`;
+        } else if (sorted.length > 1) {
+          subtitle += ` · ${sorted.length} active alerts`;
+        }
+        subtitle += ` · ${formatUnresolvedDuration(oldestTriggeredAt)}`;
+        if (sorted.some((a) => a.requires_technician)) {
+          subtitle += " · Tech Action Required";
+        }
+
+        const severity = primaryAlert.severity === "critical"
+          ? ("critical" as const)
+          : primaryAlert.severity === "high"
+          ? ("high" as const)
+          : ("medium" as const);
+
+        const actionExplanation = severity === "critical"
+          ? "DISPATCH IMMEDIATELY — Critical fault code detected. Automated P1 ticket & job creation queued."
+          : "HUMAN REVIEW REQUIRED — Telemetry anomaly detected. System awaiting admin review.";
+
+        const isStringDeviation =
+          primaryAlert.code === "STRING_PERFORMANCE_DEVIATION" ||
+          primaryAlert.code === "STRING_ANOMALY" ||
+          Boolean((primaryAlert as any).metrics?.actual_current && (primaryAlert as any).metrics?.string_index);
+
+        const techIntelUrl = primaryAlert.site_id
+          ? `/diagnostics?site_id=${primaryAlert.site_id}&tab=site`
+          : "/diagnostics";
+
+        // Clicking View Alert takes the user directly to the site details page to see all inverters and full telemetry
+        const actionUrl = isStringDeviation
           ? techIntelUrl
-          : alert.ticket_id
-          ? `/tickets/${alert.ticket_id}`
-          : "/alerts",
-        actionLabel: isStringDeviation ? "View Deviation" : alert.ticket_id ? "View Ticket" : "View Alert",
-        badgeText: `Alert ${alert.severity.toUpperCase()}`,
-        badgeVariant: alert.severity === "critical" ? ("destructive" as const) : alert.severity === "high" ? ("warning" as const) : ("secondary" as const),
-      };
-    }),
+          : primaryAlert.ticket_id
+          ? `/tickets/${primaryAlert.ticket_id}`
+          : primaryAlert.site_id
+          ? `/sites/${primaryAlert.site_id}`
+          : "/alerts";
+
+        const uniqueTitles = Array.from(new Set(sorted.map((a) => a.title).filter(Boolean)));
+        const title = uniqueTitles.length > 1
+          ? `${primaryAlert.title} (+${sorted.length - 1} more)`
+          : primaryAlert.title;
+
+        return {
+          id: `alert-site-${siteKey}`,
+          type: "alert" as const,
+          siteName: primaryAlert.sites?.name || "Unknown Site",
+          siteId: primaryAlert.site_id,
+          title,
+          subtitle,
+          actionExplanation,
+          severity,
+          timestamp: oldestTriggeredAt,
+          actionUrl,
+          actionLabel: isStringDeviation ? "View Deviation" : primaryAlert.ticket_id ? "View Ticket" : "View Alert",
+          badgeText: `Alert ${severity.toUpperCase()}`,
+          badgeVariant: severity === "critical" ? ("destructive" as const) : severity === "high" ? ("warning" as const) : ("secondary" as const),
+          totalAlertsCount: sorted.length,
+          impactedInvertersCount: invCount,
+        };
+      });
+    })(),
 
     // Unassigned Work Orders not already linked to an open ticket
     ...unassignedWorkOrders
@@ -550,8 +613,17 @@ export function NeedsAttentionQueue({
       })),
   ];
 
-  // Highest severity first; suppressed/auto-classified low items sink to the bottom
-  incidents.sort((a, b) => (SEVERITY_RANK[a.severity] ?? 9) - (SEVERITY_RANK[b.severity] ?? 9));
+  // Highest severity first; suppressed/auto-classified low items sink to the bottom.
+  // Within the same severity level, sites with more impacted inverters/alerts or newer timestamps appear first.
+  incidents.sort((a, b) => {
+    const rankA = SEVERITY_RANK[a.severity] ?? 9;
+    const rankB = SEVERITY_RANK[b.severity] ?? 9;
+    if (rankA !== rankB) return rankA - rankB;
+    const countA = (a as any).totalAlertsCount || (a as any).impactedInvertersCount || 1;
+    const countB = (b as any).totalAlertsCount || (b as any).impactedInvertersCount || 1;
+    if (countB !== countA) return countB - countA;
+    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+  });
 
   const criticalCount = incidents.filter((i) => i.severity === "critical").length;
 
