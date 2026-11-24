@@ -225,44 +225,40 @@ export function SiteSelectorCombobox({
                 <button
                   type="button"
                   onClick={() => setFilterMode("all")}
-                  className={`text-[10px] px-2 py-1 rounded font-medium transition-colors ${
-                    filterMode === "all"
-                      ? "bg-primary text-primary-foreground font-semibold"
-                      : "text-muted-foreground hover:bg-muted"
-                  }`}
+                  className={`text-[10px] px-2 py-1 rounded font-medium transition-colors ${filterMode === "all"
+                    ? "bg-primary text-primary-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-muted"
+                    }`}
                 >
                   All ({sites.length})
                 </button>
                 <button
                   type="button"
                   onClick={() => setFilterMode("attention")}
-                  className={`text-[10px] px-2 py-1 rounded font-medium transition-colors flex items-center gap-1 ${
-                    filterMode === "attention"
-                      ? "bg-amber-500 text-white font-semibold"
-                      : "text-amber-700 dark:text-amber-300 hover:bg-amber-500/10"
-                  }`}
+                  className={`text-[10px] px-2 py-1 rounded font-medium transition-colors flex items-center gap-1 ${filterMode === "attention"
+                    ? "bg-amber-500 text-white font-semibold"
+                    : "text-amber-700 dark:text-amber-300 hover:bg-amber-500/10"
+                    }`}
                 >
                   Needs Attention ({sitesWithAttentionCount})
                 </button>
                 <button
                   type="button"
                   onClick={() => setFilterMode("offline")}
-                  className={`text-[10px] px-2 py-1 rounded font-medium transition-colors flex items-center gap-1 ${
-                    filterMode === "offline"
-                      ? "bg-destructive text-white font-semibold"
-                      : "text-destructive hover:bg-destructive/10"
-                  }`}
+                  className={`text-[10px] px-2 py-1 rounded font-medium transition-colors flex items-center gap-1 ${filterMode === "offline"
+                    ? "bg-destructive text-white font-semibold"
+                    : "text-destructive hover:bg-destructive/10"
+                    }`}
                 >
                   Offline ({sitesOfflineCount})
                 </button>
                 <button
                   type="button"
                   onClick={() => setFilterMode("healthy")}
-                  className={`text-[10px] px-2 py-1 rounded font-medium transition-colors ${
-                    filterMode === "healthy"
-                      ? "bg-emerald-600 text-white font-semibold"
-                      : "text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10"
-                  }`}
+                  className={`text-[10px] px-2 py-1 rounded font-medium transition-colors ${filterMode === "healthy"
+                    ? "bg-emerald-600 text-white font-semibold"
+                    : "text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10"
+                    }`}
                 >
                   Healthy ({sitesHealthyCount})
                 </button>
@@ -300,11 +296,10 @@ export function SiteSelectorCombobox({
                     setIsOpen(false);
                     setSearch("");
                   }}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-all ${
-                    isSelected
-                      ? "bg-primary/10 text-primary font-semibold ring-1 ring-primary/30"
-                      : "hover:bg-muted text-foreground"
-                  }`}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-all ${isSelected
+                    ? "bg-primary/10 text-primary font-semibold ring-1 ring-primary/30"
+                    : "hover:bg-muted text-foreground"
+                    }`}
                 >
                   <div className="flex items-start gap-2.5 min-w-0 pr-2 flex-1">
                     {isOffline ? (
