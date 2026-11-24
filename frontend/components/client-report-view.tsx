@@ -31,8 +31,7 @@ import {
   Clock,
   Layers,
   FileText,
-  Activity,
-  AlertCircle
+  Activity
 } from "lucide-react";
 import { 
   ResponsiveContainer, 
@@ -312,8 +311,8 @@ export function ClientReportView({
 
           <div className="text-right space-y-1">
             <div className="flex items-center justify-end gap-2">
-              <img src="/logo-full.png" alt="Solar Assist" className="dark:hidden h-8 w-auto object-contain print:block" />
-              <img src="/logo-full-dark-trans.png" alt="Solar Assist" className="hidden dark:block h-8 w-auto object-contain print:hidden" />
+              <img src="/logo-full.png" alt="Solar Assist" className="dark:hidden h-10 sm:h-12 print:h-14 w-auto object-contain print:block" />
+              <img src="/logo-full-dark-trans.png" alt="Solar Assist" className="hidden dark:block h-10 sm:h-12 w-auto object-contain print:hidden" />
             </div>
             <div className="text-[11px] text-muted-foreground print:text-gray-600">
               Reporting Month: <strong>{monthLabel}</strong>
@@ -420,7 +419,7 @@ export function ClientReportView({
             </Badge>
           </div>
 
-          <div className="h-52 w-full pt-1">
+          <div className="h-96 sm:h-[420px] print:h-[440px] w-full pt-1">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.2} vertical={false} />
@@ -475,15 +474,10 @@ export function ClientReportView({
                   <th className="p-2.5">Date</th>
                   <th className="p-2.5 text-right">Energy Generated (kWh)</th>
                   <th className="p-2.5 text-right">Specific Yield (kWh/kWp)</th>
-                  <th className="p-2.5 text-right">Baseline Expected</th>
-                  <th className="p-2.5 text-right">Operational Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border print:divide-gray-200">
                 {generationDays.map((d, i) => {
-                  const isNormal = d.status === "normal";
-                  const isLow = d.status === "low_generation";
-                  const isOffline = d.status === "offline";
                   const isUpcoming = d.status === "upcoming";
 
                   return (
@@ -496,31 +490,6 @@ export function ClientReportView({
                       </td>
                       <td className="p-2.5 text-right font-mono text-emerald-600 dark:text-emerald-400 print:text-emerald-800">
                         {isUpcoming ? "—" : d.specific_yield.toFixed(2)}
-                      </td>
-                      <td className="p-2.5 text-right font-mono text-muted-foreground print:text-gray-600">
-                        {d.expected_kwh.toFixed(1)}
-                      </td>
-                      <td className="p-2.5 text-right">
-                        {isNormal && (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium print:text-emerald-800">
-                            <CheckCircle2 className="h-3 w-3" /> Nominal
-                          </span>
-                        )}
-                        {isLow && (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400 font-medium print:text-amber-800">
-                            <AlertCircle className="h-3 w-3" /> Reduced Yield
-                          </span>
-                        )}
-                        {isOffline && (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium print:text-rose-800">
-                            <AlertCircle className="h-3 w-3" /> No Telemetry
-                          </span>
-                        )}
-                        {isUpcoming && (
-                          <span className="text-[11px] text-muted-foreground print:text-gray-400">
-                            Upcoming
-                          </span>
-                        )}
                       </td>
                     </tr>
                   );
