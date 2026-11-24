@@ -293,7 +293,7 @@ export function DiagnosticsClientWrapper({
     return map;
   }, [sites, fleetAnomalies, allInverters, activeAlerts, fleetLatestTelemetryMap, allTelemetry, allStringTelemetry, allStrings]);
 
-  const [siteFilterMode, setSiteFilterMode] = useState<"all" | "attention" | "healthy">("all");
+  const [siteFilterMode, setSiteFilterMode] = useState<"all" | "attention" | "offline" | "healthy">("all");
   const [siteSortBy, setSiteSortBy] = useState<"attention" | "name" | "capacity">("attention");
   const [siteSearch, setSiteSearch] = useState<string>("");
 
@@ -308,16 +308,19 @@ export function DiagnosticsClientWrapper({
         }
 
         const issue = siteIssuesMap[s.id];
-        const hasIssues = issue && (issue.isOffline || (issue.anomalyCount ?? 0) > 0 || (issue.alertsCount ?? 0) > 0);
-        if (siteFilterMode === "attention") return hasIssues;
-        if (siteFilterMode === "healthy") return !hasIssues;
+        const isOffline = Boolean(issue?.isOffline);
+        const hasStringErrors = (issue?.stringErrors ?? 0) > 0;
+
+        if (siteFilterMode === "attention") return hasStringErrors;
+        if (siteFilterMode === "offline") return isOffline;
+        if (siteFilterMode === "healthy") return !isOffline && !hasStringErrors;
         return true;
       })
       .sort((a, b) => {
         const issueA = siteIssuesMap[a.id];
         const issueB = siteIssuesMap[b.id];
-        const scoreA = (issueA?.isOffline ? 100 : 0) + (issueA?.anomalyCount ?? 0) * 10 + (issueA?.alertsCount ?? 0) * 5;
-        const scoreB = (issueB?.isOffline ? 100 : 0) + (issueB?.anomalyCount ?? 0) * 10 + (issueB?.alertsCount ?? 0) * 5;
+        const scoreA = (issueA?.isOffline ? 100 : 0) + (issueA?.stringErrors ?? 0) * 10 + (issueA?.alertsCount ?? 0) * 5;
+        const scoreB = (issueB?.isOffline ? 100 : 0) + (issueB?.stringErrors ?? 0) * 10 + (issueB?.alertsCount ?? 0) * 5;
 
         if (siteSortBy === "attention") {
           if (scoreA !== scoreB) return scoreB - scoreA;
@@ -346,7 +349,7 @@ export function DiagnosticsClientWrapper({
     handleSelectSite(navigableSites[nextIdx]);
   };
 
-  const handleFilterModeChange = (mode: "all" | "attention" | "healthy") => {
+  const handleFilterModeChange = (mode: "all" | "attention" | "offline" | "healthy") => {
     setSiteFilterMode(mode);
     const newFiltered = sites.filter((s) => {
       if (siteSearch.trim()) {
@@ -356,9 +359,12 @@ export function DiagnosticsClientWrapper({
         if (!matchName && !matchLoc) return false;
       }
       const issue = siteIssuesMap[s.id];
-      const hasIssues = issue && (issue.isOffline || (issue.anomalyCount ?? 0) > 0);
-      if (mode === "attention") return hasIssues;
-      if (mode === "healthy") return !hasIssues;
+      const isOffline = Boolean(issue?.isOffline);
+      const hasStringErrors = (issue?.stringErrors ?? 0) > 0;
+
+      if (mode === "attention") return hasStringErrors;
+      if (mode === "offline") return isOffline;
+      if (mode === "healthy") return !isOffline && !hasStringErrors;
       return true;
     });
     if (newFiltered.length > 0 && !newFiltered.some((s) => s.id === selectedSite.id)) {
@@ -485,6 +491,18 @@ export function DiagnosticsClientWrapper({
 
   const sitesWithIssuesCount = useMemo(() => {
     return Object.values(siteIssuesMap).filter((i) => i.isOffline || i.anomalyCount > 0 || (i.alertsCount ?? 0) > 0).length;
+  }, [siteIssuesMap]);
+
+  const sitesWithAttentionCount = useMemo(() => {
+    return Object.values(siteIssuesMap).filter((i) => (i.stringErrors ?? 0) > 0).length;
+  }, [siteIssuesMap]);
+
+  const sitesOfflineCount = useMemo(() => {
+    return Object.values(siteIssuesMap).filter((i) => Boolean(i.isOffline)).length;
+  }, [siteIssuesMap]);
+
+  const sitesHealthyCount = useMemo(() => {
+    return Object.values(siteIssuesMap).filter((i) => !i.isOffline && (i.stringErrors ?? 0) === 0).length;
   }, [siteIssuesMap]);
 
   return (
@@ -670,7 +688,19 @@ export function DiagnosticsClientWrapper({
                   }`}
                 >
                   <span className="h-2 w-2 rounded-full bg-amber-500" />
-                  Needs Attention ({sitesWithIssuesCount})
+                  Needs Attention ({sitesWithAttentionCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFilterModeChange("offline")}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
+                    siteFilterMode === "offline"
+                      ? "bg-destructive text-white font-semibold shadow-xs"
+                      : "bg-destructive/10 text-destructive hover:bg-destructive/20"
+                  }`}
+                >
+                  <span className="h-2 w-2 rounded-full bg-destructive" />
+                  Offline ({sitesOfflineCount})
                 </button>
                 <button
                   type="button"
@@ -682,7 +712,7 @@ export function DiagnosticsClientWrapper({
                   }`}
                 >
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  Healthy Only ({sites.length - sitesWithIssuesCount})
+                  Healthy Only ({sitesHealthyCount})
                 </button>
               </div>
 

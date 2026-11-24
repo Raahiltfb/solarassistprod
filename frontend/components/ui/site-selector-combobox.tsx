@@ -39,8 +39,8 @@ export function SiteSelectorCombobox({
   onSelectSite: (site: SiteOption) => void;
   isPending?: boolean;
   siteIssuesMap?: Record<string, SiteIssueInfo>;
-  filterMode?: "all" | "attention" | "healthy";
-  onFilterModeChange?: (mode: "all" | "attention" | "healthy") => void;
+  filterMode?: "all" | "attention" | "offline" | "healthy";
+  onFilterModeChange?: (mode: "all" | "attention" | "offline" | "healthy") => void;
   sortBy?: "attention" | "name" | "capacity";
   onSortByChange?: (sort: "attention" | "name" | "capacity") => void;
   search?: string;
@@ -54,11 +54,11 @@ export function SiteSelectorCombobox({
     setInternalSearch(val);
     onSearchChange?.(val);
   };
-  const [internalFilterMode, setInternalFilterMode] = useState<"all" | "attention" | "healthy">("all");
+  const [internalFilterMode, setInternalFilterMode] = useState<"all" | "attention" | "offline" | "healthy">("all");
   const [internalSortBy, setInternalSortBy] = useState<"attention" | "name" | "capacity">("attention");
 
   const filterMode = controlledFilterMode ?? internalFilterMode;
-  const setFilterMode = (mode: "all" | "attention" | "healthy") => {
+  const setFilterMode = (mode: "all" | "attention" | "offline" | "healthy") => {
     setInternalFilterMode(mode);
     onFilterModeChange?.(mode);
   };
@@ -74,10 +74,24 @@ export function SiteSelectorCombobox({
   const selectedSite = sites.find((s) => s.id === selectedSiteId) || sites[0];
   const selectedIssue = selectedSite ? siteIssuesMap[selectedSite.id] : undefined;
 
-  const sitesWithIssuesCount = useMemo(() => {
+  const sitesWithAttentionCount = useMemo(() => {
     return sites.filter((s) => {
       const issue = siteIssuesMap[s.id];
-      return issue && (issue.isOffline || (issue.anomalyCount ?? 0) > 0);
+      return issue && (issue.stringErrors ?? 0) > 0;
+    }).length;
+  }, [sites, siteIssuesMap]);
+
+  const sitesOfflineCount = useMemo(() => {
+    return sites.filter((s) => {
+      const issue = siteIssuesMap[s.id];
+      return issue && Boolean(issue.isOffline);
+    }).length;
+  }, [sites, siteIssuesMap]);
+
+  const sitesHealthyCount = useMemo(() => {
+    return sites.filter((s) => {
+      const issue = siteIssuesMap[s.id];
+      return !issue || (!issue.isOffline && (issue.stringErrors ?? 0) === 0);
     }).length;
   }, [sites, siteIssuesMap]);
 
@@ -90,17 +104,19 @@ export function SiteSelectorCombobox({
         if (!matchesSearch) return false;
 
         const issue = siteIssuesMap[site.id];
-        const hasIssues = issue && (issue.isOffline || (issue.anomalyCount ?? 0) > 0);
+        const isOffline = Boolean(issue?.isOffline);
+        const hasStringErrors = (issue?.stringErrors ?? 0) > 0;
 
-        if (filterMode === "attention") return hasIssues;
-        if (filterMode === "healthy") return !hasIssues;
+        if (filterMode === "attention") return hasStringErrors;
+        if (filterMode === "offline") return isOffline;
+        if (filterMode === "healthy") return !isOffline && !hasStringErrors;
         return true;
       })
       .sort((a, b) => {
         const issueA = siteIssuesMap[a.id];
         const issueB = siteIssuesMap[b.id];
-        const scoreA = (issueA?.isOffline ? 100 : 0) + (issueA?.anomalyCount ?? 0);
-        const scoreB = (issueB?.isOffline ? 100 : 0) + (issueB?.anomalyCount ?? 0);
+        const scoreA = (issueA?.isOffline ? 100 : 0) + (issueA?.stringErrors ?? issueA?.anomalyCount ?? 0);
+        const scoreB = (issueB?.isOffline ? 100 : 0) + (issueB?.stringErrors ?? issueB?.anomalyCount ?? 0);
 
         if (sortBy === "attention") {
           if (scoreA !== scoreB) return scoreB - scoreA;
@@ -138,7 +154,7 @@ export function SiteSelectorCombobox({
             <Loader2 className="h-4 w-4 text-primary shrink-0 animate-spin" />
           ) : selectedIssue?.isOffline ? (
             <span className="h-2.5 w-2.5 rounded-full bg-destructive shrink-0 shadow-sm animate-pulse" />
-          ) : (selectedIssue?.anomalyCount ?? 0) > 0 ? (
+          ) : (selectedIssue?.stringErrors ?? 0) > 0 ? (
             <span className="h-2.5 w-2.5 rounded-full bg-amber-500 shrink-0 shadow-sm" />
           ) : (
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shrink-0 shadow-sm" />
@@ -164,9 +180,9 @@ export function SiteSelectorCombobox({
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-destructive/15 text-destructive uppercase tracking-wide">
                 Offline
               </span>
-            ) : (selectedIssue.anomalyCount ?? 0) > 0 ? (
+            ) : (selectedIssue.stringErrors ?? 0) > 0 ? (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 font-mono">
-                {selectedIssue.anomalyCount} {selectedIssue.anomalyCount === 1 ? "issue" : "issues"}
+                {selectedIssue.stringErrors} {selectedIssue.stringErrors === 1 ? "issue" : "issues"}
               </span>
             ) : (
               <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
@@ -226,7 +242,18 @@ export function SiteSelectorCombobox({
                       : "text-amber-700 dark:text-amber-300 hover:bg-amber-500/10"
                   }`}
                 >
-                  Needs Attention ({sitesWithIssuesCount})
+                  Needs Attention ({sitesWithAttentionCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterMode("offline")}
+                  className={`text-[10px] px-2 py-1 rounded font-medium transition-colors flex items-center gap-1 ${
+                    filterMode === "offline"
+                      ? "bg-destructive text-white font-semibold"
+                      : "text-destructive hover:bg-destructive/10"
+                  }`}
+                >
+                  Offline ({sitesOfflineCount})
                 </button>
                 <button
                   type="button"
@@ -237,7 +264,7 @@ export function SiteSelectorCombobox({
                       : "text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10"
                   }`}
                 >
-                  Healthy ({sites.length - sitesWithIssuesCount})
+                  Healthy ({sitesHealthyCount})
                 </button>
               </div>
 
@@ -260,8 +287,9 @@ export function SiteSelectorCombobox({
             {filteredSites.map((site) => {
               const isSelected = site.id === selectedSiteId;
               const issue = siteIssuesMap[site.id];
-              const hasAnomalies = (issue?.anomalyCount ?? 0) > 0;
-              const isOffline = issue?.isOffline;
+              const isOffline = Boolean(issue?.isOffline);
+              const stringErrorCount = issue?.stringErrors ?? 0;
+              const hasStringErrors = stringErrorCount > 0;
 
               return (
                 <button
@@ -281,7 +309,7 @@ export function SiteSelectorCombobox({
                   <div className="flex items-start gap-2.5 min-w-0 pr-2 flex-1">
                     {isOffline ? (
                       <span className="h-2 w-2 rounded-full bg-destructive shrink-0 mt-1" />
-                    ) : hasAnomalies ? (
+                    ) : hasStringErrors ? (
                       <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0 mt-1" />
                     ) : (
                       <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0 mt-1" />
@@ -300,9 +328,9 @@ export function SiteSelectorCombobox({
                       <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-destructive/15 text-destructive uppercase">
                         Offline
                       </span>
-                    ) : hasAnomalies ? (
+                    ) : hasStringErrors ? (
                       <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono">
-                        {issue?.anomalyCount} {issue?.anomalyCount === 1 ? "issue" : "issues"}
+                        {stringErrorCount} {stringErrorCount === 1 ? "string issue" : "string issues"}
                       </span>
                     ) : (
                       <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">
