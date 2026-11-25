@@ -566,6 +566,8 @@ class FestonAdapter(OemAdapter):
         raw_registers = device_data.get("dataList", [])
         col_time = device_data.get("collectionTime")
         timestamp_iso = datetime.fromtimestamp(col_time, tz=timezone.utc).isoformat() if col_time else now_iso
+        diff_mins = (datetime.now(timezone.utc) - datetime.fromtimestamp(col_time, tz=timezone.utc)).total_seconds() / 60.0 if col_time else 0.0
+        is_fresh = diff_mins <= 45.0
 
         ac_power = self._match_metric_value(raw_registers, KEY_PATTERNS["ac_power"]) or 0.0
         dc_power = self._match_metric_value(raw_registers, KEY_PATTERNS["dc_power"]) or ac_power
@@ -595,7 +597,7 @@ class FestonAdapter(OemAdapter):
             daily_generation_kwh=daily_gen,
             total_generation_kwh=total_gen,
             specific_yield=0.0,
-            online_status=bool(ac_power > 0.05),
+            online_status=bool(is_fresh and ac_power > 0.05),
             last_update=timestamp_iso,
             frequency_hz=freq,
             power_factor=pf,

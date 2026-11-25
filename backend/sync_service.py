@@ -730,7 +730,7 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                 inv_last_seen = telemetry.timestamp if telemetry else dev.last_seen_at
                 
                 ist_hours = ((datetime.now(timezone.utc).hour + 5) + (datetime.now(timezone.utc).minute + 30) / 60.0) % 24
-                is_nighttime = ist_hours >= 17.5 or ist_hours < 6.0
+                is_nighttime = ist_hours >= 18.0 or ist_hours < 6.0
 
                 if telemetry:
                     tel_date = None
@@ -741,19 +741,23 @@ def process_station_concurrently(station, adapter, plants_mapping, org_id, provi
                     except Exception:
                         pass
                     diff_mins = (datetime.now(timezone.utc) - tel_date).total_seconds() / 60.0 if tel_date else 999
+                    last_seen_ist_hours = ((tel_date.hour + 5) + (tel_date.minute + 30) / 60.0) % 24 if tel_date else 0.0
 
                     if diff_mins >= 14 * 60:
                         inv_status = "offline"
-                    elif diff_mins <= 120 and telemetry.ac_power_kw > 0.05:
-                        inv_status = "online"
                     elif is_nighttime:
-                        inv_status = "fault" if dev.status == "fault" else "standby"
+                        if last_seen_ist_hours < 17.0 and diff_mins > 45:
+                            inv_status = "offline"
+                        else:
+                            inv_status = "fault" if dev.status == "fault" else "standby"
                     elif dev.status == "fault":
                         inv_status = "fault"
-                    elif diff_mins > 120:
+                    elif diff_mins > 45:
                         inv_status = "offline"
                     elif not telemetry.online_status or dev.status == "offline":
                         inv_status = "offline"
+                    elif diff_mins <= 45 and telemetry.ac_power_kw > 0.05:
+                        inv_status = "online"
                     else:
                         inv_status = "standby"
                 else:

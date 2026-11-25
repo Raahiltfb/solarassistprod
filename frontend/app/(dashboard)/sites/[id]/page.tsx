@@ -183,6 +183,7 @@ export default async function SiteDetailPage({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {inverters.map((inv) => {
               const tel = latestTelemetryMap.get(inv.id);
+              const invStatus = getInverterStatus(inv, tel);
               const invStrings = strings
                 .filter((s) => s.inverter_id === inv.id)
                 .sort((a, b) => Number(a.string_index) - Number(b.string_index));
@@ -199,14 +200,9 @@ export default async function SiteDetailPage({
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      {(() => {
-                        const invStatus = getInverterStatus(inv, tel);
-                        return (
-                          <Badge variant={invStatus === "ONLINE" ? "success" : invStatus === "OFFLINE" ? "destructive" : "warning"} className="capitalize">
-                            {invStatus === "NO GRID" ? "Online (No Grid)" : invStatus.toLowerCase()}
-                          </Badge>
-                        );
-                      })()}
+                      <Badge variant={invStatus === "ONLINE" ? "success" : invStatus === "OFFLINE" ? "destructive" : "warning"} className="capitalize">
+                        {invStatus === "NO GRID" ? "Online (No Grid)" : invStatus.toLowerCase()}
+                      </Badge>
                       <Link href={`/inverters/${inv.id}`}>
                         <Button variant="outline" size="sm" className="text-xs gap-1 py-1 h-7">
                           View Inverter Details →
@@ -218,7 +214,7 @@ export default async function SiteDetailPage({
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
                       <div>
                         <div className="text-muted-foreground text-xs">Current Power</div>
-                        <div className="font-semibold font-mono">{tel ? `${Number(tel.ac_power_kw).toFixed(2)} kW` : "—"}</div>
+                        <div className="font-semibold font-mono">{invStatus === "OFFLINE" ? "0.00 kW" : tel ? `${Number(tel.ac_power_kw).toFixed(2)} kW` : "—"}</div>
                       </div>
                       <div>
                         <div className="text-muted-foreground text-xs">Daily Generation</div>

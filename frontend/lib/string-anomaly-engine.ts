@@ -259,14 +259,6 @@ export function analyzeStringAnomalies(
       }
     }
 
-    // If inverter status in DB is online and it communicated today (< 14 hours), treat as having active communication/generation
-    if (inv.last_seen_at) {
-      const dt = parseUtcDate(inv.last_seen_at);
-      if (dt && (Date.now() - dt.getTime()) < 14 * 3600 * 1000 && inv.status === "online") {
-        invHasActiveGeneration = true;
-      }
-    }
-
     const invStatus = getInverterStatus(inv, latestTs, invHasActiveGeneration);
     const isOffline = invStatus === "OFFLINE";
 

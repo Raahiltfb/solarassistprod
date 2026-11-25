@@ -513,6 +513,8 @@ export class FestonAdapter implements OemAdapter {
       const rawRegisters = deviceData.dataList || [];
       const colTime = deviceData.collectionTime;
       const timestampIso = colTime && typeof colTime === "number" ? new Date(colTime * 1000).toISOString() : nowIso;
+      const diffMinutes = colTime && typeof colTime === "number" ? (Date.now() - colTime * 1000) / 60000 : 0;
+      const isFresh = diffMinutes <= 45;
 
       const acPower = this._matchMetricValue(rawRegisters, KEY_PATTERNS.ac_power) || 0.0;
       const dcPower = this._matchMetricValue(rawRegisters, KEY_PATTERNS.dc_power) || acPower;
@@ -549,7 +551,7 @@ export class FestonAdapter implements OemAdapter {
         daily_generation_kwh: Math.round(dailyGen * 100) / 100,
         total_generation_kwh: Math.round(totalGen * 100) / 100,
         specific_yield: 0.0,
-        online_status: acPower > 0.05,
+        online_status: isFresh && acPower > 0.05,
         last_update: timestampIso,
         frequency_hz: freq,
         power_factor: pf,

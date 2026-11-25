@@ -444,7 +444,7 @@ export function DiagnosticsClientWrapper({
     return invStatus === "OFFLINE";
   }).length;
 
-  const isSiteOffline = siteInverters.length > 0 && offlineInvertersCount === siteInverters.length && !hasActiveGenerationToday;
+  const isSiteOffline = siteInverters.length > 0 && offlineInvertersCount === siteInverters.length;
   const invertersAffectedSet = new Set([
     ...anomalies.map((a) => a.inverter_id),
     ...siteInverters
