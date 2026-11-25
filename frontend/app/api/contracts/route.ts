@@ -27,8 +27,8 @@ export async function GET(req: NextRequest) {
       .eq("id", user.id)
       .single();
 
-    if (!profile) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 403 });
+    if (!profile || (profile.role !== "super_admin" && profile.role !== "epc_admin")) {
+      return NextResponse.json({ error: "Access denied: Contracts and SLAs are restricted to administrators" }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);

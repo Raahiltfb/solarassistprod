@@ -144,14 +144,6 @@ const NAV = [
     roles: ["technician"],
     subPaths: [],
   },
-  {
-    href: "/inventory",
-    label: "Spares & Inventory",
-    mobileLabel: "Spares",
-    icon: Package,
-    roles: ["technician"],
-    subPaths: [],
-  },
 ];
 
 export function Shell({ profile, children }: { profile: Profile; children: React.ReactNode }) {

@@ -25,8 +25,8 @@ export async function GET(req: NextRequest) {
       .eq("id", user.id)
       .single();
 
-    if (!profile) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 403 });
+    if (!profile || (profile.role !== "super_admin" && profile.role !== "epc_admin")) {
+      return NextResponse.json({ error: "Access denied: Spares inventory is restricted to administrators" }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -111,8 +111,8 @@ export async function POST(req: NextRequest) {
       .eq("id", user.id)
       .single();
 
-    if (!profile || (profile.role !== "super_admin" && profile.role !== "epc_admin" && profile.role !== "technician")) {
-      return NextResponse.json({ error: "Forbidden: Operations role required" }, { status: 403 });
+    if (!profile || (profile.role !== "super_admin" && profile.role !== "epc_admin")) {
+      return NextResponse.json({ error: "Forbidden: Administrator role required" }, { status: 403 });
     }
 
     const orgId = profile.org_id || "ac763745-aed5-469d-9956-459fb00a337e";

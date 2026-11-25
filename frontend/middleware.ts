@@ -9,6 +9,9 @@ const technicianBlockedRoutes = [
   "/sites",
   "/settings",
   "/cleaning",
+  "/contracts",
+  "/inventory",
+  "/onboarding",
 ];
 
 export async function middleware(request: NextRequest) {

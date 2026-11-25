@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -38,7 +39,23 @@ const HUB_TABS = {
 
 export function SubNav({ hub }: SubNavProps) {
   const pathname = usePathname();
-  const tabs = HUB_TABS[hub] || [];
+  const [role, setRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("user-role") || 
+        document.cookie.split("; ").find((row) => row.startsWith("user-role="))?.split("=")[1];
+      if (stored) setRole(stored);
+    }
+  }, []);
+
+  const allTabs = HUB_TABS[hub] || [];
+  const tabs = allTabs.filter((tab) => {
+    if (role === "technician") {
+      if (tab.href === "/inventory" || tab.href === "/workforce") return false;
+    }
+    return true;
+  });
 
   return (
     <div className="border-b mb-6 bg-card/30 -mx-4 px-4 md:-mx-6 md:px-6 -mt-2 pt-2">

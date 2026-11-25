@@ -22,7 +22,7 @@ export default async function InventoryPage() {
     .eq("id", user.id)
     .single();
 
-  if (!profile || (profile.role !== "super_admin" && profile.role !== "epc_admin" && profile.role !== "technician")) {
+  if (!profile || (profile.role !== "super_admin" && profile.role !== "epc_admin")) {
     redirect("/dashboard");
   }
 
