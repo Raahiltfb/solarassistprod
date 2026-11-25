@@ -379,5 +379,139 @@ export interface CleaningPlanAssignment {
 
 export type { CleaningVisitStatus, CleaningVisit, UnscheduledReason } from "./cleaning-domain";
 
+// ─────────────────────────────────────────────────────────────
+// PHASE 9: OPERATIONAL INFRASTRUCTURE TYPES
+// ─────────────────────────────────────────────────────────────
+
+export type InventoryCategory =
+  | "inverter_spare"
+  | "dc_electrical"
+  | "ac_electrical"
+  | "modules"
+  | "sensors_monitoring"
+  | "cleaning_tools"
+  | "consumables";
+
+export interface InventoryItem {
+  id: string;
+  org_id: string;
+  sku: string;
+  name: string;
+  category: InventoryCategory;
+  description?: string | null;
+  unit_of_measure: string;
+  unit_cost_inr: number;
+  quantity_on_hand: number;
+  min_reorder_level: number;
+  storage_location: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type InventoryTransactionType =
+  | "stock_in"
+  | "consumed"
+  | "transferred"
+  | "returned"
+  | "adjusted";
+
+export interface InventoryTransaction {
+  id: string;
+  org_id: string;
+  item_id: string;
+  site_id?: string | null;
+  ticket_id?: string | null;
+  work_order_id?: string | null;
+  transaction_type: InventoryTransactionType;
+  quantity: number;
+  unit_cost_inr?: number | null;
+  performed_by?: string | null;
+  notes?: string | null;
+  created_at: string;
+  inventory_items?: InventoryItem | null;
+  sites?: Site | null;
+  profiles?: Profile | null;
+}
+
+export type ContractType =
+  | "comprehensive_amc"
+  | "semi_comprehensive"
+  | "preventive_cleaning"
+  | "monitoring_only";
+
+export type ContractStatus = "active" | "pending_renewal" | "expired" | "terminated";
+
+export type BillingFrequency = "monthly" | "quarterly" | "annually";
+
+export type SlaTier = "premium" | "standard" | "basic";
+
+export interface Contract {
+  id: string;
+  org_id: string;
+  site_id: string;
+  client_org_id?: string | null;
+  contract_number: string;
+  contract_type: ContractType;
+  start_date: string;
+  end_date: string;
+  status: ContractStatus;
+  billing_frequency: BillingFrequency;
+  contract_value_inr: number;
+  billing_amount_per_cycle_inr: number;
+  sla_tier: SlaTier;
+  payment_terms_days: number;
+  auto_renew: boolean;
+  terms_notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  sites?: Site | null;
+  sla_policies?: SlaPolicy[] | null;
+}
+
+export interface SlaPolicy {
+  id: string;
+  org_id: string;
+  contract_id: string;
+  tier_name: SlaTier;
+  p1_response_hours: number;
+  p1_resolution_hours: number;
+  p2_response_hours: number;
+  p2_resolution_hours: number;
+  p3_response_hours: number;
+  p3_resolution_hours: number;
+  uptime_guarantee_percent: number;
+  penalty_per_hour_breach_inr: number;
+  created_at: string;
+}
+
+export type InvoiceStatus = "draft" | "issued" | "paid" | "overdue" | "cancelled";
+
+export interface BillingInvoice {
+  id: string;
+  org_id: string;
+  contract_id?: string | null;
+  site_id?: string | null;
+  invoice_number: string;
+  invoice_date: string;
+  due_date: string;
+  period_start: string;
+  period_end: string;
+  base_amount_inr: number;
+  spares_amount_inr: number;
+  penalty_credit_inr: number;
+  tax_amount_inr: number;
+  total_amount_inr: number;
+  status: InvoiceStatus;
+  payment_date?: string | null;
+  payment_reference?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  contracts?: Contract | null;
+  sites?: Site | null;
+}
+
+
 
 

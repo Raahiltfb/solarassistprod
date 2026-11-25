@@ -55,7 +55,7 @@ The system operates on a reactive O&M loop:
 | **Phase 6: Resolution / Verification Engine** | REFINED & VERIFIED | Phase 1, 3 | System verifies if physical intervention fixed the problem using telemetry, auto-reopens/escalates if failed. |
 | **Phase 7: Premium Client Experience** | REFINED & VERIFIED | Phase 1, 6 | Client understands performance, health score, maintenance history, and savings via a premium portal. |
 | **Phase 8: Scale + Hardening** | PROVISIONALLY HARDENED (MOCK VALIDATED) | Phases 1-7 | Hardened in code & verified across 100/500/1000 synthetic mock tiers (batched ingestion, composite indexes, bounded queries, starvation-free cron). Database-backed EXPLAIN/Postgres load-test gate remains OPEN pending isolated Supabase test project. |
-| **Phase 9: Operational Infrastructure** | NOT STARTED | Phases 1-8 | Supports onboarding, spares, SLAs, billing, contracts. |
+| **Phase 9: Operational Infrastructure** | REFINED & VERIFIED | Phases 1-8 | Supports onboarding, spares, SLAs, billing, contracts. |
 | **Phase 10: OEM Expansion** | NOT STARTED | Phases 1-9 | Growatt, Sungrow, and others plug into the normalized engine successfully. |
 
 ## G. Detailed Checklists
@@ -116,9 +116,9 @@ The system operates on a reactive O&M loop:
 - [x] Optimize DB queries, RLS, and pagination for scale.
 
 ### Phase 9: Operational Infrastructure
-- [ ] Complete automated onboarding workflows.
-- [ ] Build inventory/spares tracking.
-- [ ] Build SLA tracking, contracts, and billing integrations.
+- [x] Complete automated onboarding workflows.
+- [x] Build inventory/spares tracking.
+- [x] Build SLA tracking, contracts, and billing integrations.
 
 ### Phase 10: OEM Expansion
 - [ ] Finalize Growatt integration and validate telemetry normalization.
@@ -167,4 +167,10 @@ For each phase:
   2. **Cron Hardening Fixes**: Added secret-based endpoint protection to `/api/cron/verify-resolutions`, eliminated ticket starvation by ordering by `updated_at ASC` and filtering to active states (`['pending', 'under_verification']`), and scoped telemetry queries to the ticket's inverter strings.
   3. **Queue Transparency**: Added active status filtering + priority sorting on dashboard queries before the 100-record cap, and added an explicit UI banner linking to `/operations` when displaying the 100-item cap.
   4. **Postgres Validation Status**: Host environment lacks local Docker, Supabase CLI, and secondary dev database. Pursuant to data safety directives, migration `0013_scale_hardening_indexes.sql` and `EXPLAIN (ANALYZE, BUFFERS)` testing are paused until an isolated test project is provided. Phase 8 kept **OPEN (Provisionally Hardened)**.
+- **2026-11-25**: Completed and verified Phase 9 (Operational Infrastructure):
+  1. **Database Schema & RLS Migration**: Applied migration `0020_operational_infrastructure.sql` defining 5 operational tables (`inventory_items`, `inventory_transactions`, `contracts`, `sla_policies`, and `billing_invoices`) with tenant isolation, foreign keys, and composite indexes. Seeded baseline inventory catalog and 8 active AMC contracts mapped to real fleet plants.
+  2. **Pillar 1: Automated Onboarding Workflows**: Built transactional plant onboarding engine (`onboarding-engine.ts`), pre-flight validation API (`/api/onboarding`), and 5-step UI wizard (`/onboarding`) generating site records, inverters, strings, cleaning policies, contracts, and SLA tiers in one atomic transaction.
+  3. **Pillar 2: Inventory & Spares Management**: Built inventory valuation and replenishment engine (`inventory-engine.ts`), stock transactions API (`/api/inventory`), and Spare Parts Hub (`/inventory`) with real-time stock-in, consumption tracking, low-stock threshold alerting, and maintenance ticket material linkages.
+  4. **Pillar 3: SLA Tracking, Contracts & Billing Integrations**: Built real-time SLA MTTR compliance engine (`contracts-engine.ts`), contract & billing APIs (`/api/contracts`, `/api/contracts/invoices`), and AMC Portfolio Hub (`/contracts`) with live MTTR tracking against tickets, penalty credit calculations, and automated billing invoice generation with 18% GST and printable statements.
+  5. **Verification**: 100% passing dedicated test suite (`npm run test:phase9` with 10 unit/integration tests), 0 TypeScript compilation errors, and verified production Next.js build.
 

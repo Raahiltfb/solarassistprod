@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { LayoutDashboard, Activity, Building2, Bell, Ticket, SprayCan, Wrench, Navigation, BarChart3, Users, Settings, LogOut, User as UserIcon, MoreHorizontal } from "lucide-react";
+import { LayoutDashboard, Activity, Building2, Bell, Ticket, SprayCan, Wrench, Navigation, BarChart3, Users, Settings, LogOut, User as UserIcon, MoreHorizontal, Package, FileCheck2, PlusCircle } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ROLE_LABELS } from "@/lib/permissions";
 import type { Profile } from "@/lib/types";
@@ -60,7 +60,7 @@ const NAV = [
     mobileLabel: "Operations",
     icon: Wrench,
     roles: ["super_admin", "epc_admin"],
-    subPaths: ["/tickets", "/operations/routes", "/workforce"],
+    subPaths: ["/tickets", "/operations/routes", "/workforce", "/inventory"],
   },
   {
     href: "/cleaning",
@@ -76,13 +76,29 @@ const NAV = [
     mobileLabel: "Assets",
     icon: Building2,
     roles: ["super_admin", "epc_admin"],
-    subPaths: ["/alerts", "/inverters"],
+    subPaths: ["/alerts", "/inverters", "/onboarding"],
   },
   {
     href: "/diagnostics",
     label: "Technical Intelligence",
     mobileLabel: "Tech Intel",
     icon: Activity,
+    roles: ["super_admin", "epc_admin"],
+    subPaths: [],
+  },
+  {
+    href: "/inventory",
+    label: "Spares & Inventory",
+    mobileLabel: "Spares",
+    icon: Package,
+    roles: ["super_admin", "epc_admin"],
+    subPaths: [],
+  },
+  {
+    href: "/contracts",
+    label: "Contracts & SLA",
+    mobileLabel: "Contracts",
+    icon: FileCheck2,
     roles: ["super_admin", "epc_admin"],
     subPaths: [],
   },
@@ -125,6 +141,14 @@ const NAV = [
     label: "Log Cleaning",
     mobileLabel: "Cleaning",
     icon: SprayCan,
+    roles: ["technician"],
+    subPaths: [],
+  },
+  {
+    href: "/inventory",
+    label: "Spares & Inventory",
+    mobileLabel: "Spares",
+    icon: Package,
     roles: ["technician"],
     subPaths: [],
   },

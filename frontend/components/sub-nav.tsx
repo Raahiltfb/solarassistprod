@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Wrench, SprayCan, Navigation, Users, Ticket, Building2, Bell, Settings, ShieldCheck, LayoutDashboard, Calendar, CheckCircle2 } from "lucide-react";
+import { Wrench, SprayCan, Navigation, Users, Ticket, Building2, Bell, Settings, ShieldCheck, LayoutDashboard, Calendar, CheckCircle2, Package, PlusCircle } from "lucide-react";
 
 interface SubNavProps {
   hub: "operations" | "cleaning" | "assets" | "configuration";
@@ -21,11 +21,13 @@ const HUB_TABS = {
   operations: [
     { href: "/service-requests", label: "Technical Work Orders", icon: Wrench },
     { href: "/tickets", label: "Incidents & Tickets", icon: Ticket },
+    { href: "/inventory", label: "Spares & Inventory", icon: Package },
     { href: "/operations/routes", label: "Routes & Dispatch", icon: Navigation },
     { href: "/workforce", label: "Technician Directory", icon: Users },
   ],
   assets: [
     { href: "/sites", label: "Fleet Sites", icon: Building2 },
+    { href: "/onboarding", label: "Onboard Plant", icon: PlusCircle },
     { href: "/alerts", label: "Telemetry & Alarms", icon: Bell },
   ],
   configuration: [
