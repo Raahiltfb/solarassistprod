@@ -234,9 +234,9 @@ export default function CleaningPage() {
       <SubNav hub="cleaning" />
 
       {/* Header */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">
+          <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-foreground">
             Cleaning Operations Overview
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -244,25 +244,29 @@ export default function CleaningPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Button asChild variant="outline" className="text-xs h-9 gap-1.5 border-primary/40 text-primary hover:bg-primary/10">
             <Link href="/cleaning/policies">
               <Settings className="h-4 w-4 text-primary" />
-              <span>Site Cleaning Policies</span>
+              <span className="hidden sm:inline">Site Cleaning Policies</span>
+              <span className="sm:hidden">Policies</span>
             </Link>
           </Button>
 
           <Button asChild variant="outline" className="text-xs h-9 gap-1.5 border-muted-foreground/30 text-foreground">
             <Link href="/cleaning/planner">
               <Calendar className="h-4 w-4 text-amber-500" />
-              <span>Open Monthly Planner</span>
+              <span className="hidden sm:inline">Open Monthly Planner</span>
+              <span className="sm:hidden">Planner</span>
             </Link>
           </Button>
 
           <Dialog open={openLogDialog} onOpenChange={setOpenLogDialog}>
             <DialogTrigger asChild>
               <Button data-testid="new-cleaning-btn" variant="default" className="text-xs h-9">
-                <Plus className="h-4 w-4 mr-1.5" /> Log Cleaning Execution
+                <Plus className="h-4 w-4 mr-1.5" />
+                <span className="hidden sm:inline">Log Cleaning Execution</span>
+                <span className="sm:hidden">Log Cleaning</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -371,15 +375,18 @@ export default function CleaningPage() {
 
       {/* Main Tabs */}
       <Tabs defaultValue="canonical" className="space-y-6">
-        <TabsList className="bg-muted p-1">
-          <TabsTrigger value="canonical" className="text-xs font-semibold px-4">
-            Current Month Scheduled Visits ({canonicalVisits.length})
+        <TabsList className="bg-muted p-1 max-w-full overflow-x-auto no-scrollbar justify-start sm:justify-center w-full">
+          <TabsTrigger value="canonical" className="text-xs font-semibold px-3 sm:px-4 shrink-0 whitespace-nowrap">
+            <span className="hidden sm:inline">Current Month Scheduled Visits ({canonicalVisits.length})</span>
+            <span className="sm:hidden">Scheduled Visits ({canonicalVisits.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="schedules" className="text-xs font-semibold px-4">
-            Site Policy Quick View ({sites.length})
+          <TabsTrigger value="schedules" className="text-xs font-semibold px-3 sm:px-4 shrink-0 whitespace-nowrap">
+            <span className="hidden sm:inline">Site Policy Quick View ({sites.length})</span>
+            <span className="sm:hidden">Policy Quick View ({sites.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="history" className="text-xs font-semibold px-4">
-            Recent Execution Logs ({logs.length})
+          <TabsTrigger value="history" className="text-xs font-semibold px-3 sm:px-4 shrink-0 whitespace-nowrap">
+            <span className="hidden sm:inline">Recent Execution Logs ({logs.length})</span>
+            <span className="sm:hidden">Execution Logs ({logs.length})</span>
           </TabsTrigger>
         </TabsList>
 

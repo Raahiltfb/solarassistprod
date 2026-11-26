@@ -241,7 +241,7 @@ export function Shell({ profile, children }: { profile: Profile; children: React
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-[1400px] w-full mx-auto animate-fade-in pb-20 md:pb-8">
+        <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-[1400px] w-full mx-auto animate-fade-in pb-20 md:pb-8 min-w-0 overflow-x-hidden">
           {children}
         </main>
 
@@ -261,9 +261,19 @@ export function Shell({ profile, children }: { profile: Profile; children: React
             it.subPaths?.some((sp) => pathname === sp || pathname.startsWith(sp + "/"))
           );
 
+          const totalNavItems = primaryItems.length + (isOverflow ? 1 : 0);
+          const gridColsClass = 
+            totalNavItems === 1 ? "grid-cols-1" :
+            totalNavItems === 2 ? "grid-cols-2" :
+            totalNavItems === 3 ? "grid-cols-3" :
+            totalNavItems === 4 ? "grid-cols-4" : "grid-cols-5";
+
           return (
             <nav
-              className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur border-t h-16 safe-area-pb shadow-lg grid grid-cols-5 items-center px-1"
+              className={cn(
+                "md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur border-t h-16 safe-area-pb shadow-lg grid items-center px-1",
+                gridColsClass
+              )}
               data-testid="mobile-nav"
             >
               {primaryItems.map((it) => {

@@ -417,7 +417,7 @@ export default function CleaningPlannerPage() {
         </div>
 
         {/* Multi-Month Navigation Strip */}
-        <div className="flex items-center gap-1.5 bg-muted/40 p-1 border rounded-xl shadow-sm">
+        <div className="flex items-center gap-1.5 bg-muted/40 p-1 border rounded-xl shadow-sm overflow-x-auto max-w-full no-scrollbar">
           {monthNavItems.map((mItem) => {
             const isSelected = mItem.year === year && mItem.month === month;
             return (

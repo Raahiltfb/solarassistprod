@@ -44,7 +44,7 @@ import {
   CartesianGrid,
   ReferenceLine 
 } from "recharts";
-import { kWh, formatDate, formatDateTime } from "@/lib/utils";
+import { cn, kWh, formatDate, formatDateTime } from "@/lib/utils";
 import { ClientEvidenceViewer } from "@/components/client-evidence-viewer";
 
 export interface ReportSiteData {
@@ -288,9 +288,9 @@ export function ClientReportView({
       {/* Printable Report Document Wrapper */}
       <div className="printable-report bg-card border rounded-2xl shadow-sm p-6 sm:p-10 space-y-8 print:p-0 print:border-0 print:shadow-none print:bg-white print:text-black">
         {/* Document Header */}
-        <div className="page-break-avoid flex flex-wrap items-start justify-between gap-6 border-b pb-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2.5">
+        <div className="page-break-avoid border-b pb-6 space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
               <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 print:border-emerald-600 print:text-emerald-800">
                 Official O&M Performance Report
               </span>
@@ -300,25 +300,30 @@ export function ClientReportView({
               </Badge>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-foreground print:text-black">
-              {selectedSite ? selectedSite.name : organizationName || clientName}
-            </h1>
-            <p className="text-xs text-muted-foreground print:text-gray-600">
-              Prepared by Solar Assist Supervised O&M Operating System for {clientName}
-              {selectedSite?.location ? ` • ${selectedSite.location}` : ""}
-            </p>
+            <div className="shrink-0 flex items-center justify-end">
+              <img src="/logo-full.png" alt="Solar Assist" className="dark:hidden h-8 sm:h-11 print:h-14 w-auto object-contain print:block" />
+              <img src="/logo-full-dark-trans.png" alt="Solar Assist" className="hidden dark:block h-8 sm:h-11 w-auto object-contain print:hidden" />
+            </div>
           </div>
 
-          <div className="text-right space-y-1">
-            <div className="flex items-center justify-end gap-2">
-              <img src="/logo-full.png" alt="Solar Assist" className="dark:hidden h-10 sm:h-12 print:h-14 w-auto object-contain print:block" />
-              <img src="/logo-full-dark-trans.png" alt="Solar Assist" className="hidden dark:block h-10 sm:h-12 w-auto object-contain print:hidden" />
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-1">
+            <div className="space-y-1">
+              <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-foreground print:text-black">
+                {selectedSite ? selectedSite.name : organizationName || clientName}
+              </h1>
+              <p className="text-xs text-muted-foreground print:text-gray-600">
+                Prepared by Solar Assist Supervised O&M Operating System for {clientName}
+                {selectedSite?.location ? ` • ${selectedSite.location}` : ""}
+              </p>
             </div>
-            <div className="text-[11px] text-muted-foreground print:text-gray-600">
-              Reporting Month: <strong>{monthLabel}</strong>
-            </div>
-            <div className="text-[11px] font-mono text-muted-foreground print:text-gray-600">
-              Total Capacity: <strong>{totalCapacityKwp.toFixed(2)} kWp</strong>
+
+            <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 sm:gap-1 text-xs text-muted-foreground print:text-gray-600 shrink-0 bg-muted/40 sm:bg-transparent p-2 sm:p-0 rounded-lg sm:rounded-none border sm:border-0">
+              <div>
+                Reporting Month: <strong className="text-foreground print:text-black">{monthLabel}</strong>
+              </div>
+              <div className="font-mono">
+                Total Capacity: <strong className="text-foreground print:text-black">{totalCapacityKwp.toFixed(2)} kWp</strong>
+              </div>
             </div>
           </div>
         </div>
@@ -326,57 +331,65 @@ export function ClientReportView({
         {/* Executive Summary Metrics Grid (4 Key Metric Cards) */}
         <div className="page-break-avoid grid grid-cols-2 md:grid-cols-4 gap-4">
           {/* 1. Total Generation */}
-          <div className="p-4 border rounded-xl bg-card/60 print:bg-gray-50 print:border-gray-300 space-y-1">
+          <div className="p-4 border rounded-xl bg-card/60 print:bg-gray-50 print:border-gray-300 space-y-1 min-w-0 overflow-hidden">
             <div className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center justify-between">
               <span>Clean Energy Generated</span>
-              <Zap className="h-4 w-4 text-emerald-500" />
+              <Zap className="h-4 w-4 text-emerald-500 shrink-0" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold font-mono text-foreground print:text-black">
+            <div className="text-2xl sm:text-3xl font-bold font-mono text-foreground print:text-black truncate">
               {kWh(totalGenerationKwh)}
             </div>
-            <p className="text-[10px] text-muted-foreground print:text-gray-600">
+            <p className="text-[10px] text-muted-foreground print:text-gray-600 truncate">
               Total clean units produced in {monthLabel}
             </p>
           </div>
 
           {/* 2. Specific Yield */}
-          <div className="p-4 border rounded-xl bg-card/60 print:bg-gray-50 print:border-gray-300 space-y-1">
+          <div className="p-4 border rounded-xl bg-card/60 print:bg-gray-50 print:border-gray-300 space-y-1 min-w-0 overflow-hidden">
             <div className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center justify-between">
               <span>Specific Yield</span>
-              <Sun className="h-4 w-4 text-amber-500" />
+              <Sun className="h-4 w-4 text-amber-500 shrink-0" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold font-mono text-foreground print:text-black">
+            <div className="text-2xl sm:text-3xl font-bold font-mono text-foreground print:text-black truncate">
               {specificYield.toFixed(2)} <span className="text-xs font-normal text-muted-foreground">kWh/kWp</span>
             </div>
-            <p className="text-[10px] text-muted-foreground print:text-gray-600">
+            <p className="text-[10px] text-muted-foreground print:text-gray-600 truncate">
               Yield per kilowatt peak installed
             </p>
           </div>
 
           {/* 3. Performance Ratio & Inverter Availability */}
-          <div className="p-4 border rounded-xl bg-card/60 print:bg-gray-50 print:border-gray-300 space-y-1">
+          <div className="p-4 border rounded-xl bg-card/60 print:bg-gray-50 print:border-gray-300 space-y-1 min-w-0 overflow-hidden">
             <div className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center justify-between">
               <span>Performance Ratio</span>
-              <Activity className="h-4 w-4 text-blue-500" />
+              <Activity className="h-4 w-4 text-blue-500 shrink-0" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold font-mono text-foreground print:text-black">
+            <div className="text-2xl sm:text-3xl font-bold font-mono text-foreground print:text-black truncate">
               {performanceRatio !== null ? `${performanceRatio}%` : "—"}
             </div>
-            <p className="text-[10px] text-muted-foreground print:text-gray-600">
+            <p className="text-[10px] text-muted-foreground print:text-gray-600 truncate">
               Availability: <strong>{inverterAvailability}%</strong> reporting uptime
             </p>
           </div>
 
           {/* 4. Estimated Commercial Value */}
-          <div className="p-4 border rounded-xl bg-card/60 print:bg-gray-50 print:border-gray-300 space-y-1">
+          <div className="p-4 border rounded-xl bg-card/60 print:bg-gray-50 print:border-gray-300 space-y-1 min-w-0 overflow-hidden">
             <div className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground flex items-center justify-between">
               <span>Estimated Value</span>
-              <Coins className="h-4 w-4 text-emerald-500" />
+              <Coins className="h-4 w-4 text-emerald-500 shrink-0" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold font-mono text-foreground print:text-black">
+            <div 
+              className={cn(
+                "font-bold truncate tracking-tight text-foreground print:text-black",
+                financialSavings 
+                  ? "text-2xl sm:text-3xl font-mono" 
+                  : "text-base sm:text-xl font-semibold text-muted-foreground py-0.5"
+              )}
+              title={financialSavings ? `₹${Math.round(financialSavings).toLocaleString("en-IN")}` : "Unconfigured"}
+            >
               {financialSavings ? `₹${Math.round(financialSavings).toLocaleString("en-IN")}` : "Unconfigured"}
             </div>
-            <p className="text-[10px] text-muted-foreground print:text-gray-600">
+            <p className="text-[10px] text-muted-foreground print:text-gray-600 truncate">
               {avgTariff ? `Calculated at ₹${avgTariff.toFixed(2)}/kWh grid tariff` : "Set grid tariff in site settings"}
             </p>
           </div>
@@ -467,7 +480,7 @@ export function ClientReportView({
             </span>
           </div>
 
-          <div className="border rounded-xl overflow-hidden print:border-gray-300">
+          <div className="border rounded-xl overflow-x-auto print:border-gray-300">
             <table className="w-full text-xs text-left">
               <thead className="bg-muted/50 print:bg-gray-100 border-b font-medium text-muted-foreground print:text-black">
                 <tr>
@@ -520,7 +533,7 @@ export function ClientReportView({
               No module washing cycles were scheduled or logged in {monthLabel}. Washing is performed according to the cycle policy.
             </div>
           ) : (
-            <div className="border rounded-xl overflow-hidden print:border-gray-300">
+            <div className="border rounded-xl overflow-x-auto print:border-gray-300">
               <table className="w-full text-xs text-left">
                 <thead className="bg-muted/50 print:bg-gray-100 border-b font-medium text-muted-foreground print:text-black">
                   <tr>
@@ -585,7 +598,7 @@ export function ClientReportView({
               Zero unscheduled downtime or critical hardware faults recorded during this period.
             </div>
           ) : (
-            <div className="border rounded-xl overflow-hidden print:border-gray-300">
+            <div className="border rounded-xl overflow-x-auto print:border-gray-300">
               <table className="w-full text-xs text-left">
                 <thead className="bg-muted/50 print:bg-gray-100 border-b font-medium text-muted-foreground print:text-black">
                   <tr>

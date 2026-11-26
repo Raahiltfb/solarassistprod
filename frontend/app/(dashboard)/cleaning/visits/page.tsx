@@ -96,7 +96,7 @@ export default function CleaningVisitsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select value={cyclePeriod} onValueChange={setCyclePeriod}>
             <SelectTrigger className="w-36 text-xs h-9 font-mono">
               <SelectValue />
