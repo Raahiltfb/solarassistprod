@@ -246,7 +246,18 @@ export function DiagnosticsClientWrapper({
 
   // 2. Map issues per site using canonical getSiteStatus and active alerts
   const siteIssuesMap = useMemo(() => {
-    const map: Record<string, { anomalyCount: number; isOffline: boolean; stringErrors: number; alertsCount: number }> = {};
+    const map: Record<
+      string,
+      {
+        anomalyCount: number;
+        isOffline: boolean;
+        offlineInvertersCount: number;
+        stringErrors: number;
+        alertsCount: number;
+        healthScore: number;
+        hasIssues: boolean;
+      }
+    > = {};
     for (const s of sites) {
       const siteAnoms = fleetAnomalies.filter((a) => a.site_id === s.id);
       const siteInvs = allInverters.filter((i) => i.site_id === s.id);
@@ -279,15 +290,37 @@ export function DiagnosticsClientWrapper({
           return hoursAgo < 1.5;
         });
 
+      const offlineInvs = siteInvs.filter((inv) => {
+        const invLatestTel = fleetLatestTelemetryMap.get(inv.id)?.timestamp;
+        return getInverterStatus(inv, invLatestTel, hasGenToday) === "OFFLINE";
+      });
+      const offlineInvertersCount = offlineInvs.length;
+      const isSiteEntirelyOffline = siteInvs.length > 0 && offlineInvertersCount === siteInvs.length;
       const siteStatus = getSiteStatus(siteInvs, fleetLatestTelemetryMap, hasGenToday);
-      const isOffline = siteStatus === "OFFLINE";
+      const isOffline = isSiteEntirelyOffline || siteStatus === "OFFLINE";
 
       const strErrors = siteAnoms.filter((a) => a.type !== "inverter_offline").length;
+      const totalAnomalies = siteAnoms.length;
+      const alertsCount = siteAlts.length;
+
+      // Calculate health score consistent with site health header
+      const invertersAffectedCount = Math.min(
+        siteInvs.length,
+        new Set([...siteAnoms.map((a) => a.inverter_id), ...offlineInvs.map((i) => i.id)]).size
+      );
+      const baseHealth = 100 - (totalAnomalies * 12 + invertersAffectedCount * 15 + offlineInvertersCount * 25);
+      const healthScore = isOffline ? 0 : Math.max(0, Math.min(100, Math.round(baseHealth)));
+
+      const hasIssues = isOffline || offlineInvertersCount > 0 || strErrors > 0 || totalAnomalies > 0 || alertsCount > 0 || healthScore < 90;
+
       map[s.id] = {
-        anomalyCount: siteAnoms.length,
+        anomalyCount: totalAnomalies,
         isOffline,
+        offlineInvertersCount,
         stringErrors: strErrors,
-        alertsCount: siteAlts.length,
+        alertsCount,
+        healthScore,
+        hasIssues,
       };
     }
     return map;
@@ -309,18 +342,29 @@ export function DiagnosticsClientWrapper({
 
         const issue = siteIssuesMap[s.id];
         const isOffline = Boolean(issue?.isOffline);
-        const hasStringErrors = (issue?.stringErrors ?? 0) > 0;
+        const hasAttentionIssues = Boolean(issue && issue.hasIssues && !issue.isOffline);
+        const isHealthy = Boolean(!issue || !issue.hasIssues);
 
-        if (siteFilterMode === "attention") return hasStringErrors;
+        if (siteFilterMode === "attention") return hasAttentionIssues;
         if (siteFilterMode === "offline") return isOffline;
-        if (siteFilterMode === "healthy") return !isOffline && !hasStringErrors;
+        if (siteFilterMode === "healthy") return isHealthy;
         return true;
       })
       .sort((a, b) => {
         const issueA = siteIssuesMap[a.id];
         const issueB = siteIssuesMap[b.id];
-        const scoreA = (issueA?.isOffline ? 100 : 0) + (issueA?.stringErrors ?? 0) * 10 + (issueA?.alertsCount ?? 0) * 5;
-        const scoreB = (issueB?.isOffline ? 100 : 0) + (issueB?.stringErrors ?? 0) * 10 + (issueB?.alertsCount ?? 0) * 5;
+        const scoreA =
+          (issueA?.isOffline ? 100 : 0) +
+          (issueA?.offlineInvertersCount ?? 0) * 20 +
+          (issueA?.stringErrors ?? 0) * 10 +
+          (issueA?.anomalyCount ?? 0) * 8 +
+          (issueA?.alertsCount ?? 0) * 5;
+        const scoreB =
+          (issueB?.isOffline ? 100 : 0) +
+          (issueB?.offlineInvertersCount ?? 0) * 20 +
+          (issueB?.stringErrors ?? 0) * 10 +
+          (issueB?.anomalyCount ?? 0) * 8 +
+          (issueB?.alertsCount ?? 0) * 5;
 
         if (siteSortBy === "attention") {
           if (scoreA !== scoreB) return scoreB - scoreA;
@@ -490,11 +534,11 @@ export function DiagnosticsClientWrapper({
   };
 
   const sitesWithIssuesCount = useMemo(() => {
-    return Object.values(siteIssuesMap).filter((i) => i.isOffline || i.anomalyCount > 0 || (i.alertsCount ?? 0) > 0).length;
+    return Object.values(siteIssuesMap).filter((i) => i.isOffline || i.hasIssues).length;
   }, [siteIssuesMap]);
 
   const sitesWithAttentionCount = useMemo(() => {
-    return Object.values(siteIssuesMap).filter((i) => (i.stringErrors ?? 0) > 0).length;
+    return Object.values(siteIssuesMap).filter((i) => i.hasIssues && !i.isOffline).length;
   }, [siteIssuesMap]);
 
   const sitesOfflineCount = useMemo(() => {
@@ -502,7 +546,7 @@ export function DiagnosticsClientWrapper({
   }, [siteIssuesMap]);
 
   const sitesHealthyCount = useMemo(() => {
-    return Object.values(siteIssuesMap).filter((i) => !i.isOffline && (i.stringErrors ?? 0) === 0).length;
+    return Object.values(siteIssuesMap).filter((i) => !i.hasIssues).length;
   }, [siteIssuesMap]);
 
   return (

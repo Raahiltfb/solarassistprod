@@ -167,6 +167,20 @@ export function StringAnalyticsSection({
     ...values
   })).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
 
+  // Find selected strings for display line elements
+  const selectedStringsInfo = strings.filter((s) => selectedStrIds.includes(s.id));
+
+  // Determine if there are actual valid numeric data points to plot on the chart
+  const hasValidData =
+    chartData.length > 0 &&
+    selectedStringsInfo.length > 0 &&
+    chartData.some((row) =>
+      selectedStringsInfo.some((s) => {
+        const val = (row as any)[`String #${s.string_index}`];
+        return typeof val === "number" && !isNaN(val);
+      })
+    );
+
   const toggleStringSelection = (id: string) => {
     setSelectedStrIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
@@ -196,9 +210,6 @@ export function StringAnalyticsSection({
       setSelectedStrIds(targetIds);
     }
   };
-
-  // Find selected strings for display line elements
-  const selectedStringsInfo = strings.filter((s) => selectedStrIds.includes(s.id));
 
   // For each flagged string, locate the point of worst deviation vs. the healthy peer baseline
   const [hoveredMarker, setHoveredMarker] = useState<string | null>(null);
@@ -452,7 +463,18 @@ export function StringAnalyticsSection({
             ))}
           </div>
 
-          <div className="relative h-[320px] bg-card p-4 rounded-xl border border-border/30 shadow-sm">
+          <div className="relative h-[320px] bg-card p-4 rounded-xl border border-border/30 shadow-sm overflow-hidden">
+            {!hasValidData && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-card/95 backdrop-blur-[2px] rounded-xl z-20">
+                <AlertTriangle className="h-8 w-8 text-amber-500/80 mb-2" />
+                <p className="text-sm font-semibold text-foreground">Inverter Telemetry Currently Unavailable</p>
+                <p className="text-xs text-muted-foreground max-w-sm mt-1">
+                  {selectedStringsInfo.length === 0
+                    ? "Select one or more strings above to view timeseries telemetry curves."
+                    : `No ${activeMetricConfig.label.toLowerCase()} telemetry data points were recorded for this inverter during the selected time period.`}
+                </p>
+              </div>
+            )}
             {activeMarker && (
               <div className="absolute top-3 right-3 z-10 w-64 rounded-lg border border-border bg-card/95 backdrop-blur p-3 shadow-lg text-[11px] pointer-events-none">
                 <div className="flex items-center gap-1.5 font-semibold mb-1.5" style={{ color: activeMarker.color }}>
@@ -584,8 +606,12 @@ export function StringAnalyticsSection({
           </div>
         </div>
       ) : (
-        <div className="h-[320px] flex items-center justify-center border border-dashed rounded-xl bg-card">
-          <span className="text-xs text-muted-foreground">No historical string telemetry found for this time range.</span>
+        <div className="h-[320px] flex flex-col items-center justify-center text-center p-6 border border-dashed rounded-xl bg-card">
+          <AlertTriangle className="h-8 w-8 text-muted-foreground/60 mb-2" />
+          <p className="text-sm font-semibold text-foreground">Inverter Telemetry Currently Unavailable</p>
+          <p className="text-xs text-muted-foreground max-w-sm mt-1">
+            No historical string telemetry found for this inverter during the selected date range.
+          </p>
         </div>
       )}
     </div>

@@ -17,7 +17,11 @@ export interface SiteOption {
 export interface SiteIssueInfo {
   anomalyCount?: number;
   isOffline?: boolean;
+  offlineInvertersCount?: number;
   stringErrors?: number;
+  alertsCount?: number;
+  healthScore?: number;
+  hasIssues?: boolean;
 }
 
 export function SiteSelectorCombobox({
@@ -77,21 +81,21 @@ export function SiteSelectorCombobox({
   const sitesWithAttentionCount = useMemo(() => {
     return sites.filter((s) => {
       const issue = siteIssuesMap[s.id];
-      return issue && (issue.stringErrors ?? 0) > 0;
+      return Boolean(issue && issue.hasIssues && !issue.isOffline);
     }).length;
   }, [sites, siteIssuesMap]);
 
   const sitesOfflineCount = useMemo(() => {
     return sites.filter((s) => {
       const issue = siteIssuesMap[s.id];
-      return issue && Boolean(issue.isOffline);
+      return Boolean(issue && issue.isOffline);
     }).length;
   }, [sites, siteIssuesMap]);
 
   const sitesHealthyCount = useMemo(() => {
     return sites.filter((s) => {
       const issue = siteIssuesMap[s.id];
-      return !issue || (!issue.isOffline && (issue.stringErrors ?? 0) === 0);
+      return Boolean(!issue || !issue.hasIssues);
     }).length;
   }, [sites, siteIssuesMap]);
 
@@ -105,18 +109,29 @@ export function SiteSelectorCombobox({
 
         const issue = siteIssuesMap[site.id];
         const isOffline = Boolean(issue?.isOffline);
-        const hasStringErrors = (issue?.stringErrors ?? 0) > 0;
+        const hasAttentionIssues = Boolean(issue && issue.hasIssues && !issue.isOffline);
+        const isHealthy = Boolean(!issue || !issue.hasIssues);
 
-        if (filterMode === "attention") return hasStringErrors;
+        if (filterMode === "attention") return hasAttentionIssues;
         if (filterMode === "offline") return isOffline;
-        if (filterMode === "healthy") return !isOffline && !hasStringErrors;
+        if (filterMode === "healthy") return isHealthy;
         return true;
       })
       .sort((a, b) => {
         const issueA = siteIssuesMap[a.id];
         const issueB = siteIssuesMap[b.id];
-        const scoreA = (issueA?.isOffline ? 100 : 0) + (issueA?.stringErrors ?? issueA?.anomalyCount ?? 0);
-        const scoreB = (issueB?.isOffline ? 100 : 0) + (issueB?.stringErrors ?? issueB?.anomalyCount ?? 0);
+        const scoreA =
+          (issueA?.isOffline ? 100 : 0) +
+          (issueA?.offlineInvertersCount ?? 0) * 20 +
+          (issueA?.stringErrors ?? 0) * 10 +
+          (issueA?.anomalyCount ?? 0) * 8 +
+          (issueA?.alertsCount ?? 0) * 5;
+        const scoreB =
+          (issueB?.isOffline ? 100 : 0) +
+          (issueB?.offlineInvertersCount ?? 0) * 20 +
+          (issueB?.stringErrors ?? 0) * 10 +
+          (issueB?.anomalyCount ?? 0) * 8 +
+          (issueB?.alertsCount ?? 0) * 5;
 
         if (sortBy === "attention") {
           if (scoreA !== scoreB) return scoreB - scoreA;
@@ -154,7 +169,7 @@ export function SiteSelectorCombobox({
             <Loader2 className="h-4 w-4 text-primary shrink-0 animate-spin" />
           ) : selectedIssue?.isOffline ? (
             <span className="h-2.5 w-2.5 rounded-full bg-destructive shrink-0 shadow-sm animate-pulse" />
-          ) : (selectedIssue?.stringErrors ?? 0) > 0 ? (
+          ) : selectedIssue?.hasIssues ? (
             <span className="h-2.5 w-2.5 rounded-full bg-amber-500 shrink-0 shadow-sm" />
           ) : (
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shrink-0 shadow-sm" />
@@ -180,9 +195,21 @@ export function SiteSelectorCombobox({
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-destructive/15 text-destructive uppercase tracking-wide">
                 Offline
               </span>
+            ) : (selectedIssue.offlineInvertersCount ?? 0) > 0 ? (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 font-mono">
+                {selectedIssue.offlineInvertersCount} inv offline
+              </span>
             ) : (selectedIssue.stringErrors ?? 0) > 0 ? (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 font-mono">
                 {selectedIssue.stringErrors} {selectedIssue.stringErrors === 1 ? "issue" : "issues"}
+              </span>
+            ) : (selectedIssue.anomalyCount ?? 0) > 0 ? (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 font-mono">
+                {selectedIssue.anomalyCount} {selectedIssue.anomalyCount === 1 ? "anomaly" : "anomalies"}
+              </span>
+            ) : selectedIssue.hasIssues ? (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                Action Needed
               </span>
             ) : (
               <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
@@ -304,7 +331,7 @@ export function SiteSelectorCombobox({
                   <div className="flex items-start gap-2.5 min-w-0 pr-2 flex-1">
                     {isOffline ? (
                       <span className="h-2 w-2 rounded-full bg-destructive shrink-0 mt-1" />
-                    ) : hasStringErrors ? (
+                    ) : issue?.hasIssues ? (
                       <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0 mt-1" />
                     ) : (
                       <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0 mt-1" />
@@ -323,9 +350,21 @@ export function SiteSelectorCombobox({
                       <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-destructive/15 text-destructive uppercase">
                         Offline
                       </span>
-                    ) : hasStringErrors ? (
+                    ) : (issue?.offlineInvertersCount ?? 0) > 0 ? (
                       <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono">
-                        {stringErrorCount} {stringErrorCount === 1 ? "string issue" : "string issues"}
+                        {issue?.offlineInvertersCount} inv offline
+                      </span>
+                    ) : (issue?.stringErrors ?? 0) > 0 ? (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono">
+                        {issue?.stringErrors} {issue?.stringErrors === 1 ? "string issue" : "string issues"}
+                      </span>
+                    ) : (issue?.anomalyCount ?? 0) > 0 ? (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono">
+                        {issue?.anomalyCount} anomaly
+                      </span>
+                    ) : issue?.hasIssues ? (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                        Attention
                       </span>
                     ) : (
                       <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">

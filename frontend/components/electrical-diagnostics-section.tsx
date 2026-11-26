@@ -302,7 +302,7 @@ export function ElectricalDiagnosticsSection({ inverterId, latestTelemetry }: El
             <div className="h-[280px] flex items-center justify-center border border-dashed rounded-xl bg-card">
               <span className="text-xs text-muted-foreground animate-pulse">Loading electrical telemetry data...</span>
             </div>
-          ) : telemetry.length > 0 ? (
+          ) : chartData.length > 0 ? (
             <div className="h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData} margin={{ top: 10, right: 8, left: -10, bottom: 0 }}>
@@ -349,8 +349,8 @@ export function ElectricalDiagnosticsSection({ inverterId, latestTelemetry }: El
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="h-[280px] flex items-center justify-center border border-dashed rounded-xl bg-card">
-              <span className="text-xs text-muted-foreground">No telemetry diagnostics logged for this period.</span>
+            <div className="h-[280px] flex flex-col items-center justify-center text-center p-6 border border-dashed rounded-xl bg-card">
+              <span className="text-xs text-muted-foreground">Inverter telemetry currently unavailable for this metric and period.</span>
             </div>
           )}
         </div>

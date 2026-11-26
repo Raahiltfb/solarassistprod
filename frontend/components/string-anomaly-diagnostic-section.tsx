@@ -688,7 +688,7 @@ export function StringAnomalyDiagnosticSection({
 
               {/* Chart Overlay */}
               <div className="w-full pt-1 h-[320px] min-h-[320px]">
-                {chartData.length === 0 ? (
+                {chartData.length === 0 || (chartMetricMode === "current" ? currentValues.length === 0 : voltageValues.length === 0) ? (
                   <div className="flex flex-col items-center justify-center h-full text-center p-6 bg-muted/20 border border-dashed rounded-lg">
                     <Info className="h-8 w-8 text-muted-foreground mb-2" />
                     <p className="text-sm font-semibold text-foreground">No Timeseries Telemetry Available</p>
