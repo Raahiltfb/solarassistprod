@@ -165,6 +165,7 @@ export async function syncScheduledCleaning(
     scheduleType = "manual",
     notes = "",
     teamId = null,
+    technicianId = null,
     userId = null,
   }: {
     siteId: string;
@@ -172,6 +173,7 @@ export async function syncScheduledCleaning(
     scheduleType?: "manual" | "approved" | "planner" | "work_order";
     notes?: string;
     teamId?: string | null;
+    technicianId?: string | null;
     userId?: string | null;
   }
 ) {
@@ -218,7 +220,8 @@ export async function syncScheduledCleaning(
       .update({
         status: "published",
         target_due_date: scheduledDate,
-        assigned_team_id: teamId || undefined,
+        assigned_team_id: teamId || null,
+        assigned_technician_id: technicianId || null,
         acknowledged_at: null,
         updated_at: new Date().toISOString(),
       })
@@ -237,6 +240,7 @@ export async function syncScheduledCleaning(
       scheduled_date: scheduledDate,
       status: "published",
       assigned_team_id: teamId || null,
+      assigned_technician_id: technicianId || null,
       acknowledged_at: null,
     });
   }
@@ -255,7 +259,8 @@ export async function syncScheduledCleaning(
       .from("work_orders")
       .update({
         status: "scheduled",
-        team_id: teamId || undefined,
+        team_id: teamId || null,
+        technician_id: technicianId || null,
         client_acknowledged_at: null,
         updated_at: new Date().toISOString(),
       })
@@ -265,6 +270,7 @@ export async function syncScheduledCleaning(
       org_id: site.org_id,
       site_id: siteId,
       team_id: teamId || null,
+      technician_id: technicianId || null,
       created_by: userId || null,
       title: `Module Cleaning: ${site.name}`,
       description: notes || `Scheduled solar panel module cleaning service request.`,

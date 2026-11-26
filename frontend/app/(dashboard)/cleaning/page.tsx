@@ -49,6 +49,8 @@ export default function CleaningPage() {
 
   // Service Request Creation Form
   const [woForm, setWoForm] = useState({
+    assignment_type: "technician" as "technician" | "team",
+    technician_id: "",
     team_id: "",
     scheduled_date: "",
     notes: "",
@@ -166,7 +168,8 @@ export default function CleaningPage() {
         scheduledDate: woForm.scheduled_date,
         scheduleType: "work_order",
         notes: woForm.notes || `Scheduled solar panel module cleaning service request.`,
-        teamId: woForm.team_id || null,
+        teamId: woForm.assignment_type === "team" && woForm.team_id !== "unassigned" ? woForm.team_id || null : null,
+        technicianId: woForm.assignment_type === "technician" && woForm.technician_id !== "unassigned" ? woForm.technician_id || null : null,
         userId: user?.id || null,
       });
 
@@ -612,6 +615,8 @@ export default function CleaningPage() {
                                 onClick={() => {
                                   setSelectedSite(site);
                                   setWoForm({
+                                    assignment_type: "technician",
+                                    technician_id: technicians[0]?.id || "",
                                     team_id: "",
                                     scheduled_date: site.next_cleaning_date || new Date().toISOString().split("T")[0],
                                     notes: `Solar panel module cleaning service request for ${site.name}`,
@@ -760,23 +765,63 @@ export default function CleaningPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label>Assign Cleaning Team (Required for Cleaning)</Label>
-                <Select
-                  value={woForm.team_id}
-                  onValueChange={(v) => setWoForm({ ...woForm, team_id: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select team" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unassigned">Unassigned (Queue)</SelectItem>
-                    {teams.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Assign Cleaning Responsibility</Label>
+                <div className="grid grid-cols-2 gap-2 pb-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={woForm.assignment_type === "technician" ? "default" : "outline"}
+                    className="h-8 text-xs"
+                    onClick={() => setWoForm({ ...woForm, assignment_type: "technician" })}
+                  >
+                    Individual Technician
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={woForm.assignment_type === "team" ? "default" : "outline"}
+                    className="h-8 text-xs"
+                    onClick={() => setWoForm({ ...woForm, assignment_type: "team" })}
+                  >
+                    Field Workforce Team
+                  </Button>
+                </div>
+
+                {woForm.assignment_type === "technician" ? (
+                  <Select
+                    value={woForm.technician_id}
+                    onValueChange={(v) => setWoForm({ ...woForm, technician_id: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select technician" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Unassigned (Queue)</SelectItem>
+                      {technicians.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.full_name || t.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Select
+                    value={woForm.team_id}
+                    onValueChange={(v) => setWoForm({ ...woForm, team_id: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select team" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Unassigned (Queue)</SelectItem>
+                      {teams.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               <div className="space-y-1.5">

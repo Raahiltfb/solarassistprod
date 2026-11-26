@@ -23,7 +23,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
     }
 
-    const orgId = profile.org_id || "c1e566ff-c676-4ceb-a2f1-c904783e2fa5";
+    const orgId = profile.org_id || "ac763745-aed5-469d-9956-459fb00a337e";
     const body = await req.json();
 
     const year = Number(body.year);

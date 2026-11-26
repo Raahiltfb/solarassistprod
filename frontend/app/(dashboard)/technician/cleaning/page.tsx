@@ -223,6 +223,8 @@ function CleaningFormContent() {
         .from("sites")
         .update({
           last_cleaned_on: new Date().toISOString().slice(0, 10),
+          next_cleaning_date: nextDue,
+          cleaning_schedule_type: "suggested",
         })
         .eq("id", form.site_id);
 

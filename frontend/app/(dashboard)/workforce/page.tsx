@@ -41,6 +41,10 @@ export default function WorkforcePage() {
   const [teamForm, setTeamForm] = useState({ name: "", base_address: "", color_code: "#3b82f6" });
   const [savingTeam, setSavingTeam] = useState(false);
 
+  const [addTechOpen, setAddTechOpen] = useState(false);
+  const [techForm, setTechForm] = useState({ full_name: "", email: "", phone: "", password: "" });
+  const [savingTech, setSavingTech] = useState(false);
+
   const [manageTeam, setManageTeam] = useState<ExtendedTeam | null>(null);
   const [manageMembersOpen, setManageMembersOpen] = useState(false);
   const [selectedTechIds, setSelectedTechIds] = useState<string[]>([]);
@@ -71,23 +75,72 @@ export default function WorkforcePage() {
     if (!teamForm.name) return toast.error("Team name is required.");
     setSavingTeam(true);
 
-    const { error } = await sb.from("technician_teams").insert({
-      org_id: "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
-      name: teamForm.name,
-      base_address: teamForm.base_address || "Operating Base",
-      color_code: teamForm.color_code,
-      is_active: true,
-    });
-
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success(`Created team ${teamForm.name}`);
-      setCreateTeamOpen(false);
-      setTeamForm({ name: "", base_address: "", color_code: "#3b82f6" });
-      loadData();
+    try {
+      const res = await fetch("/api/teams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(teamForm),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to create team");
+      } else {
+        toast.success(`Created team ${teamForm.name}`);
+        setCreateTeamOpen(false);
+        setTeamForm({ name: "", base_address: "", color_code: "#3b82f6" });
+        loadData();
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create team");
+    } finally {
+      setSavingTeam(false);
     }
-    setSavingTeam(false);
+  }
+
+  // Handle Add Technician
+  async function handleAddTechnician() {
+    if (!techForm.full_name.trim()) return toast.error("Technician name is required");
+    if (!techForm.email.trim() || !techForm.email.includes("@")) return toast.error("Valid email is required");
+
+    setSavingTech(true);
+    try {
+      const res = await fetch("/api/technicians", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(techForm),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to create technician");
+      } else {
+        toast.success(data.message || `Technician ${techForm.full_name} created successfully`);
+        setAddTechOpen(false);
+        setTechForm({ full_name: "", email: "", phone: "", password: "" });
+        loadData();
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create technician");
+    } finally {
+      setSavingTech(false);
+    }
+  }
+
+  // Handle Delete Team
+  async function handleDeleteTeam(team: ExtendedTeam) {
+    if (!confirm(`Delete team "${team.name}"? Any assigned tasks will become unassigned.`)) return;
+    try {
+      const res = await fetch(`/api/teams?id=${team.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to delete team");
+      } else {
+        toast.success(`Team "${team.name}" deleted`);
+        loadData();
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete team");
+    }
   }
 
   // Handle Manage Team Members
@@ -102,29 +155,29 @@ export default function WorkforcePage() {
     if (!manageTeam) return;
     setSavingMembers(true);
 
-    // Delete existing team members for this team
-    await sb.from("technician_team_members").delete().eq("team_id", manageTeam.id);
+    try {
+      const res = await fetch("/api/teams", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          team_id: manageTeam.id,
+          technician_ids: selectedTechIds,
+        }),
+      });
 
-    // Insert new selected members
-    if (selectedTechIds.length > 0) {
-      const inserts = selectedTechIds.map((tId) => ({
-        team_id: manageTeam.id,
-        technician_id: tId,
-      }));
-      const { error } = await sb.from("technician_team_members").insert(inserts);
-      if (error) {
-        toast.error(error.message);
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to update team members");
       } else {
         toast.success(`Updated members for ${manageTeam.name}`);
         setManageMembersOpen(false);
         loadData();
       }
-    } else {
-      toast.success(`Updated members for ${manageTeam.name}`);
-      setManageMembersOpen(false);
-      loadData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save team members");
+    } finally {
+      setSavingMembers(false);
     }
-    setSavingMembers(false);
   }
 
   const toggleTechSelection = (tId: string) => {
@@ -192,9 +245,14 @@ export default function WorkforcePage() {
           </p>
         </div>
 
-        <Button onClick={() => setCreateTeamOpen(true)} variant="default" className="text-xs h-9 gap-1.5">
-          <Plus className="h-4 w-4" /> Create Team
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setAddTechOpen(true)} variant="outline" className="text-xs h-9 gap-1.5">
+            <Users className="h-4 w-4" /> Add Technician
+          </Button>
+          <Button onClick={() => setCreateTeamOpen(true)} variant="default" className="text-xs h-9 gap-1.5">
+            <Plus className="h-4 w-4" /> Create Team
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="teams" className="space-y-6">
@@ -402,8 +460,19 @@ export default function WorkforcePage() {
             <DialogTitle>Manage Members for {manageTeam?.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 text-xs max-h-64 overflow-y-auto pr-1">
-            <Label className="font-bold">Select 2 members (Technician + Helper) for {manageTeam?.name}</Label>
-            <div className="text-muted-foreground text-[10px] mb-2">Selected: {selectedTechIds.length} / 2 required</div>
+            <Label className="font-bold">Select members for {manageTeam?.name}</Label>
+            <div className="flex justify-between items-center text-muted-foreground text-[10px] mb-2">
+              <span>Selected: {selectedTechIds.length} technician(s)</span>
+              {selectedTechIds.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedTechIds([])}
+                  className="text-destructive hover:underline"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
             <div className="space-y-2">
               {technicians.map((t) => {
                 const isSelected = selectedTechIds.includes(t.id);
@@ -429,8 +498,62 @@ export default function WorkforcePage() {
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleSaveTeamMembers} disabled={savingMembers || selectedTechIds.length !== 2} size="sm">
+            <Button onClick={handleSaveTeamMembers} disabled={savingMembers} size="sm">
               {savingMembers ? "Saving..." : "Save Team Details"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Technician Dialog */}
+      <Dialog open={addTechOpen} onOpenChange={setAddTechOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Technician</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2 text-xs">
+            <div className="space-y-1.5">
+              <Label>Full Name <span className="text-red-500">*</span></Label>
+              <Input
+                placeholder="e.g. Ramesh Kumar"
+                value={techForm.full_name}
+                onChange={(e) => setTechForm({ ...techForm, full_name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Email Address <span className="text-red-500">*</span></Label>
+              <Input
+                type="email"
+                placeholder="e.g. ramesh@solarassist.dev"
+                value={techForm.email}
+                onChange={(e) => setTechForm({ ...techForm, email: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Mobile / Phone Number</Label>
+              <Input
+                type="tel"
+                placeholder="e.g. +91 98765 43210"
+                value={techForm.phone}
+                onChange={(e) => setTechForm({ ...techForm, phone: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Initial Password</Label>
+              <Input
+                type="text"
+                placeholder="SolarTech2026! (default)"
+                value={techForm.password}
+                onChange={(e) => setTechForm({ ...techForm, password: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setAddTechOpen(false)}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={handleAddTechnician} disabled={savingTech}>
+              {savingTech ? "Creating..." : "Save Technician"}
             </Button>
           </DialogFooter>
         </DialogContent>

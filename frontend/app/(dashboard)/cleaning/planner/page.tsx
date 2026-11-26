@@ -347,10 +347,12 @@ export default function CleaningPlannerPage() {
 
   async function handleAddManualAssignment(siteId: string, teamId: string, dateStr: string) {
     if (!plan) {
+      const siteForOrg = sites.find((s) => s.id === siteId) || sites[0];
+      const targetOrgId = siteForOrg?.org_id || "ac763745-aed5-469d-9956-459fb00a337e";
       const { data: newPlan, error: pErr } = await sb
         .from("cleaning_plans")
         .insert({
-          org_id: "c1e566ff-c676-4ceb-a2f1-c904783e2fa5",
+          org_id: targetOrgId,
           year,
           month,
           status: "draft",

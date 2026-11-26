@@ -51,6 +51,8 @@ export function SitesConfigurationTable({
     cleaning_cycle_days: "30",
     service_tier: "cleaning_only" as "full_om" | "cleaning_only",
     cleaning_location_id: "",
+    latitude: "19.0760",
+    longitude: "72.8777",
   });
 
   const locationMap = useMemo(() => {
@@ -82,8 +84,8 @@ export function SitesConfigurationTable({
           org_id: orgId,
           name: newSiteForm.name.trim(),
           location: newSiteForm.location.trim(),
-          latitude: 19.076,
-          longitude: 72.8777,
+          latitude: Number(newSiteForm.latitude) || 19.076,
+          longitude: Number(newSiteForm.longitude) || 72.8777,
           capacity_kwp: capKwp,
           cleaning_cycle_days: cycleDays,
           service_tier: newSiteForm.service_tier,
@@ -94,6 +96,20 @@ export function SitesConfigurationTable({
         .single();
 
       if (error) throw error;
+
+      // Auto-provision initial cleaning rule
+      await sb.from("site_cleaning_rules").upsert({
+        site_id: data.id,
+        is_configured: true,
+        normal_interval_days: cycleDays,
+        monsoon_interval_days: Math.min(60, cycleDays * 2),
+        monsoon_start_md: "06-01",
+        monsoon_end_md: "09-30",
+        allowed_weekdays: [1, 2, 3, 4, 5, 6],
+        blackout_dates: [],
+        estimated_cleaning_mins: 90,
+        required_teams: 1,
+      }, { onConflict: "site_id" });
 
       toast.success(`Site "${data.name}" (${newSiteForm.service_tier === "cleaning_only" ? "Cleaning Only" : "Full O&M"}) created.`);
       setAddSiteOpen(false);
@@ -473,6 +489,28 @@ export function SitesConfigurationTable({
                   type="number"
                   value={newSiteForm.cleaning_cycle_days}
                   onChange={(e) => setNewSiteForm({ ...newSiteForm, cleaning_cycle_days: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Latitude (e.g. 19.0760)</Label>
+                <Input
+                  type="number"
+                  step="0.0001"
+                  value={newSiteForm.latitude}
+                  onChange={(e) => setNewSiteForm({ ...newSiteForm, latitude: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Longitude (e.g. 72.8777)</Label>
+                <Input
+                  type="number"
+                  step="0.0001"
+                  value={newSiteForm.longitude}
+                  onChange={(e) => setNewSiteForm({ ...newSiteForm, longitude: e.target.value })}
                 />
               </div>
             </div>
