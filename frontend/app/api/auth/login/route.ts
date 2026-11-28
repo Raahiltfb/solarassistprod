@@ -11,62 +11,92 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || PROD_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || PROD_ANON_KEY;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || PROD_SERVICE_KEY;
 
-// Canonical alias resolution to allow technicians & operators to log in easily
-const EMAIL_ALIASES: Record<string, string> = {
-  // Faisal Sorathiya
-  "faisal": "faisal.sorathiya@solarassist.dev",
-  "faisal@solarassist.dev": "faisal.sorathiya@solarassist.dev",
-  "tech1": "faisal.sorathiya@solarassist.dev",
-  "tech1@solarassist.dev": "faisal.sorathiya@solarassist.dev",
-
-  // Sandesh Tambe
-  "sandesh": "sandesh.tambe@solarassist.dev",
-  "sandesh@solarassist.dev": "sandesh.tambe@solarassist.dev",
-  "tech2": "sandesh.tambe@solarassist.dev",
-  "tech2@solarassist.dev": "sandesh.tambe@solarassist.dev",
-
-  // Faiz Adani
-  "faiz": "faiz.adani@solarassist.dev",
-  "faiz@solarassist.dev": "faiz.adani@solarassist.dev",
-  "tech3": "faiz.adani@solarassist.dev",
-  "tech3@solarassist.dev": "faiz.adani@solarassist.dev",
-
-  // Imran Qureshi
-  "imran": "imran.qureshi@solarassist.dev",
-  "imran@solarassist.dev": "imran.qureshi@solarassist.dev",
-  "tech4": "imran.qureshi@solarassist.dev",
-  "tech4@solarassist.dev": "imran.qureshi@solarassist.dev",
-
-  // Aphjal Khan
-  "aphjal": "aphjal.khan@solarassist.dev",
-  "aphjal@solarassist.dev": "aphjal.khan@solarassist.dev",
-  "tech5": "aphjal.khan@solarassist.dev",
-  "tech5@solarassist.dev": "aphjal.khan@solarassist.dev",
-
-  // Amir Khan
-  "amir": "amir.khan@solarassist.dev",
-  "amir@solarassist.dev": "amir.khan@solarassist.dev",
-  "tech6": "amir.khan@solarassist.dev",
-  "tech6@solarassist.dev": "amir.khan@solarassist.dev",
-
-  // Admin & Super Admin
+// Canonical username to email resolution
+const USERNAME_MAP: Record<string, string> = {
+  // Administration
   "admin": "admin@solarassist.dev",
+  "solarassist": "admin@solarassist.dev",
+  "solarassistadmin": "admin@solarassist.dev",
   "super": "super@solarassist.dev",
+  "superadmin": "super@solarassist.dev",
+
+  // Field Technicians
+  "faisal": "faisal.sorathiya@solarassist.dev",
+  "faisal.sorathiya": "faisal.sorathiya@solarassist.dev",
+  "faisalsorathiya": "faisal.sorathiya@solarassist.dev",
+  "tech1": "faisal.sorathiya@solarassist.dev",
+
+  "sandesh": "sandesh.tambe@solarassist.dev",
+  "sandesh.tambe": "sandesh.tambe@solarassist.dev",
+  "sandeshtambe": "sandesh.tambe@solarassist.dev",
+  "tech2": "sandesh.tambe@solarassist.dev",
+
+  "faiz": "faiz.adani@solarassist.dev",
+  "faiz.adani": "faiz.adani@solarassist.dev",
+  "faizadani": "faiz.adani@solarassist.dev",
+  "tech3": "faiz.adani@solarassist.dev",
+
+  "imran": "imran.qureshi@solarassist.dev",
+  "imran.qureshi": "imran.qureshi@solarassist.dev",
+  "imranqureshi": "imran.qureshi@solarassist.dev",
+  "tech4": "imran.qureshi@solarassist.dev",
+
+  "aphjal": "aphjal.khan@solarassist.dev",
+  "aphjal.khan": "aphjal.khan@solarassist.dev",
+  "aphjalkhan": "aphjal.khan@solarassist.dev",
+  "tech5": "aphjal.khan@solarassist.dev",
+
+  "amir": "amir.khan@solarassist.dev",
+  "amir.khan": "amir.khan@solarassist.dev",
+  "amirkhan": "amir.khan@solarassist.dev",
+  "tech6": "amir.khan@solarassist.dev",
+
+  // Client Portals
+  "anoopam": "client@anoopam.com",
+  "anoopammission": "client@anoopam.com",
+  "cilantro": "client@cilantro.com",
+  "manavsthal": "client@manavsthal.com",
+  "alcove": "client@alcove.com",
+  "belmac": "client@belmac.com",
+  "bwssb": "client@bwssb.com",
+  "casaflorea": "client@casaflorea.com",
+  "crestia": "client@crestia.com",
+  "dostijade": "client@dostijade.com",
+  "garcinia": "client@garcinia.com",
+  "ivy": "client@ivy.com",
+  "madhukosh": "client@madhukosh.com",
+  "maitrianand": "client@maitrianand.com",
+  "maxima": "client@maxima.com",
+  "mkthakur": "client@mkthakur.com",
+  "patwardhan": "client@patwardhan.com",
+  "regalia": "client@regalia.com",
+  "sophistica": "client@sophistica.com",
+  "stp": "client@stp.com",
+  "suvarnapushpa": "client@suvarnapushpa.com",
+  "suyash": "client@suyash.com",
+  "venecia": "client@venecia.com",
+  "vijayvatika": "client@vijayvatika.com",
 };
 
 export async function POST(req: Request) {
   try {
-    const { email, password } = await req.json();
+    const body = await req.json();
+    const rawIdentifier = (body.username || body.email || "").trim().toLowerCase();
+    const password = (body.password || "").trim();
 
-    if (!email || !password) {
+    if (!rawIdentifier || !password) {
       return NextResponse.json(
-        { error: "Email and password are required." },
+        { error: "Username and password are required." },
         { status: 400 }
       );
     }
 
-    const cleanInput = email.trim().toLowerCase();
-    const targetEmail = EMAIL_ALIASES[cleanInput] || cleanInput;
+    let targetEmail = USERNAME_MAP[rawIdentifier] || rawIdentifier;
+
+    // Fallback: If not an email address, try resolving by client domain or solarassist.dev domain
+    if (!targetEmail.includes("@")) {
+      targetEmail = `${rawIdentifier}@solarassist.dev`;
+    }
 
     let cookieStore: any = null;
     try {
@@ -102,7 +132,7 @@ export async function POST(req: Request) {
 
     if (authErr || !authData?.user) {
       return NextResponse.json(
-        { error: "Invalid email or password. Please verify your credentials." },
+        { error: "Invalid username or password. Please verify your credentials." },
         { status: 401 }
       );
     }

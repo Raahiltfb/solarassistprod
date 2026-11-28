@@ -8,11 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { Eye, EyeOff, Lock, User } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -27,9 +27,9 @@ export default function LoginPage() {
   async function handleLogin(e?: React.FormEvent) {
     if (e) e.preventDefault();
 
-    const cleanEmail = email.trim();
-    if (!cleanEmail) {
-      toast.error("Please enter your email address");
+    const cleanUsername = username.trim();
+    if (!cleanUsername) {
+      toast.error("Please enter your username");
       return;
     }
     if (!password) {
@@ -43,7 +43,7 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: cleanEmail, password }),
+        body: JSON.stringify({ username: cleanUsername, password }),
       });
 
       const data = await res.json();
@@ -57,7 +57,7 @@ export default function LoginPage() {
       localStorage.setItem("user-role", data.role);
       document.cookie = `user-role=${data.role}; path=/`;
 
-      toast.success(`Welcome back, ${data.profile?.full_name || cleanEmail}!`);
+      toast.success(`Welcome back, ${data.profile?.full_name || cleanUsername}!`);
       router.replace(data.redirectUrl || "/dashboard");
       router.refresh();
     } catch (err: any) {
@@ -137,7 +137,7 @@ export default function LoginPage() {
               Sign In to Solar Assist
             </h2>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              Enter your credentials to access your operating portal
+              Enter your username and password to access your portal
             </p>
           </div>
 
@@ -145,23 +145,23 @@ export default function LoginPage() {
             <CardContent className="pt-6">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="login-email" className="text-xs font-semibold text-foreground">
-                    Email Address
+                  <Label htmlFor="login-username" className="text-xs font-semibold text-foreground">
+                    Username
                   </Label>
                   <div className="relative">
                     <Input
-                      id="login-email"
+                      id="login-username"
                       type="text"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="e.g. name@company.com"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="Enter your username"
                       disabled={loading}
                       autoComplete="username"
                       required
-                      data-testid="login-email-input"
+                      data-testid="login-username-input"
                       className="h-10 text-sm pl-9 bg-background text-foreground"
                     />
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                   </div>
                 </div>
 

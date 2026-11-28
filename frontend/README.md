@@ -60,17 +60,39 @@ yarn seed
 
 Creates 2 orgs, 5 sites, 20 inverters with 48h hourly telemetry, alerts, tickets, cleaning logs, and four demo accounts:
 
-| Role       | Email / Accounts                                                              | Password          |
-| ---------- | ----------------------------------------------------------------------------- | ----------------- |
-| Super      | super@solarassist.dev                                                         | SolarAssist@1234  |
-| EPC Admin  | admin@solarassist.dev                                                         | SolarAssist@1234  |
-| Technician | Faisal Sorathiya (faisal.sorathiya@solarassist.dev)                           | SolarAssist@1234  |
-| Technician | Sandesh Tambe (sandesh.tambe@solarassist.dev)                                 | SolarAssist@1234  |
-| Technician | Faiz Adani (faiz.adani@solarassist.dev)                                       | SolarAssist@1234  |
-| Technician | Imran Qureshi (imran.qureshi@solarassist.dev)                                 | SolarAssist@1234  |
-| Technician | Aphjal Khan (aphjal.khan@solarassist.dev)                                     | SolarAssist@1234  |
-| Technician | Amir Khan (amir.khan@solarassist.dev)                                         | SolarAssist@1234  |
-| Client     | client@anoopam.com, client@cilantro.com, etc.                                 | SolarAssist@1234  |
+| Role       | Username (Login) | Name / Entity                             | Password          |
+| ---------- | ---------------- | ----------------------------------------- | ----------------- |
+| Super Admin| `superadmin`     | Sam Superadmin                            | SolarAssist@1234  |
+| EPC Admin  | `admin`          | Solar Assist Admin                        | SolarAssist@1234  |
+| Technician | `faisal`         | Faisal Sorathiya                          | SolarAssist@1234  |
+| Technician | `sandesh`        | Sandesh Tambe                             | SolarAssist@1234  |
+| Technician | `faiz`           | Faiz Adani                                | SolarAssist@1234  |
+| Technician | `imran`          | Imran Qureshi                             | SolarAssist@1234  |
+| Technician | `aphjal`         | Aphjal Khan                               | SolarAssist@1234  |
+| Technician | `amir`           | Amir Khan                                 | SolarAssist@1234  |
+| Client     | `anoopam`        | Anoopam Mission Representative            | SolarAssist@1234  |
+| Client     | `cilantro`       | Cilantro CHS Representative               | SolarAssist@1234  |
+| Client     | `manavsthal`     | Manavsthal Tower Representative           | SolarAssist@1234  |
+| Client     | `alcove`         | Alcove Society Representative             | SolarAssist@1234  |
+| Client     | `belmac`         | Belmac Panvel Representative              | SolarAssist@1234  |
+| Client     | `bwssb`          | BWSSB Bangalore Representative            | SolarAssist@1234  |
+| Client     | `casaflorea`     | Casa Florea Representative                | SolarAssist@1234  |
+| Client     | `crestia`        | Crestia Solar Representative              | SolarAssist@1234  |
+| Client     | `dostijade`      | Dosti Jade CHS Representative             | SolarAssist@1234  |
+| Client     | `garcinia`       | Garcinia Residency Representative         | SolarAssist@1234  |
+| Client     | `ivy`            | Ivy By Courtyard Representative           | SolarAssist@1234  |
+| Client     | `madhukosh`      | Madhukosh CHS Representative              | SolarAssist@1234  |
+| Client     | `maitrianand`    | Maitri Anand CHS Representative           | SolarAssist@1234  |
+| Client     | `maxima`         | Maxima CHS Representative                 | SolarAssist@1234  |
+| Client     | `mkthakur`       | MK Thakur Housing Complex Representative  | SolarAssist@1234  |
+| Client     | `patwardhan`     | Patwardhan Hospital Representative        | SolarAssist@1234  |
+| Client     | `regalia`        | Regalia CHS Representative                | SolarAssist@1234  |
+| Client     | `sophistica`     | Sophistica Solar Representative           | SolarAssist@1234  |
+| Client     | `stp`            | STP Plant Services Representative         | SolarAssist@1234  |
+| Client     | `suvarnapushpa`  | Suvarna Pushpa CHS Representative         | SolarAssist@1234  |
+| Client     | `suyash`         | Suyash Heights Representative             | SolarAssist@1234  |
+| Client     | `venecia`        | Venecia CHS Representative                | SolarAssist@1234  |
+| Client     | `vijayvatika`    | Vijay Vatika CHS Representative           | SolarAssist@1234  |
 
 ## Run dev
 
