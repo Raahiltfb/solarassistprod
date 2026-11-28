@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { toast } from "sonner";
-import { Camera, Image as ImageIcon, AlertTriangle, ArrowLeft, Calendar, Info, CheckCircle2, Users } from "lucide-react";
+import { Camera, Image as ImageIcon, AlertTriangle, ArrowLeft, Calendar, Info, CheckCircle2, Users, MapPin, Loader2, RefreshCw } from "lucide-react";
 
 import type { Site } from "@/lib/types";
 import { isValidStateTransition } from "@/lib/cleaning-domain";
@@ -58,6 +58,49 @@ function CleaningFormContent() {
 
   const [currentTime, setCurrentTime] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+
+  const [gpsLocation, setGpsLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    accuracy: number;
+    timestamp: string;
+  } | null>(null);
+  const [gpsStatus, setGpsStatus] = useState<"idle" | "acquiring" | "success" | "error">("idle");
+  const [gpsError, setGpsError] = useState<string | null>(null);
+
+  function acquireGpsLocation() {
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      setGpsStatus("error");
+      setGpsError("GPS is not supported on this device/browser.");
+      return;
+    }
+    setGpsStatus("acquiring");
+    setGpsError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGpsLocation({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+          timestamp: new Date(pos.timestamp).toISOString(),
+        });
+        setGpsStatus("success");
+      },
+      (err) => {
+        let msg = "Unable to retrieve GPS location";
+        if (err.code === 1) msg = "Location permission denied. Please allow GPS access.";
+        else if (err.code === 2) msg = "GPS position unavailable.";
+        else if (err.code === 3) msg = "GPS request timed out.";
+        setGpsStatus("error");
+        setGpsError(msg);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 30000,
+      }
+    );
+  }
 
   const [targetWo, setTargetWo] = useState<any | null>(null);
   const [currentUser, setCurrentUser] = useState<any | null>(null);
@@ -111,6 +154,7 @@ function CleaningFormContent() {
     }
     if (queryWoId) {
       setOpen(true);
+      acquireGpsLocation();
       sb.from("work_orders")
         .select("*, sites(*), technician_teams(*)")
         .eq("id", queryWoId)
@@ -118,12 +162,20 @@ function CleaningFormContent() {
         .then(({ data }) => {
           if (data) setTargetWo(data);
         });
+    } else {
+      acquireGpsLocation();
     }
     const timer = setInterval(() => {
       setCurrentTime(new Date().toLocaleString());
     }, 10000);
     return () => clearInterval(timer);
   }, [querySiteId, queryWoId]);
+
+  useEffect(() => {
+    if (open) {
+      acquireGpsLocation();
+    }
+  }, [open]);
 
   const isFormValid = Boolean(form.site_id && form.safety && form.before && form.after);
 
@@ -192,11 +244,20 @@ function CleaningFormContent() {
 
     setSubmitting(true);
     const completedAtIso = new Date().toISOString();
+    const gpsRemark = gpsLocation
+      ? ` [GPS: ${gpsLocation.latitude.toFixed(5)}, ${gpsLocation.longitude.toFixed(5)} (±${Math.round(gpsLocation.accuracy)}m)]`
+      : "";
+    const finalRemarks = form.remarks ? `${form.remarks}${gpsRemark}` : (gpsRemark ? gpsRemark.trim() : "");
 
     if (!navigator.onLine) {
       const { data: { user } } = await sb.auth.getUser().catch(() => ({ data: { user: null } }));
       enqueueOfflineAction("cleaning_submission", {
         ...form,
+        remarks: finalRemarks,
+        latitude: gpsLocation?.latitude || null,
+        longitude: gpsLocation?.longitude || null,
+        gps_accuracy: gpsLocation?.accuracy || null,
+        geo_tagged_at: gpsLocation ? (gpsLocation.timestamp || completedAtIso) : null,
         work_order_id: queryWoId || null,
         performed_by: user?.id || null,
         completedAt: completedAtIso,
@@ -230,13 +291,17 @@ function CleaningFormContent() {
           performed_by: user?.id ?? null,
           performed_at: completedAtIso,
           next_due_on: nextDue,
-          remarks: form.remarks,
+          remarks: finalRemarks,
           safety_photo_url: form.safety,
           before_photo_url: form.before,
           after_photo_url: form.after,
           damage_observed: form.damageObserved,
           damage_type: form.damageObserved ? form.damageType : null,
           damage_photo_url: form.damageObserved ? form.damagePhoto : null,
+          latitude: gpsLocation?.latitude || null,
+          longitude: gpsLocation?.longitude || null,
+          gps_accuracy: gpsLocation?.accuracy || null,
+          geo_tagged_at: gpsLocation ? (gpsLocation.timestamp || completedAtIso) : null,
         })
         .select()
         .single();
@@ -244,6 +309,11 @@ function CleaningFormContent() {
       if (error || !logData) {
         enqueueOfflineAction("cleaning_submission", {
           ...form,
+          remarks: finalRemarks,
+          latitude: gpsLocation?.latitude || null,
+          longitude: gpsLocation?.longitude || null,
+          gps_accuracy: gpsLocation?.accuracy || null,
+          geo_tagged_at: gpsLocation ? (gpsLocation.timestamp || completedAtIso) : null,
           work_order_id: queryWoId || null,
           performed_by: user?.id || null,
           completedAt: completedAtIso,
@@ -498,6 +568,89 @@ function CleaningFormContent() {
                 className="bg-muted text-muted-foreground cursor-not-allowed font-mono text-sm"
               />
               <p className="text-xs text-muted-foreground">Automatically set to current date and time</p>
+            </div>
+
+            {/* Auto GPS Geo-tagging Status */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <Label className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+                  <MapPin className="h-3.5 w-3.5 text-emerald-600" />
+                  Auto GPS Geo-Tag
+                </Label>
+                {gpsStatus !== "acquiring" && (
+                  <button
+                    type="button"
+                    onClick={acquireGpsLocation}
+                    className="flex items-center gap-1 text-[11px] text-emerald-700 dark:text-emerald-400 hover:underline font-medium cursor-pointer"
+                  >
+                    <RefreshCw className="h-3 w-3" /> Re-scan GPS
+                  </button>
+                )}
+              </div>
+
+              {gpsStatus === "acquiring" && (
+                <div className="p-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 flex items-center justify-between text-xs text-amber-800 dark:text-amber-300">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-amber-600 shrink-0" />
+                    <span>Auto-detecting current GPS coordinates...</span>
+                  </div>
+                </div>
+              )}
+
+              {gpsStatus === "success" && gpsLocation && (
+                <div className="p-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-300">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-emerald-600 animate-pulse shrink-0" />
+                    <div>
+                      <p className="font-semibold text-foreground">
+                        📍 {gpsLocation.latitude.toFixed(5)}°, {gpsLocation.longitude.toFixed(5)}°
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Accuracy: ±{Math.round(gpsLocation.accuracy)}m · Auto-tagged for audit
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
+                    Verified
+                  </span>
+                </div>
+              )}
+
+              {gpsStatus === "error" && (
+                <div className="p-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 flex items-center justify-between text-xs text-amber-800 dark:text-amber-300">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                    <div>
+                      <p className="font-medium text-amber-900 dark:text-amber-200">GPS not locked</p>
+                      <p className="text-[11px] text-muted-foreground">{gpsError || "Click Re-scan GPS to retry"}</p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={acquireGpsLocation}
+                    className="h-7 text-xs border-amber-500/40"
+                  >
+                    Retry
+                  </Button>
+                </div>
+              )}
+
+              {gpsStatus === "idle" && (
+                <div className="p-2.5 rounded-lg border bg-muted/40 flex items-center justify-between text-xs text-muted-foreground">
+                  <span>GPS ready to capture</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={acquireGpsLocation}
+                    className="h-7 text-xs"
+                  >
+                    Acquire GPS
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

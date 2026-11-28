@@ -246,6 +246,10 @@ export async function processOfflineQueue(sb: SupabaseClient): Promise<{
               damage_observed: Boolean(p.damageObserved),
               damage_type: p.damageObserved ? p.damageType : null,
               damage_photo_url: damageUrl,
+              latitude: p.latitude || null,
+              longitude: p.longitude || null,
+              gps_accuracy: p.gps_accuracy || null,
+              geo_tagged_at: p.geo_tagged_at || (p.latitude ? completedAtIso : null),
             })
             .select()
             .single();
