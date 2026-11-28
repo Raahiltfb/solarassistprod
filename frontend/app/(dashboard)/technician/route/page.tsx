@@ -25,6 +25,7 @@ import {
   RefreshCw,
   Play,
   UserCheck,
+  Users,
 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import type {
@@ -75,6 +76,7 @@ function TechnicianRouteContent() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [dailyRoute, setDailyRoute] = useState<DailyRoute | null>(null);
   const [stops, setStops] = useState<any[]>([]);
+  const [teamsMap, setTeamsMap] = useState<Map<string, { id: string; name: string; color: string; members: Array<{ id: string; name: string }> }>>(new Map());
   const [loading, setLoading] = useState(true);
 
   // Offline PWA State
@@ -149,6 +151,27 @@ function TechnicianRouteContent() {
 
       const { data: prof } = await sb.from("profiles").select("*").eq("id", user.id).single();
       setProfile(prof as Profile);
+
+      // Fetch teams and team members to know partner technicians
+      const [teamsRes, membersRes] = await Promise.all([
+        sb.from("technician_teams").select("id, name, color_code"),
+        sb.from("technician_team_members").select("team_id, technician_id, profiles(id, full_name, email)"),
+      ]);
+
+      const tMap = new Map<string, { id: string; name: string; color: string; members: Array<{ id: string; name: string }> }>();
+      (teamsRes.data || []).forEach((t: any) => {
+        tMap.set(t.id, { id: t.id, name: t.name, color: t.color_code || "#10b981", members: [] });
+      });
+      (membersRes.data || []).forEach((m: any) => {
+        const team = tMap.get(m.team_id);
+        if (team && m.profiles) {
+          team.members.push({
+            id: m.technician_id,
+            name: m.profiles.full_name || m.profiles.email || "Technician",
+          });
+        }
+      });
+      setTeamsMap(tMap);
 
       // Fetch published route for today
       const { data: routeData } = await sb
@@ -508,6 +531,33 @@ function TechnicianRouteContent() {
                         </span>
                       )}
                     </div>
+
+                    {/* Team & Partner Information */}
+                    {(() => {
+                      const teamId = wo?.team_id || wo?.assigned_team_id;
+                      const team = teamId ? teamsMap.get(teamId) : null;
+                      const partners = team
+                        ? team.members.filter((m) => m.id !== profile?.id).map((m) => m.name)
+                        : [];
+
+                      if (!team) return null;
+
+                      return (
+                        <div className="pt-1">
+                          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-800 dark:text-emerald-300">
+                            <Users className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                            <span>
+                              Team: <strong>{team.name}</strong>
+                              {partners.length > 0 ? (
+                                <> · Clean with: <strong className="text-foreground">{partners.join(", ")}</strong></>
+                              ) : (
+                                <span className="text-muted-foreground ml-1">(Solo team assignment)</span>
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Workflow Action Buttons */}

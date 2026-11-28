@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { toast } from "sonner";
-import { Camera, Image as ImageIcon, AlertTriangle, ArrowLeft, Calendar, Info, CheckCircle2 } from "lucide-react";
+import { Camera, Image as ImageIcon, AlertTriangle, ArrowLeft, Calendar, Info, CheckCircle2, Users } from "lucide-react";
 
 import type { Site } from "@/lib/types";
 import { isValidStateTransition } from "@/lib/cleaning-domain";
@@ -60,6 +60,9 @@ function CleaningFormContent() {
   const [submitting, setSubmitting] = useState(false);
 
   const [targetWo, setTargetWo] = useState<any | null>(null);
+  const [currentUser, setCurrentUser] = useState<any | null>(null);
+  const [teamsMap, setTeamsMap] = useState<Map<string, { id: string; name: string; color: string; members: Array<{ id: string; name: string }> }>>(new Map());
+  const [siteTeamMap, setSiteTeamMap] = useState<Map<string, string>>(new Map());
 
   async function loadSites() {
     const { data } = await sb.from("sites").select("*");
@@ -70,6 +73,39 @@ function CleaningFormContent() {
   useEffect(() => {
     loadSites();
     setCurrentTime(new Date().toLocaleString());
+
+    sb.auth.getUser().then(({ data }) => setCurrentUser(data.user));
+
+    Promise.all([
+      sb.from("technician_teams").select("id, name, color_code"),
+      sb.from("technician_team_members").select("team_id, technician_id, profiles(id, full_name, email)"),
+      sb.from("cleaning_visits").select("site_id, assigned_team_id, team_id, scheduled_date").in("status", ["published", "planned", "approved"]),
+    ]).then(([teamsRes, membersRes, visitsRes]) => {
+      const tMap = new Map<string, { id: string; name: string; color: string; members: Array<{ id: string; name: string }> }>();
+      (teamsRes.data || []).forEach((t: any) => {
+        tMap.set(t.id, { id: t.id, name: t.name, color: t.color_code || "#10b981", members: [] });
+      });
+      (membersRes.data || []).forEach((m: any) => {
+        const team = tMap.get(m.team_id);
+        if (team && m.profiles) {
+          team.members.push({
+            id: m.technician_id,
+            name: m.profiles.full_name || m.profiles.email || "Technician",
+          });
+        }
+      });
+      setTeamsMap(tMap);
+
+      const sMap = new Map<string, string>();
+      (visitsRes.data || []).forEach((v: any) => {
+        const teamId = v.assigned_team_id || v.team_id;
+        if (v.site_id && teamId) {
+          sMap.set(v.site_id, teamId);
+        }
+      });
+      setSiteTeamMap(sMap);
+    });
+
     if (querySiteId) {
       setForm((f) => ({ ...f, site_id: querySiteId }));
     }
@@ -290,20 +326,11 @@ function CleaningFormContent() {
     }
   }
 
-  const now = Date.now();
-
-  const overdueSites = sites.filter((s) => {
-    if (!s.last_cleaned_on) return true;
-
-    const last = new Date(
-      s.last_cleaned_on
-    ).getTime();
-
-    return (
-      (now - last) / 86400_000 >
-      s.cleaning_cycle_days
-    );
-  });
+  const activeTeamId = targetWo?.team_id || (form.site_id ? siteTeamMap.get(form.site_id) : null);
+  const activeTeam = activeTeamId ? teamsMap.get(activeTeamId) : null;
+  const teamPartners = activeTeam
+    ? activeTeam.members.filter((m) => m.id !== currentUser?.id).map((m) => m.name)
+    : [];
 
   return (
     <div className="p-4 space-y-4 max-w-xl mx-auto">
@@ -318,23 +345,23 @@ function CleaningFormContent() {
         </p>
       </div>
 
-      {overdueSites.length > 0 && (
-        <Card className="border-red-300 bg-red-50">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
-
-              <div>
-                <p className="font-medium text-red-700">
-                  Overdue Sites
-                </p>
-
-                <p className="text-sm text-red-600 mt-1">
-                  {overdueSites
-                    .map((s) => s.name)
-                    .join(", ")}
-                </p>
-              </div>
+      {activeTeam && (
+        <Card className="border-emerald-300/80 bg-emerald-50/50 dark:bg-emerald-950/20">
+          <CardContent className="p-3.5 flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <Users className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="font-semibold text-sm text-foreground">
+                Assigned Team: <span className="text-emerald-700 dark:text-emerald-400">{activeTeam.name}</span>
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {teamPartners.length > 0 ? (
+                  <>You are cleaning this site with: <strong className="text-foreground">{teamPartners.join(", ")}</strong></>
+                ) : (
+                  "Solo assignment (no other teammates assigned)"
+                )}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -383,7 +410,10 @@ function CleaningFormContent() {
                       </div>
                       <div className="flex justify-between py-1 border-b">
                         <span className="text-muted-foreground font-medium">Assigned Team:</span>
-                        <span className="font-semibold">{targetWo.technician_teams?.name || "Team Dispatched"}</span>
+                        <span className="font-semibold text-foreground">
+                          {activeTeam?.name || targetWo.technician_teams?.name || "Team Dispatched"}
+                          {teamPartners.length > 0 ? ` (Clean with: ${teamPartners.join(", ")})` : ""}
+                        </span>
                       </div>
                       <div className="flex justify-between py-1 border-b">
                         <span className="text-muted-foreground font-medium">Estimated Duration:</span>
@@ -498,6 +528,22 @@ function CleaningFormContent() {
                 </SelectContent>
               </Select>
             </div>
+
+            {activeTeam && (
+              <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                <Users className="h-4 w-4 text-emerald-600 shrink-0" />
+                <div>
+                  <span className="font-semibold">{activeTeam.name}</span>
+                  {teamPartners.length > 0 ? (
+                    <span className="ml-1 text-muted-foreground">
+                      · Clean with: <strong className="text-foreground">{teamPartners.join(", ")}</strong>
+                    </span>
+                  ) : (
+                    <span className="ml-1 text-muted-foreground">(Solo team assignment)</span>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>

@@ -17,6 +17,7 @@ import {
   Wrench,
   Camera,
   FileText,
+  Users,
 } from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { CleaningEvidenceLinks } from "@/components/cleaning-evidence-links";
@@ -43,7 +44,7 @@ export default async function TechnicianSiteDetailPage({
     notFound();
   }
 
-  const [cleaningRes, workOrdersRes, alertsRes, invertersRes] = await Promise.all([
+  const [cleaningRes, workOrdersRes, alertsRes, invertersRes, teamsRes, teamMembersRes, visitsRes] = await Promise.all([
     sb
       .from("cleaning_logs")
       .select("*, profiles!cleaning_logs_performed_by_fkey(full_name, email)")
@@ -66,12 +67,23 @@ export default async function TechnicianSiteDetailPage({
       .from("inverters")
       .select("id, model, serial_number, status, capacity_kw")
       .eq("site_id", id),
+    sb.from("technician_teams").select("id, name, color_code"),
+    sb.from("technician_team_members").select("team_id, technician_id, profiles(id, full_name, email)"),
+    sb.from("cleaning_visits").select("assigned_team_id, team_id").eq("site_id", id).in("status", ["published", "planned", "approved"]).limit(1),
   ]);
 
   const cleaningLogs = cleaningRes.data ?? [];
   const workOrders = workOrdersRes.data ?? [];
   const alerts = alertsRes.data ?? [];
   const inverters = invertersRes.data ?? [];
+
+  // Team & partner resolution
+  const activeTeamId = workOrders.find((w) => w.team_id)?.team_id || visitsRes.data?.[0]?.assigned_team_id || visitsRes.data?.[0]?.team_id;
+  const activeTeam = (teamsRes.data ?? []).find((t) => t.id === activeTeamId);
+  const activeTeamMembers = (teamMembersRes.data ?? []).filter((m) => m.team_id === activeTeamId);
+  const partners = activeTeamMembers
+    .filter((m) => m.technician_id !== user.id)
+    .map((m: any) => m.profiles?.full_name || m.profiles?.email || "Technician");
 
   const now = Date.now();
   const lastCleaned = site.last_cleaned_on ? new Date(site.last_cleaned_on).getTime() : 0;
@@ -83,18 +95,21 @@ export default async function TechnicianSiteDetailPage({
     <div className="space-y-6 max-w-4xl mx-auto pb-12" data-testid="technician-site-detail">
       {/* Navigation Header */}
       <div className="flex items-center justify-between">
-        <Link href="/dashboard">
+        <Link href="/technician/route">
           <Button variant="ghost" size="sm" className="gap-2">
             <ArrowLeft className="h-4 w-4" />
-            <span>Back to My Work</span>
+            <span>Back to My Tasks</span>
           </Button>
         </Link>
-        <Badge
-          variant={isOverdue ? "destructive" : "success"}
-          className="text-xs px-3 py-1 font-semibold uppercase tracking-wider"
-        >
-          {isOverdue ? "Cleaning Overdue" : "Cleaned Recently"}
-        </Badge>
+        <div className="flex items-center gap-2">
+          {activeTeam && (
+            <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-medium text-xs px-2.5 py-1">
+              <Users className="h-3.5 w-3.5 mr-1.5 text-emerald-600 inline" />
+              Team {activeTeam.name}
+              {partners.length > 0 ? ` · Clean with: ${partners.join(", ")}` : " (Solo)"}
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* Main Site Banner */}
