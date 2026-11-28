@@ -60,12 +60,17 @@ yarn seed
 
 Creates 2 orgs, 5 sites, 20 inverters with 48h hourly telemetry, alerts, tickets, cleaning logs, and four demo accounts:
 
-| Role       | Email                        | Password     |
-| ---------- | ---------------------------- | ------------ |
-| Super      | super@solarassist.dev        | Solar@12345  |
-| EPC Admin  | admin@solarassist.dev        | Solar@12345  |
-| Technician | tech1@solarassist.dev (1..10)| Solar@12345  |
-| Client     | client@solarassist.dev       | Solar@12345  |
+| Role       | Email / Accounts                                                              | Password          |
+| ---------- | ----------------------------------------------------------------------------- | ----------------- |
+| Super      | super@solarassist.dev                                                         | SolarAssist@1234  |
+| EPC Admin  | admin@solarassist.dev                                                         | SolarAssist@1234  |
+| Technician | Faisal Sorathiya (faisal.sorathiya@solarassist.dev)                           | SolarAssist@1234  |
+| Technician | Sandesh Tambe (sandesh.tambe@solarassist.dev)                                 | SolarAssist@1234  |
+| Technician | Faiz Adani (faiz.adani@solarassist.dev)                                       | SolarAssist@1234  |
+| Technician | Imran Qureshi (imran.qureshi@solarassist.dev)                                 | SolarAssist@1234  |
+| Technician | Aphjal Khan (aphjal.khan@solarassist.dev)                                     | SolarAssist@1234  |
+| Technician | Amir Khan (amir.khan@solarassist.dev)                                         | SolarAssist@1234  |
+| Client     | client@anoopam.com, client@cilantro.com, etc.                                 | SolarAssist@1234  |
 
 ## Run dev
 

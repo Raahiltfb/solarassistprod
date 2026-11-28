@@ -8,91 +8,82 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Eye, EyeOff, Lock, Mail, ChevronDown, ChevronUp, UserCheck, Wrench, Shield, Building2 } from "lucide-react";
 
-const LOGIN_OPTIONS = [
+const QUICK_ROSTER = [
   {
-    group: "Administrative",
-    options: [
-      { label: "Solar Assist Fleet Admin (admin@solarassist.dev)", email: "admin@solarassist.dev" },
-      { label: "Super Admin (super@solarassist.dev)", email: "super@solarassist.dev" },
+    category: "Field Operations (Technicians)",
+    icon: Wrench,
+    accounts: [
+      { name: "Faisal Sorathiya", email: "faisal.sorathiya@solarassist.dev" },
+      { name: "Sandesh Tambe", email: "sandesh.tambe@solarassist.dev" },
+      { name: "Faiz Adani", email: "faiz.adani@solarassist.dev" },
+      { name: "Imran Qureshi", email: "imran.qureshi@solarassist.dev" },
+      { name: "Aphjal Khan", email: "aphjal.khan@solarassist.dev" },
+      { name: "Amir Khan", email: "amir.khan@solarassist.dev" },
     ],
   },
   {
-    group: "Field Technicians (10 Active Technicians)",
-    options: [
-      { label: "Tech 1 · Team A (tech1@solarassist.dev)", email: "tech1@solarassist.dev" },
-      { label: "Tech 2 · Team A (tech2@solarassist.dev)", email: "tech2@solarassist.dev" },
-      { label: "Tech 3 · Team B (tech3@solarassist.dev)", email: "tech3@solarassist.dev" },
-      { label: "Tech 4 · Team B (tech4@solarassist.dev)", email: "tech4@solarassist.dev" },
-      { label: "Tech 5 · Team C (tech5@solarassist.dev)", email: "tech5@solarassist.dev" },
-      { label: "Tech 6 · Team C (tech6@solarassist.dev)", email: "tech6@solarassist.dev" },
-      { label: "Tech 7 · Team D (tech7@solarassist.dev)", email: "tech7@solarassist.dev" },
-      { label: "Tech 8 · Team D (tech8@solarassist.dev)", email: "tech8@solarassist.dev" },
-      { label: "Tech 9 · Team E (tech9@solarassist.dev)", email: "tech9@solarassist.dev" },
-      { label: "Tech 10 · Team E (tech10@solarassist.dev)", email: "tech10@solarassist.dev" },
+    category: "Administration & Engineering",
+    icon: Shield,
+    accounts: [
+      { name: "Solar Assist Admin", email: "admin@solarassist.dev" },
+      { name: "Super Admin", email: "super@solarassist.dev" },
     ],
   },
   {
-    group: "Client Portals (Fleet Sites)",
-    options: [
-      { label: "Cilantro CHS (client@cilantro.com)", email: "client@cilantro.com" },
-      { label: "Maxima CHS (client@maxima.com)", email: "client@maxima.com" },
-      { label: "MK Thakur Complex (client@mkthakur.com)", email: "client@mkthakur.com" },
-      { label: "Alcove Society (client@alcove.com)", email: "client@alcove.com" },
-      { label: "Manavsthal Tower (client@manavsthal.com)", email: "client@manavsthal.com" },
-      { label: "Patwardhan Hospital (client@patwardhan.com)", email: "client@patwardhan.com" },
-      { label: "Dosti Jade CHS (client@dostijade.com)", email: "client@dostijade.com" },
-      { label: "Belmac Panvel (client@belmac.com)", email: "client@belmac.com" },
-      { label: "BWSSB Bangalore (client@bwssb.com)", email: "client@bwssb.com" },
-      { label: "Regalia CHS (client@regalia.com)", email: "client@regalia.com" },
-      { label: "Maitri Anand CHS (client@maitrianand.com)", email: "client@maitrianand.com" },
-      { label: "Sophistica Solar (client@sophistica.com)", email: "client@sophistica.com" },
-      { label: "Ivy By Courtyard (client@ivy.com)", email: "client@ivy.com" },
-      { label: "Casa Florea (client@casaflorea.com)", email: "client@casaflorea.com" },
-      { label: "Madhukosh CHS (client@madhukosh.com)", email: "client@madhukosh.com" },
-      { label: "Garcinia Residency (client@garcinia.com)", email: "client@garcinia.com" },
-      { label: "Anoopam Mission (client@anoopam.com)", email: "client@anoopam.com" },
-      { label: "Suvarna Pushpa CHS (client@suvarnapushpa.com)", email: "client@suvarnapushpa.com" },
-      { label: "Suyash Heights (client@suyash.com)", email: "client@suyash.com" },
-      { label: "Venecia CHS (client@venecia.com)", email: "client@venecia.com" },
-      { label: "Vijay Vatika CHS (client@vijayvatika.com)", email: "client@vijayvatika.com" },
-      { label: "Crestia Solar (client@crestia.com)", email: "client@crestia.com" },
-      { label: "STP Plant Services (client@stp.com)", email: "client@stp.com" },
+    category: "Featured Client Portals",
+    icon: Building2,
+    accounts: [
+      { name: "Anoopam Mission", email: "client@anoopam.com" },
+      { name: "Cilantro CHS", email: "client@cilantro.com" },
+      { name: "Manavsthal Tower", email: "client@manavsthal.com" },
+      { name: "Alcove Society", email: "client@alcove.com" },
     ],
   },
 ];
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@solarassist.dev");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showDirectory, setShowDirectory] = useState(false);
 
-  // Ensure clean session state when landing on login page
+  // Clean session state on landing
   useState(() => {
     if (typeof document !== "undefined") {
       document.cookie = "user-role=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     }
   });
 
-  async function handleLogin(targetEmail: string) {
-    if (!targetEmail) {
-      toast.error("Please select or enter an email address");
+  async function handleLogin(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      toast.error("Please enter your email address");
+      return;
+    }
+    if (!password) {
+      toast.error("Please enter your account password");
       return;
     }
 
     setLoading(true);
 
     try {
-      const res = await fetch("/api/auth/quick-login", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: targetEmail }),
+        body: JSON.stringify({ email: cleanEmail, password }),
       });
 
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        toast.error(data.error || "Login failed");
+        toast.error(data.error || "Authentication failed. Please verify credentials.");
         setLoading(false);
         return;
       }
@@ -100,7 +91,7 @@ export default function LoginPage() {
       localStorage.setItem("user-role", data.role);
       document.cookie = `user-role=${data.role}; path=/`;
 
-      toast.success(`Welcome back! Logged in as ${data.profile?.full_name || targetEmail}`);
+      toast.success(`Welcome back, ${data.profile?.full_name || cleanEmail}!`);
       router.replace(data.redirectUrl || "/dashboard");
       router.refresh();
     } catch (err: any) {
@@ -109,25 +100,23 @@ export default function LoginPage() {
     }
   }
 
-  function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    handleLogin(email);
+  function handleSelectRosterEmail(rosterEmail: string) {
+    setEmail(rosterEmail);
+    // Auto-focus or hint
+    toast.info(`Selected ${rosterEmail}. Please enter password to sign in.`);
   }
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-background dark:bg-slate-950 relative overflow-hidden">
-      {/* Seamless full-screen ambient grid & radial glow for perfect uniform grid lines across both columns */}
+      {/* Seamless full-screen ambient grid & radial glow */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(16,185,129,0.20),transparent_60%),radial-gradient(ellipse_at_bottom_right,rgba(6,182,212,0.12),transparent_60%)] pointer-events-none" />
       <div className="absolute inset-0 bg-grid opacity-50 dark:opacity-40 pointer-events-none" />
 
-      {/* Left Branding Panel: Rich dark branding panel with emerald radiance in light mode; transparent in dark mode */}
+      {/* Left Branding Panel */}
       <div className="hidden lg:flex relative bg-slate-950 dark:bg-transparent text-white border-r border-slate-900/80 dark:border-none">
-        {/* Emerald radiance in light mode */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(16,185,129,0.25),transparent_60%),radial-gradient(ellipse_at_bottom_right,rgba(6,182,212,0.15),transparent_60%)] dark:hidden pointer-events-none" />
-        {/* Ambient grid lines on left panel in light mode */}
         <div className="absolute inset-0 bg-grid opacity-50 dark:hidden pointer-events-none" />
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
-          {/* Prominently sized single top-left logo */}
           <div className="flex items-center">
             <img
               src="/logo-full-dark-trans.png"
@@ -172,75 +161,139 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right Sign-in Panel: Cleanly positioned over the unified full-screen ambient grid */}
+      {/* Right Sign-in Panel */}
       <div className="relative flex items-center justify-center p-6 sm:p-12 bg-emerald-50/30 dark:bg-transparent">
-        {/* Light Mode only: Rich light green ambient hue and enhanced visible grid lines */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.18),transparent_65%),radial-gradient(ellipse_at_bottom_left,rgba(52,211,153,0.12),transparent_65%)] dark:hidden pointer-events-none" />
         <div className="absolute inset-0 bg-grid opacity-75 dark:hidden pointer-events-none" />
 
-        {/* Ambient Theme Toggle on top right corner */}
+        {/* Ambient Theme Toggle */}
         <div className="absolute top-6 right-6 z-10">
           <ThemeToggle />
         </div>
 
-        <div className="w-full max-w-sm space-y-6 relative z-10">
-          {/* Centered Heading with signature emerald green */}
-          <div className="text-center">
-            <h2 className="text-2xl font-display font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
+        <div className="w-full max-w-md space-y-6 relative z-10">
+          <div className="text-center space-y-1">
+            <h2 className="text-2xl sm:text-3xl font-display font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
               Sign In to Solar Assist
             </h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Enter your credentials to access your operating portal
+            </p>
           </div>
 
           <Card className="border shadow-lg bg-card/95 backdrop-blur-sm">
             <CardContent className="pt-6">
-              <form onSubmit={onSubmit} className="space-y-4">
+              <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="login-email" className="text-xs font-medium text-foreground">
-                    Email
+                  <Label htmlFor="login-email" className="text-xs font-semibold text-foreground">
+                    Email Address
                   </Label>
-                  <select
-                    id="login-email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={loading}
-                    data-testid="login-email-select"
-                    className="w-full h-10 px-3 text-sm bg-background text-foreground border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary transition-colors cursor-pointer"
-                  >
-                    {LOGIN_OPTIONS.map((grp) => (
-                      <optgroup key={grp.group} label={grp.group}>
-                        {grp.options.map((opt) => (
-                          <option key={opt.email} value={opt.email}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <Input
+                      id="login-email"
+                      type="text"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="e.g. admin@solarassist.dev or technician email"
+                      disabled={loading}
+                      autoComplete="username"
+                      required
+                      data-testid="login-email-input"
+                      className="h-10 text-sm pl-9 bg-background text-foreground"
+                    />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="login-password" className="text-xs font-medium text-muted-foreground">
-                    Password
-                  </Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    value="••••••••••••"
-                    disabled
-                    readOnly
-                    className="h-10 text-sm bg-muted/50 cursor-not-allowed select-none text-muted-foreground"
-                  />
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="login-password" className="text-xs font-semibold text-foreground">
+                      Password
+                    </Label>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      id="login-password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      disabled={loading}
+                      autoComplete="current-password"
+                      required
+                      data-testid="login-password-input"
+                      className="h-10 text-sm pl-9 pr-10 bg-background text-foreground"
+                    />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
+                      tabIndex={-1}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <Button
                   type="submit"
-                  className="w-full h-10 font-semibold text-sm transition-all shadow-sm"
+                  className="w-full h-10 font-semibold text-sm transition-all shadow-sm bg-emerald-600 hover:bg-emerald-700 text-white"
                   disabled={loading}
                   data-testid="login-submit"
                 >
-                  {loading ? "Signing in..." : "Sign In"}
+                  {loading ? "Authenticating..." : "Sign In"}
                 </Button>
               </form>
+
+              {/* Roster & Quick Directory for Easy Access */}
+              <div className="mt-6 pt-4 border-t border-border/60">
+                <button
+                  type="button"
+                  onClick={() => setShowDirectory(!showDirectory)}
+                  className="w-full flex items-center justify-between text-xs font-medium text-muted-foreground hover:text-foreground transition-colors py-1"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <UserCheck className="w-3.5 h-3.5 text-emerald-500" />
+                    Active Accounts & Quick Fill
+                  </span>
+                  {showDirectory ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
+
+                {showDirectory && (
+                  <div className="mt-3 space-y-3 p-3 rounded-lg bg-muted/40 text-xs border border-border/50 max-h-64 overflow-y-auto">
+                    <div className="p-2 bg-emerald-500/10 rounded border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-mono text-[11px]">
+                      Access Password for all accounts: <strong>SolarAssist@1234</strong>
+                    </div>
+
+                    {QUICK_ROSTER.map((grp) => {
+                      const Icon = grp.icon;
+                      return (
+                        <div key={grp.category} className="space-y-1.5">
+                          <div className="flex items-center gap-1.5 font-semibold text-muted-foreground text-[11px] uppercase tracking-wider">
+                            <Icon className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                            {grp.category}
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                            {grp.accounts.map((acc) => (
+                              <button
+                                key={acc.email}
+                                type="button"
+                                onClick={() => handleSelectRosterEmail(acc.email)}
+                                className="text-left px-2 py-1.5 rounded bg-background hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-border/60 hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors"
+                              >
+                                <div className="font-medium text-foreground text-[11px] truncate">{acc.name}</div>
+                                <div className="text-[10px] text-muted-foreground truncate">{acc.email}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
