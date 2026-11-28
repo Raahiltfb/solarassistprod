@@ -8,40 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Eye, EyeOff, Lock, Mail, ChevronDown, ChevronUp, UserCheck, Wrench, Shield, Building2 } from "lucide-react";
-
-const QUICK_ROSTER = [
-  {
-    category: "Field Operations (Technicians)",
-    icon: Wrench,
-    accounts: [
-      { name: "Faisal Sorathiya", email: "faisal.sorathiya@solarassist.dev" },
-      { name: "Sandesh Tambe", email: "sandesh.tambe@solarassist.dev" },
-      { name: "Faiz Adani", email: "faiz.adani@solarassist.dev" },
-      { name: "Imran Qureshi", email: "imran.qureshi@solarassist.dev" },
-      { name: "Aphjal Khan", email: "aphjal.khan@solarassist.dev" },
-      { name: "Amir Khan", email: "amir.khan@solarassist.dev" },
-    ],
-  },
-  {
-    category: "Administration & Engineering",
-    icon: Shield,
-    accounts: [
-      { name: "Solar Assist Admin", email: "admin@solarassist.dev" },
-      { name: "Super Admin", email: "super@solarassist.dev" },
-    ],
-  },
-  {
-    category: "Featured Client Portals",
-    icon: Building2,
-    accounts: [
-      { name: "Anoopam Mission", email: "client@anoopam.com" },
-      { name: "Cilantro CHS", email: "client@cilantro.com" },
-      { name: "Manavsthal Tower", email: "client@manavsthal.com" },
-      { name: "Alcove Society", email: "client@alcove.com" },
-    ],
-  },
-];
+import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -49,7 +16,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showDirectory, setShowDirectory] = useState(false);
 
   // Clean session state on landing
   useState(() => {
@@ -98,12 +64,6 @@ export default function LoginPage() {
       toast.error(err?.message || "Server error during sign in");
       setLoading(false);
     }
-  }
-
-  function handleSelectRosterEmail(rosterEmail: string) {
-    setEmail(rosterEmail);
-    // Auto-focus or hint
-    toast.info(`Selected ${rosterEmail}. Please enter password to sign in.`);
   }
 
   return (
@@ -194,7 +154,7 @@ export default function LoginPage() {
                       type="text"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="e.g. admin@solarassist.dev or technician email"
+                      placeholder="e.g. name@company.com"
                       disabled={loading}
                       autoComplete="username"
                       required
@@ -246,54 +206,6 @@ export default function LoginPage() {
                   {loading ? "Authenticating..." : "Sign In"}
                 </Button>
               </form>
-
-              {/* Roster & Quick Directory for Easy Access */}
-              <div className="mt-6 pt-4 border-t border-border/60">
-                <button
-                  type="button"
-                  onClick={() => setShowDirectory(!showDirectory)}
-                  className="w-full flex items-center justify-between text-xs font-medium text-muted-foreground hover:text-foreground transition-colors py-1"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <UserCheck className="w-3.5 h-3.5 text-emerald-500" />
-                    Active Accounts & Quick Fill
-                  </span>
-                  {showDirectory ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                </button>
-
-                {showDirectory && (
-                  <div className="mt-3 space-y-3 p-3 rounded-lg bg-muted/40 text-xs border border-border/50 max-h-64 overflow-y-auto">
-                    <div className="p-2 bg-emerald-500/10 rounded border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-mono text-[11px]">
-                      Access Password for all accounts: <strong>SolarAssist@1234</strong>
-                    </div>
-
-                    {QUICK_ROSTER.map((grp) => {
-                      const Icon = grp.icon;
-                      return (
-                        <div key={grp.category} className="space-y-1.5">
-                          <div className="flex items-center gap-1.5 font-semibold text-muted-foreground text-[11px] uppercase tracking-wider">
-                            <Icon className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                            {grp.category}
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                            {grp.accounts.map((acc) => (
-                              <button
-                                key={acc.email}
-                                type="button"
-                                onClick={() => handleSelectRosterEmail(acc.email)}
-                                className="text-left px-2 py-1.5 rounded bg-background hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-border/60 hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors"
-                              >
-                                <div className="font-medium text-foreground text-[11px] truncate">{acc.name}</div>
-                                <div className="text-[10px] text-muted-foreground truncate">{acc.email}</div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
             </CardContent>
           </Card>
         </div>
